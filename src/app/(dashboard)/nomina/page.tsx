@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -189,7 +189,19 @@ function periodoLabel(p: Periodo) {
 
 export default function NominaPage() {
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const stored = localStorage.getItem("nomina-deleted-ids");
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("nomina-deleted-ids", JSON.stringify([...deletedIds]));
+  }, [deletedIds]);
   const [selectedMes, setSelectedMes] = useState(6);   // Junio (current)
   const [selectedAnio] = useState(2026);
   const [empresaFilter, setEmpresaFilter] = useState("todas");
