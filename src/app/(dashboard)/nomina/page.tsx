@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -8,11 +8,12 @@ import {
   CheckCircle2,
   Send,
   Eye,
-  Pencil,
   Download,
   ThumbsUp,
   AlertCircle,
   FileText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,16 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EMPRESAS_MOCK, EmpresaMock } from "@/lib/empresas-mock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type EstadoNomina = "BORRADOR" | "ENVIADO" | "REVISADO" | "APROBADO";
-type Periodo = "1-15" | "16-30";
+type Periodo = "1-15" | "16-30" | "mensual";
 
 interface ReporteNomina {
-  id: number;
-  empresaId: string;
+  id: string;
+  empresaNumId: number;
+  empresaSlug: string;
   empresa: string;
+  periodicidadNomina: "quincenal" | "mensual";
   periodo: Periodo;
   mes: number;
   anio: number;
@@ -44,270 +48,202 @@ interface ReporteNomina {
   fechaEnvio?: string;
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-const REPORTES: ReporteNomina[] = [
-  // Junio 2026 - primera quincena
-  {
-    id: 1,
-    empresaId: "300-hilos",
-    empresa: "300 HILOS SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "ENVIADO",
-    totalEmpleados: 10,
-    sinNovedades: false,
-    enviadoPor: "Cliente - 300 Hilos",
-    fechaEnvio: "2026-06-02",
-  },
-  {
-    id: 2,
-    empresaId: "x-tours",
-    empresa: "X TOURS SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 8,
-    sinNovedades: true,
-    enviadoPor: "Cliente - X Tours",
-    fechaEnvio: "2026-06-01",
-  },
-  {
-    id: 3,
-    empresaId: "diazar",
-    empresa: "DIAZAR LTDA",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "BORRADOR",
-    totalEmpleados: 5,
-    sinNovedades: false,
-  },
-  {
-    id: 4,
-    empresaId: "textiles-norte",
-    empresa: "TEXTILES DEL NORTE SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "REVISADO",
-    totalEmpleados: 15,
-    sinNovedades: false,
-    enviadoPor: "Cliente - Textiles Norte",
-    fechaEnvio: "2026-06-02",
-  },
-  {
-    id: 5,
-    empresaId: "inversiones-castillo",
-    empresa: "INVERSIONES CASTILLO SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "BORRADOR",
-    totalEmpleados: 12,
-    sinNovedades: false,
-  },
-  {
-    id: 6,
-    empresaId: "comercial-torres",
-    empresa: "COMERCIAL TORRES LTDA",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "ENVIADO",
-    totalEmpleados: 7,
-    sinNovedades: true,
-    enviadoPor: "Cliente - C. Torres",
-    fechaEnvio: "2026-06-03",
-  },
-  {
-    id: 7,
-    empresaId: "logistica-andina",
-    empresa: "LOGÍSTICA ANDINA SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "BORRADOR",
-    totalEmpleados: 20,
-    sinNovedades: false,
-  },
-  {
-    id: 8,
-    empresaId: "constructora-cima",
-    empresa: "CONSTRUCTORA CIMA SAS",
-    periodo: "1-15",
-    mes: 6,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 25,
-    sinNovedades: false,
-    enviadoPor: "Cliente - C. Cima",
-    fechaEnvio: "2026-06-01",
-  },
-  // Mayo 2026 - segunda quincena
-  {
-    id: 9,
-    empresaId: "300-hilos",
-    empresa: "300 HILOS SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 10,
-    sinNovedades: false,
-    enviadoPor: "Cliente - 300 Hilos",
-    fechaEnvio: "2026-05-18",
-  },
-  {
-    id: 10,
-    empresaId: "x-tours",
-    empresa: "X TOURS SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 8,
-    sinNovedades: true,
-    enviadoPor: "Cliente - X Tours",
-    fechaEnvio: "2026-05-17",
-  },
-  {
-    id: 11,
-    empresaId: "diazar",
-    empresa: "DIAZAR LTDA",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 5,
-    sinNovedades: false,
-    enviadoPor: "Cliente - Diazar",
-    fechaEnvio: "2026-05-19",
-  },
-  {
-    id: 12,
-    empresaId: "textiles-norte",
-    empresa: "TEXTILES DEL NORTE SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 15,
-    sinNovedades: false,
-    enviadoPor: "Cliente - Textiles Norte",
-    fechaEnvio: "2026-05-18",
-  },
-  {
-    id: 13,
-    empresaId: "inversiones-castillo",
-    empresa: "INVERSIONES CASTILLO SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "ENVIADO",
-    totalEmpleados: 12,
-    sinNovedades: false,
-    enviadoPor: "Cliente - Castillo",
-    fechaEnvio: "2026-05-20",
-  },
-  {
-    id: 14,
-    empresaId: "comercial-torres",
-    empresa: "COMERCIAL TORRES LTDA",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 7,
-    sinNovedades: true,
-    enviadoPor: "Cliente - C. Torres",
-    fechaEnvio: "2026-05-17",
-  },
-  {
-    id: 15,
-    empresaId: "logistica-andina",
-    empresa: "LOGÍSTICA ANDINA SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "REVISADO",
-    totalEmpleados: 20,
-    sinNovedades: false,
-    enviadoPor: "Cliente - L. Andina",
-    fechaEnvio: "2026-05-20",
-  },
-  {
-    id: 16,
-    empresaId: "constructora-cima",
-    empresa: "CONSTRUCTORA CIMA SAS",
-    periodo: "16-30",
-    mes: 5,
-    anio: 2026,
-    estado: "APROBADO",
-    totalEmpleados: 25,
-    sinNovedades: false,
-    enviadoPor: "Cliente - C. Cima",
-    fechaEnvio: "2026-05-18",
-  },
-];
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+function rowId(empresa: string, periodo: Periodo, mes: number, anio: number): string {
+  return `${toSlug(empresa)}|${periodo}|${mes}|${anio}`;
+}
+
+function isActiva(emp: EmpresaMock): boolean {
+  if (emp.fechaFinRelacion) {
+    const today = new Date().toISOString().split("T")[0];
+    if (emp.fechaFinRelacion <= today) return false;
+  }
+  return emp.estado === "ACTIVA";
+}
+
+// Generate expected rows for a given month from empresa configuration
+function generarFilas(mes: number, anio: number): ReporteNomina[] {
+  const rows: ReporteNomina[] = [];
+
+  EMPRESAS_MOCK
+    .filter(
+      (emp) =>
+        isActiva(emp) &&
+        emp.periodicidadNomina &&
+        emp.periodicidadNomina !== "no_aplica" &&
+        emp.tipoNomina !== "no_aplica"
+    )
+    .forEach((emp) => {
+      const base = {
+        empresaNumId: emp.id,
+        empresaSlug: toSlug(emp.razonSocial),
+        empresa: emp.razonSocial,
+        mes,
+        anio,
+        estado: "BORRADOR" as EstadoNomina,
+        totalEmpleados: 0,
+        sinNovedades: false,
+      };
+
+      if (emp.periodicidadNomina === "quincenal") {
+        rows.push({
+          ...base,
+          id: rowId(emp.razonSocial, "1-15", mes, anio),
+          periodicidadNomina: "quincenal",
+          periodo: "1-15",
+        });
+        rows.push({
+          ...base,
+          id: rowId(emp.razonSocial, "16-30", mes, anio),
+          periodicidadNomina: "quincenal",
+          periodo: "16-30",
+        });
+      } else {
+        rows.push({
+          ...base,
+          id: rowId(emp.razonSocial, "mensual", mes, anio),
+          periodicidadNomina: "mensual",
+          periodo: "mensual",
+        });
+      }
+    });
+
+  return rows;
+}
+
+// ── Initial seeded data (pre-existing states for Jun/May 2026) ─────────────────
+
+type Override = Partial<Omit<ReporteNomina, "id">>;
+
+const INITIAL_OVERRIDES: Record<string, Override> = {
+  // Junio 2026 — 1ra quincena
+  [rowId("300 HILOS SAS", "1-15", 6, 2026)]: { estado: "ENVIADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-06-02" },
+  [rowId("X TOURS SAS", "1-15", 6, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-06-01" },
+  [rowId("DIAZAR LTDA", "1-15", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 5 },
+  [rowId("TEXTILES DEL NORTE SAS", "1-15", 6, 2026)]: { estado: "REVISADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-06-02" },
+  [rowId("COMERCIAL TORRES LTDA", "1-15", 6, 2026)]: { estado: "ENVIADO", totalEmpleados: 7, sinNovedades: true, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-06-03" },
+  [rowId("LOGÍSTICA ANDINA SAS", "1-15", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 20 },
+  [rowId("CONSTRUCTORA CIMA SAS", "1-15", 6, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-06-01" },
+  // Junio 2026 — mensual
+  [rowId("INVERSIONES CASTILLO SAS", "mensual", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 12 },
+  // Mayo 2026 — 2da quincena
+  [rowId("300 HILOS SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-05-18" },
+  [rowId("X TOURS SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-05-17" },
+  [rowId("DIAZAR LTDA", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 5, enviadoPor: "Cliente - Diazar", fechaEnvio: "2026-05-19" },
+  [rowId("TEXTILES DEL NORTE SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-05-18" },
+  [rowId("INVERSIONES CASTILLO SAS", "mensual", 5, 2026)]: { estado: "ENVIADO", totalEmpleados: 12, enviadoPor: "Cliente - Castillo", fechaEnvio: "2026-05-20" },
+  [rowId("COMERCIAL TORRES LTDA", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 7, sinNovedades: true, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-05-17" },
+  [rowId("LOGÍSTICA ANDINA SAS", "16-30", 5, 2026)]: { estado: "REVISADO", totalEmpleados: 20, enviadoPor: "Cliente - L. Andina", fechaEnvio: "2026-05-20" },
+  [rowId("CONSTRUCTORA CIMA SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-05-18" },
+  // Mayo 2026 — 1ra quincena
+  [rowId("300 HILOS SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-05-05" },
+  [rowId("X TOURS SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-05-04" },
+  [rowId("DIAZAR LTDA", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 5, enviadoPor: "Cliente - Diazar", fechaEnvio: "2026-05-06" },
+  [rowId("TEXTILES DEL NORTE SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-05-05" },
+  [rowId("COMERCIAL TORRES LTDA", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 7, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-05-04" },
+  [rowId("LOGÍSTICA ANDINA SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 20, enviadoPor: "Cliente - L. Andina", fechaEnvio: "2026-05-06" },
+  [rowId("CONSTRUCTORA CIMA SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-05-05" },
+};
+
+// ── Estado config ──────────────────────────────────────────────────────────────
 
 const ESTADO_CONFIG: Record<
   EstadoNomina,
   { label: string; variant: "secondary" | "warning" | "info" | "success"; Icon: React.ElementType }
 > = {
   BORRADOR: { label: "Borrador", variant: "secondary", Icon: FileText },
-  ENVIADO: { label: "Enviado", variant: "warning", Icon: Send },
-  REVISADO: { label: "Revisado", variant: "info", Icon: Eye },
-  APROBADO: { label: "Aprobado", variant: "success", Icon: CheckCircle2 },
+  ENVIADO:  { label: "Enviado",  variant: "warning",   Icon: Send },
+  REVISADO: { label: "Revisado", variant: "info",      Icon: Eye },
+  APROBADO: { label: "Aprobado", variant: "success",   Icon: CheckCircle2 },
 };
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
-  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
   return `${d} ${months[parseInt(m) - 1]} ${y}`;
 }
 
 function periodoLabel(p: Periodo) {
-  return p === "1-15" ? "1ra Quincena" : "2da Quincena";
+  if (p === "1-15")    return "1ra Quincena";
+  if (p === "16-30")   return "2da Quincena";
+  return "Mensual";
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NominaPage() {
-  const [reportes, setReportes] = useState<ReporteNomina[]>(REPORTES);
+  const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
+  const [selectedMes, setSelectedMes] = useState(6);   // Junio (current)
+  const [selectedAnio] = useState(2026);
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [periodoFilter, setPeriodoFilter] = useState<"todos" | Periodo>("todos");
-  const [mesFilter, setMesFilter] = useState("todos");
   const [estadoFilter, setEstadoFilter] = useState<"todos" | EstadoNomina>("todos");
 
-  const empresas = Array.from(new Set(REPORTES.map((r) => r.empresa))).sort();
+  // Generate base rows for selected month and merge with overrides
+  const reportes = useMemo<ReporteNomina[]>(() => {
+    return generarFilas(selectedMes, selectedAnio).map((row) => ({
+      ...row,
+      ...(overrides[row.id] ?? {}),
+    }));
+  }, [selectedMes, selectedAnio, overrides]);
+
+  // Empresa list from active companies with nómina configured
+  const empresasConNomina = useMemo(
+    () =>
+      EMPRESAS_MOCK.filter(
+        (e) => isActiva(e) && e.periodicidadNomina && e.periodicidadNomina !== "no_aplica"
+      ).map((e) => e.razonSocial).sort(),
+    []
+  );
 
   const filtered = reportes.filter((r) => {
     const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
     const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
-    const matchMes = mesFilter === "todos" || r.mes === parseInt(mesFilter);
     const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;
-    return matchEmpresa && matchPeriodo && matchMes && matchEstado;
+    return matchEmpresa && matchPeriodo && matchEstado;
   });
 
   const pendientes = reportes.filter((r) => r.estado === "BORRADOR").length;
-  const enviados = reportes.filter((r) => r.estado === "ENVIADO").length;
-  const aprobados = reportes.filter((r) => r.estado === "APROBADO").length;
+  const enviados   = reportes.filter((r) => r.estado === "ENVIADO").length;
+  const aprobados  = reportes.filter((r) => r.estado === "APROBADO").length;
 
-  const handleAprobar = (id: number) => {
-    setReportes((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, estado: "APROBADO" as EstadoNomina } : r))
-    );
-  };
+  function handleAprobar(id: string) {
+    setOverrides((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        estado: "APROBADO",
+        fechaEnvio: new Date().toISOString().split("T")[0],
+      },
+    }));
+  }
+
+  function goMes(delta: number) {
+    setSelectedMes((m) => {
+      const next = m + delta;
+      if (next < 1) return 12;
+      if (next > 12) return 1;
+      return next;
+    });
+    setPeriodoFilter("todos");
+    setEmpresaFilter("todas");
+    setEstadoFilter("todos");
+  }
 
   return (
     <div className="space-y-6">
@@ -320,9 +256,28 @@ export default function NominaPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Novedades de Nómina</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Seguimiento de novedades quincenales por empresa
+              {empresasConNomina.length} empresa{empresasConNomina.length !== 1 ? "s" : ""} con nómina configurada
             </p>
           </div>
+        </div>
+
+        {/* Month navigator */}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+          <button
+            onClick={() => goMes(-1)}
+            className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold text-gray-900 min-w-[130px] text-center">
+            {MESES[selectedMes - 1]} {selectedAnio}
+          </span>
+          <button
+            onClick={() => goMes(1)}
+            className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -334,7 +289,7 @@ export default function NominaPage() {
               <Clock className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-xs font-medium text-amber-700">Reportes Pendientes</p>
+              <p className="text-xs font-medium text-amber-700">Pendientes</p>
               <p className="text-2xl font-bold text-amber-800">{pendientes}</p>
             </div>
           </CardContent>
@@ -368,12 +323,12 @@ export default function NominaPage() {
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
-              <SelectTrigger className="w-52 h-9 text-sm">
+              <SelectTrigger className="w-56 h-9 text-sm">
                 <SelectValue placeholder="Empresa" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas las empresas</SelectItem>
-                {empresas.map((e) => (
+                {empresasConNomina.map((e) => (
                   <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
               </SelectContent>
@@ -383,25 +338,14 @@ export default function NominaPage() {
               value={periodoFilter}
               onValueChange={(v) => setPeriodoFilter(v as "todos" | Periodo)}
             >
-              <SelectTrigger className="w-40 h-9 text-sm">
+              <SelectTrigger className="w-44 h-9 text-sm">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los períodos</SelectItem>
-                <SelectItem value="1-15">1ra Quincena (1-15)</SelectItem>
-                <SelectItem value="16-30">2da Quincena (16-30)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={mesFilter} onValueChange={setMesFilter}>
-              <SelectTrigger className="w-36 h-9 text-sm">
-                <SelectValue placeholder="Mes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los meses</SelectItem>
-                {MESES.map((m, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
-                ))}
+                <SelectItem value="1-15">1ra Quincena (1–15)</SelectItem>
+                <SelectItem value="16-30">2da Quincena (16–30)</SelectItem>
+                <SelectItem value="mensual">Mensual</SelectItem>
               </SelectContent>
             </Select>
 
@@ -435,8 +379,9 @@ export default function NominaPage() {
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <p className="text-sm text-amber-700">
-            Hay <span className="font-bold">{pendientes}</span> empresa
-            {pendientes !== 1 ? "s" : ""} con reportes de nómina pendientes de envío esta quincena.
+            Hay <span className="font-bold">{pendientes}</span> reporte
+            {pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} de envío en{" "}
+            <span className="font-bold">{MESES[selectedMes - 1]} {selectedAnio}</span>.
           </p>
         </div>
       )}
@@ -492,7 +437,14 @@ export default function NominaPage() {
                         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 shrink-0">
                           <Users className="w-4 h-4 text-indigo-600" />
                         </div>
-                        <span className="font-semibold text-gray-900 text-sm">{r.empresa}</span>
+                        <div>
+                          <span className="font-semibold text-gray-900 text-sm block">
+                            {r.empresa}
+                          </span>
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                            {r.periodicidadNomina === "quincenal" ? "Quincenal" : "Mensual"}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
@@ -504,16 +456,15 @@ export default function NominaPage() {
                       {MESES[r.mes - 1]} {r.anio}
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <Badge
-                        variant={estadoCfg.variant}
-                        className="gap-1 text-xs"
-                      >
+                      <Badge variant={estadoCfg.variant} className="gap-1 text-xs">
                         <EstadoIcon className="w-3 h-3" />
                         {estadoCfg.label}
                       </Badge>
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <span className="text-sm font-semibold text-gray-700">{r.totalEmpleados}</span>
+                      <span className="text-sm font-semibold text-gray-700">
+                        {r.totalEmpleados > 0 ? r.totalEmpleados : <span className="text-gray-300">—</span>}
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       {r.sinNovedades ? (
@@ -523,19 +474,15 @@ export default function NominaPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-xs text-gray-600">
-                      {r.enviadoPor ?? (
-                        <span className="text-gray-400 italic">Pendiente</span>
-                      )}
+                      {r.enviadoPor ?? <span className="text-gray-400 italic">Pendiente</span>}
                     </td>
                     <td className="px-4 py-3.5 text-xs text-gray-600">
-                      {r.fechaEnvio ? formatDate(r.fechaEnvio) : (
-                        <span className="text-gray-400 italic">—</span>
-                      )}
+                      {r.fechaEnvio ? formatDate(r.fechaEnvio) : <span className="text-gray-400 italic">—</span>}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/nomina/${r.empresaId}/${r.periodo}?mes=${r.mes}&anio=${r.anio}&empresa=${encodeURIComponent(r.empresa)}`}
+                          href={`/nomina/${r.empresaSlug}/${r.periodo}?mes=${r.mes}&anio=${r.anio}&empresa=${encodeURIComponent(r.empresa)}`}
                         >
                           <button
                             className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"

@@ -23,9 +23,9 @@ export interface EmpresaMock {
   actividadEconomica?: string;
   tipoContribuyente?: string;
   agenteRetenedor?: boolean;
-  softwareContable?: string;
   tipoNomina?: string;
   periodicidadNomina?: string;
+  softwareContable?: string;
 }
 
 export const EMPRESAS_MOCK: EmpresaMock[] = [
@@ -41,6 +41,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "601 320 4500",
     correo: "contabilidad@xtours.co",
     fechaInicioRelacion: "2020-01-15",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 2,
@@ -54,6 +56,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "601 298 7600",
     correo: "diana@diazar.com",
     fechaInicioRelacion: "2019-06-01",
+    tipoNomina: "manual",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 3,
@@ -67,6 +71,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "604 444 3200",
     correo: "info@300hilos.com",
     fechaInicioRelacion: "2021-03-10",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 4,
@@ -80,6 +86,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "605 360 1122",
     correo: "administracion@textilesnorte.co",
     fechaInicioRelacion: "2020-08-20",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 5,
@@ -93,6 +101,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "601 625 8800",
     correo: "rcastillo@inversionescastillo.com",
     fechaInicioRelacion: "2018-11-05",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "mensual",
   },
   {
     id: 6,
@@ -106,6 +116,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "602 884 5600",
     correo: "mtorres@comercialtorres.co",
     fechaInicioRelacion: "2022-02-14",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 7,
@@ -119,6 +131,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "607 697 4400",
     correo: "logistica@andinasas.co",
     fechaInicioRelacion: "2021-09-01",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 8,
@@ -132,6 +146,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "604 311 9900",
     correo: "fcima@constructoracima.com",
     fechaInicioRelacion: "2023-04-15",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "quincenal",
   },
   {
     id: 9,
@@ -145,6 +161,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "602 552 7700",
     correo: "sprado@inmopacifico.com",
     fechaInicioRelacion: "2022-07-22",
+    tipoNomina: "manual",
+    periodicidadNomina: "mensual",
   },
   {
     id: 10,
@@ -158,6 +176,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     telefono: "601 789 3300",
     correo: "amorales@consdig.co",
     fechaInicioRelacion: "2020-05-10",
+    tipoNomina: "electronica_dian",
+    periodicidadNomina: "mensual",
   },
   {
     id: 11,
@@ -172,6 +192,8 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     correo: "pvega@servilogistica.co",
     fechaInicioRelacion: "2019-03-15",
     fechaFinRelacion: "2024-12-31",
+    tipoNomina: "no_aplica",
+    periodicidadNomina: "no_aplica",
   },
   {
     id: 12,
@@ -186,5 +208,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     correo: "jsalcedo@agrosanpablo.co",
     fechaInicioRelacion: "2020-10-01",
     fechaFinRelacion: "2025-06-30",
+    tipoNomina: "no_aplica",
+    periodicidadNomina: "no_aplica",
   },
 ];
