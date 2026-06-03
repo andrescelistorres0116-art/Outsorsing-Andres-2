@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           id: true,
           empresaId: true,
           tipo: true,
-          entidad: true,
+          plataforma: true,
           usuario: true,
           // contrasena intentionally excluded from list view
           correoAsociado: true,

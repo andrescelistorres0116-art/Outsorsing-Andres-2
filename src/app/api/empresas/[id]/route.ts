@@ -13,7 +13,7 @@ export async function GET(
           select: {
             id: true,
             tipo: true,
-            entidad: true,
+            plataforma: true,
             usuario: true,
             createdAt: true,
           },
