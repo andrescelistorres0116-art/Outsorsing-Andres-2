@@ -46,6 +46,20 @@ interface Empresa {
   correo: string;
   fechaInicioRelacion: string;
   fechaFinRelacion?: string;
+  // Campos adicionales del formulario (opcionales para compatibilidad con mock data)
+  nombreComercial?: string;
+  direccion?: string;
+  repCedula?: string;
+  repCorreo?: string;
+  repTelefono?: string;
+  responsabilidadIVA?: string;
+  obligadoFacturar?: boolean;
+  actividadEconomica?: string;
+  tipoContribuyente?: string;
+  agenteRetenedor?: boolean;
+  softwareContable?: string;
+  tipoNomina?: string;
+  periodicidadNomina?: string;
 }
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
@@ -331,7 +345,20 @@ export default function EmpresasPage() {
   const [ciudadFilter, setCiudadFilter] = useState("Todas");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalKey, setModalKey] = useState(0);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
+
+  function openCreate() {
+    setEditingEmpresa(null);
+    setModalKey((k) => k + 1);
+    setModalOpen(true);
+  }
+
+  function openEdit(empresa: Empresa) {
+    setEditingEmpresa(empresa);
+    setModalKey((k) => k + 1);
+    setModalOpen(true);
+  }
 
   const PER_PAGE = 8;
 
@@ -364,7 +391,7 @@ export default function EmpresasPage() {
           </p>
         </div>
         <Button
-          onClick={() => setModalOpen(true)}
+          onClick={openCreate}
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
         >
           <Plus className="w-4 h-4" />
@@ -575,7 +602,7 @@ export default function EmpresasPage() {
                           </button>
                         </Link>
                         <button
-                          onClick={() => { setEditingEmpresa(empresa); setModalOpen(true); }}
+                          onClick={() => openEdit(empresa)}
                           className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                           title="Editar"
                         >
@@ -671,24 +698,38 @@ export default function EmpresasPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal — key forces remount on every open so form always resets to saved data */}
       <EmpresaFormModal
+        key={modalKey}
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditingEmpresa(null); }}
         mode={editingEmpresa ? "edit" : "create"}
         initialData={editingEmpresa ? {
           razonSocial: editingEmpresa.razonSocial,
+          nombreComercial: editingEmpresa.nombreComercial ?? "",
           nit: editingEmpresa.nit.split("-")[0] ?? editingEmpresa.nit,
           dv: editingEmpresa.nit.split("-")[1] ?? "",
+          direccion: editingEmpresa.direccion ?? "",
           ciudad: editingEmpresa.ciudad,
           departamento: editingEmpresa.departamento,
           telefono: editingEmpresa.telefono,
           correo: editingEmpresa.correo,
           estado: editingEmpresa.estado,
-          repNombre: editingEmpresa.representante,
-          regimen: REGIMEN_TO_VALUE[editingEmpresa.regimen] ?? "",
           fechaInicioRelacion: editingEmpresa.fechaInicioRelacion,
           fechaFinRelacion: editingEmpresa.fechaFinRelacion ?? "",
+          repNombre: editingEmpresa.representante,
+          repCedula: editingEmpresa.repCedula ?? "",
+          repCorreo: editingEmpresa.repCorreo ?? "",
+          repTelefono: editingEmpresa.repTelefono ?? "",
+          regimen: REGIMEN_TO_VALUE[editingEmpresa.regimen] ?? "",
+          responsabilidadIVA: editingEmpresa.responsabilidadIVA ?? "",
+          obligadoFacturar: editingEmpresa.obligadoFacturar ?? true,
+          actividadEconomica: editingEmpresa.actividadEconomica ?? "",
+          tipoContribuyente: editingEmpresa.tipoContribuyente ?? "Persona Jurídica",
+          agenteRetenedor: editingEmpresa.agenteRetenedor ?? false,
+          softwareContable: editingEmpresa.softwareContable ?? "",
+          tipoNomina: editingEmpresa.tipoNomina ?? "",
+          periodicidadNomina: editingEmpresa.periodicidadNomina ?? "",
         } : undefined}
         onSave={(data) => {
           if (editingEmpresa) {
@@ -696,18 +737,60 @@ export default function EmpresasPage() {
               e.id === editingEmpresa.id ? {
                 ...e,
                 razonSocial: data.razonSocial,
+                nombreComercial: data.nombreComercial,
                 nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
+                direccion: data.direccion,
                 ciudad: data.ciudad,
                 departamento: data.departamento,
                 telefono: data.telefono,
                 correo: data.correo,
                 estado: data.estado as "ACTIVA" | "INACTIVA",
-                representante: data.repNombre,
-                regimen: VALUE_TO_REGIMEN[data.regimen] ?? data.regimen,
                 fechaInicioRelacion: data.fechaInicioRelacion,
                 fechaFinRelacion: data.fechaFinRelacion || undefined,
+                representante: data.repNombre,
+                repCedula: data.repCedula,
+                repCorreo: data.repCorreo,
+                repTelefono: data.repTelefono,
+                regimen: VALUE_TO_REGIMEN[data.regimen] ?? data.regimen,
+                responsabilidadIVA: data.responsabilidadIVA,
+                obligadoFacturar: data.obligadoFacturar,
+                actividadEconomica: data.actividadEconomica,
+                tipoContribuyente: data.tipoContribuyente,
+                agenteRetenedor: data.agenteRetenedor,
+                softwareContable: data.softwareContable,
+                tipoNomina: data.tipoNomina,
+                periodicidadNomina: data.periodicidadNomina,
               } : e
             ));
+          } else {
+            const newId = Math.max(...empresas.map((e) => e.id)) + 1;
+            setEmpresas((prev) => [...prev, {
+              id: newId,
+              razonSocial: data.razonSocial,
+              nombreComercial: data.nombreComercial,
+              nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
+              direccion: data.direccion,
+              ciudad: data.ciudad,
+              departamento: data.departamento,
+              telefono: data.telefono,
+              correo: data.correo,
+              estado: data.estado as "ACTIVA" | "INACTIVA",
+              fechaInicioRelacion: data.fechaInicioRelacion,
+              fechaFinRelacion: data.fechaFinRelacion || undefined,
+              representante: data.repNombre,
+              repCedula: data.repCedula,
+              repCorreo: data.repCorreo,
+              repTelefono: data.repTelefono,
+              regimen: VALUE_TO_REGIMEN[data.regimen] ?? data.regimen,
+              responsabilidadIVA: data.responsabilidadIVA,
+              obligadoFacturar: data.obligadoFacturar,
+              actividadEconomica: data.actividadEconomica,
+              tipoContribuyente: data.tipoContribuyente,
+              agenteRetenedor: data.agenteRetenedor,
+              softwareContable: data.softwareContable,
+              tipoNomina: data.tipoNomina,
+              periodicidadNomina: data.periodicidadNomina,
+            }]);
           }
         }}
       />
