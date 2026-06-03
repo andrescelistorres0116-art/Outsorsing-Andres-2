@@ -14,6 +14,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -188,6 +189,7 @@ function periodoLabel(p: Periodo) {
 
 export default function NominaPage() {
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [selectedMes, setSelectedMes] = useState(6);   // Junio (current)
   const [selectedAnio] = useState(2026);
   const [empresaFilter, setEmpresaFilter] = useState("todas");
@@ -212,6 +214,7 @@ export default function NominaPage() {
   );
 
   const filtered = reportes.filter((r) => {
+    if (deletedIds.has(r.id)) return false;
     const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
     const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
     const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;
@@ -233,6 +236,10 @@ export default function NominaPage() {
     }));
   }
 
+  function handleEliminar(id: string) {
+    setDeletedIds((prev) => new Set([...prev, id]));
+  }
+
   function goMes(delta: number) {
     setSelectedMes((m) => {
       const next = m + delta;
@@ -243,6 +250,7 @@ export default function NominaPage() {
     setPeriodoFilter("todos");
     setEmpresaFilter("todas");
     setEstadoFilter("todos");
+    setDeletedIds(new Set());
   }
 
   return (
@@ -505,6 +513,13 @@ export default function NominaPage() {
                           title="Exportar"
                         >
                           <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(r.id)}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Eliminar fila"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
