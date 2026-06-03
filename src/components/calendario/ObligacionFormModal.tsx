@@ -186,6 +186,8 @@ export default function ObligacionFormModal({
       responsable: form.responsable.trim(),
       observaciones: form.observaciones.trim() || undefined,
       contabilizado: editingObligacion?.contabilizado ?? false,
+      declarado: editingObligacion?.declarado ?? false,
+      pagado: editingObligacion?.pagado ?? false,
     };
 
     setTimeout(() => {

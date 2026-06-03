@@ -29,6 +29,8 @@ export interface Obligacion {
   responsable: string;
   observaciones?: string;
   contabilizado: boolean;
+  declarado: boolean;
+  pagado: boolean;
 }
 
 export const EMPRESAS = [
@@ -92,6 +94,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Andrés Torres",
     observaciones: "Formulario 350 - Abril 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "2",
@@ -107,6 +111,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "María López",
     observaciones: "Bimestre Mar-Abr 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "3",
@@ -121,6 +127,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "VENCIDO",
     responsable: "Carlos Ramírez",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 
   // --- MUY URGENTES (0-3 días) ---
@@ -138,6 +146,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Ana Martínez",
     observaciones: "Transmisión DIAN nómina mayo",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "5",
@@ -153,6 +163,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Andrés Torres",
     observaciones: "Aporte FONTUR 1er trimestre 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "6",
@@ -168,6 +180,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Pedro Gómez",
     observaciones: "Aporte FONTUR 1er trimestre 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 
   // --- URGENTES (3-7 días) ---
@@ -185,6 +199,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Luisa Herrera",
     observaciones: "Formulario 350 - Mayo 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "8",
@@ -200,6 +216,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "María López",
     observaciones: "ReteICA Bogotá bimestre Mar-Abr",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "9",
@@ -215,6 +233,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Carlos Ramírez",
     observaciones: "ICA Bogotá bimestre Mar-Abr 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "10",
@@ -229,6 +249,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "Ana Martínez",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 
   // --- PRÓXIMAS (7-15 días) ---
@@ -246,6 +268,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Andrés Torres",
     observaciones: "Formulario 350 - Mayo 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "12",
@@ -260,6 +284,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "Pedro Gómez",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "13",
@@ -275,6 +301,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "María López",
     observaciones: "PILA mayo 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "14",
@@ -289,6 +317,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "Luisa Herrera",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "15",
@@ -304,6 +334,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Carlos Ramírez",
     observaciones: "Régimen SIMPLE - anticipo mayo-jun",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 
   // --- PRÓXIMAS MÁS DE 15 DÍAS ---
@@ -320,6 +352,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "Andrés Torres",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "17",
@@ -335,6 +369,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Ana Martínez",
     observaciones: "Bimestre May-Jun 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "18",
@@ -349,6 +385,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "Luisa Herrera",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "19",
@@ -364,6 +402,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Pedro Gómez",
     observaciones: "Bimestre May-Jun 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "20",
@@ -378,6 +418,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     estado: "PENDIENTE",
     responsable: "María López",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "21",
@@ -393,6 +435,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Carlos Ramírez",
     observaciones: "Matrícula mercantil 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 
   // --- COMPLETADAS ---
@@ -410,6 +454,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Andrés Torres",
     observaciones: "Bimestre Ene-Feb 2026 - PAGO CONFIRMADO",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "23",
@@ -425,6 +471,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "María López",
     observaciones: "Formulario 350 - Marzo 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "24",
@@ -440,6 +488,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Pedro Gómez",
     observaciones: "PILA abril 2026 - presentado UGPP",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "25",
@@ -455,6 +505,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Ana Martínez",
     observaciones: "Transmisión DIAN abril - OK",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "26",
@@ -470,6 +522,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Luisa Herrera",
     observaciones: "ICA Bogotá bimestre Ene-Feb 2026",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "27",
@@ -485,6 +539,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Carlos Ramírez",
     observaciones: "Renta 2025 - Presentada DIAN",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   // Agosto
   {
@@ -501,6 +557,8 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "Andrés Torres",
     observaciones: "Medios magnéticos DIAN 2025",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
   {
     id: "29",
@@ -516,5 +574,7 @@ export const OBLIGACIONES_MOCK: Obligacion[] = [
     responsable: "María López",
     observaciones: "Renta persona jurídica 2025",
     contabilizado: false,
+    declarado: false,
+    pagado: false,
   },
 ];

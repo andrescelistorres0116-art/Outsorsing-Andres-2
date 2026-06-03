@@ -345,6 +345,18 @@ export default function CalendarioPage() {
     );
   }
 
+  function handleDeclaradoChange(id: string, value: boolean) {
+    setObligaciones((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, declarado: value } : o))
+    );
+  }
+
+  function handlePagadoChange(id: string, value: boolean) {
+    setObligaciones((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, pagado: value } : o))
+    );
+  }
+
   function handleSave(obligacion: Obligacion) {
     setObligaciones((prev) => {
       const idx = prev.findIndex((o) => o.id === obligacion.id);
@@ -385,6 +397,8 @@ export default function CalendarioPage() {
       "Días",
       "Estado",
       "Contabilizado",
+      "Declarado",
+      "Pagado",
       "Responsable",
       "Observaciones",
     ];
@@ -399,6 +413,8 @@ export default function CalendarioPage() {
       getDaysUntil(o.fechaVencimiento),
       ESTADOS_LABELS[o.estado],
       o.contabilizado ? "Sí" : "No",
+      o.declarado ? "Sí" : "No",
+      o.pagado ? "Sí" : "No",
       o.responsable,
       o.observaciones || "",
     ]);
@@ -652,6 +668,8 @@ export default function CalendarioPage() {
                       "Días",
                       "Estado",
                       "Contabilizado",
+                      "Declarado",
+                      "Pagado",
                       "Responsable",
                       "",
                     ].map((col) => (
@@ -668,7 +686,7 @@ export default function CalendarioPage() {
                   {sorted.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={12}
+                        colSpan={14}
                         className="px-4 py-12 text-center text-sm text-gray-400"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -784,6 +802,62 @@ export default function CalendarioPage() {
                                 className={cn(
                                   "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
                                   !o.contabilizado
+                                    ? "bg-gray-500 text-white border-gray-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                )}
+                              >
+                                No
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Declarado */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, true); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
+                                  o.declarado
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                                )}
+                              >
+                                Sí
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, false); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
+                                  !o.declarado
+                                    ? "bg-gray-500 text-white border-gray-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                )}
+                              >
+                                No
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Pagado */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
+                                  o.pagado
+                                    ? "bg-purple-500 text-white border-purple-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
+                                )}
+                              >
+                                Sí
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
+                                  !o.pagado
                                     ? "bg-gray-500 text-white border-gray-500"
                                     : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
                                 )}
@@ -955,6 +1029,8 @@ export default function CalendarioPage() {
                                 "Días",
                                 "Estado",
                                 "Contabilizado",
+                                "Declarado",
+                                "Pagado",
                                 "Responsable",
                                 "",
                               ].map((col) => (
@@ -1038,6 +1114,60 @@ export default function CalendarioPage() {
                                         className={cn(
                                           "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
                                           !o.contabilizado
+                                            ? "bg-gray-500 text-white border-gray-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                        )}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  </td>
+                                  {/* Declarado */}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, true); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
+                                          o.declarado
+                                            ? "bg-blue-500 text-white border-blue-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                                        )}
+                                      >
+                                        Sí
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, false); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
+                                          !o.declarado
+                                            ? "bg-gray-500 text-white border-gray-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                        )}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  </td>
+                                  {/* Pagado */}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
+                                          o.pagado
+                                            ? "bg-purple-500 text-white border-purple-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
+                                        )}
+                                      >
+                                        Sí
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
+                                          !o.pagado
                                             ? "bg-gray-500 text-white border-gray-500"
                                             : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
                                         )}
