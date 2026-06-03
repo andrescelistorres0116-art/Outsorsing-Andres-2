@@ -155,7 +155,13 @@ export default function EmpresasPage() {
     if (typeof window === "undefined") return EMPRESAS_MOCK;
     try {
       const stored = localStorage.getItem("empresas-data");
-      return stored ? (JSON.parse(stored) as Empresa[]) : EMPRESAS_MOCK;
+      if (!stored) return EMPRESAS_MOCK;
+      const parsed = JSON.parse(stored) as Empresa[];
+      // Sanitize: assign valid ids to any entry that lost its id due to prior -Infinity JSON bug
+      let maxId = parsed.reduce((m, e) => (typeof e.id === "number" && isFinite(e.id) ? Math.max(m, e.id) : m), 0);
+      return parsed.map((e) =>
+        typeof e.id !== "number" || !isFinite(e.id) ? { ...e, id: ++maxId } : e
+      );
     } catch {
       return EMPRESAS_MOCK;
     }
@@ -221,6 +227,8 @@ export default function EmpresasPage() {
 
   const activas = empresas.filter((e) => getEstadoEfectivo(e) === "ACTIVA").length;
   const inactivas = empresas.filter((e) => getEstadoEfectivo(e) === "INACTIVA").length;
+
+  const menuEmpresa = menuOpenId !== null ? (empresas.find((e) => e.id === menuOpenId) ?? null) : null;
 
   return (
     <div className="space-y-6">
@@ -554,38 +562,34 @@ export default function EmpresasPage() {
       )}
 
       {/* Three-dot dropdown — fixed position to escape overflow-x-auto clipping */}
-      {menuOpenId !== null && (() => {
-        const empresa = empresas.find((e) => e.id === menuOpenId);
-        if (!empresa) return null;
-        return (
-          <>
-            <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
-            <div
-              style={{ top: menuPos.top, right: menuPos.right }}
-              className="fixed z-40 w-48 bg-white border border-gray-200 rounded-xl shadow-xl shadow-black/10 py-1 overflow-hidden"
+      {menuEmpresa && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
+          <div
+            style={{ top: menuPos.top, right: menuPos.right }}
+            className="fixed z-40 w-48 bg-white border border-gray-200 rounded-xl shadow-xl shadow-black/10 py-1 overflow-hidden"
+          >
+            <button
+              onClick={() => handleToggleEstado(menuEmpresa)}
+              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              <button
-                onClick={() => handleToggleEstado(empresa)}
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                {getEstadoEfectivo(empresa) === "ACTIVA" ? (
-                  <><PowerOff className="w-3.5 h-3.5 text-orange-500" />Marcar como Inactiva</>
-                ) : (
-                  <><Power className="w-3.5 h-3.5 text-green-600" />Marcar como Activa</>
-                )}
-              </button>
-              <div className="my-1 border-t border-gray-100" />
-              <button
-                onClick={() => handleDelete(empresa.id)}
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Eliminar empresa
-              </button>
-            </div>
-          </>
-        );
-      })()}
+              {getEstadoEfectivo(menuEmpresa) === "ACTIVA" ? (
+                <><PowerOff className="w-3.5 h-3.5 text-orange-500" />Marcar como Inactiva</>
+              ) : (
+                <><Power className="w-3.5 h-3.5 text-green-600" />Marcar como Activa</>
+              )}
+            </button>
+            <div className="my-1 border-t border-gray-100" />
+            <button
+              onClick={() => handleDelete(menuEmpresa.id)}
+              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Eliminar empresa
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Modal — key forces remount on every open so form always resets to saved data */}
       <EmpresaFormModal
@@ -652,7 +656,7 @@ export default function EmpresasPage() {
               } : e
             ));
           } else {
-            const newId = Math.max(...empresas.map((e) => e.id)) + 1;
+            const newId = empresas.length > 0 ? Math.max(...empresas.map((e) => e.id)) + 1 : 1;
             setEmpresas((prev) => [...prev, {
               id: newId,
               razonSocial: data.razonSocial,

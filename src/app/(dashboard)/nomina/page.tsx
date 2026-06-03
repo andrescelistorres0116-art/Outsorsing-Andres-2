@@ -86,8 +86,7 @@ function generarFilas(empresas: EmpresaMock[], mes: number, anio: number): Repor
       (emp) =>
         isActiva(emp) &&
         emp.periodicidadNomina &&
-        emp.periodicidadNomina !== "no_aplica" &&
-        emp.tipoNomina !== "no_aplica"
+        emp.periodicidadNomina !== "no_aplica"
     )
     .forEach((emp) => {
       const base = {
@@ -189,15 +188,14 @@ function periodoLabel(p: Periodo) {
 
 export default function NominaPage() {
   // Read empresas from localStorage so newly created companies appear automatically
-  const [empresasData] = useState<EmpresaMock[]>(() => {
-    if (typeof window === "undefined") return EMPRESAS_MOCK;
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("empresas-data");
-      return stored ? (JSON.parse(stored) as EmpresaMock[]) : EMPRESAS_MOCK;
-    } catch {
-      return EMPRESAS_MOCK;
-    }
-  });
+      if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
+    } catch {}
+  }, []);
 
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
