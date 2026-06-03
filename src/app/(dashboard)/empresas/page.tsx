@@ -173,6 +173,7 @@ export default function EmpresasPage() {
   const [modalKey, setModalKey] = useState(0);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
   function openCreate() {
     setEditingEmpresa(null);
@@ -449,47 +450,22 @@ export default function EmpresasPage() {
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
-                        {/* Three-dot dropdown */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setMenuOpenId(menuOpenId === empresa.id ? null : empresa.id)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                            title="Más opciones"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-                          {menuOpenId === empresa.id && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                              <div className="absolute right-0 top-8 z-20 w-48 bg-white border border-gray-200 rounded-xl shadow-lg shadow-black/10 py-1 overflow-hidden">
-                                <button
-                                  onClick={() => handleToggleEstado(empresa)}
-                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  {getEstadoEfectivo(empresa) === "ACTIVA" ? (
-                                    <>
-                                      <PowerOff className="w-3.5 h-3.5 text-orange-500" />
-                                      Marcar como Inactiva
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Power className="w-3.5 h-3.5 text-green-600" />
-                                      Marcar como Activa
-                                    </>
-                                  )}
-                                </button>
-                                <div className="my-1 border-t border-gray-100" />
-                                <button
-                                  onClick={() => handleDelete(empresa.id)}
-                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Eliminar empresa
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                        {/* Three-dot button — dropdown rendered at page level to escape overflow clipping */}
+                        <button
+                          onClick={(e) => {
+                            if (menuOpenId === empresa.id) {
+                              setMenuOpenId(null);
+                            } else {
+                              const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                              setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                              setMenuOpenId(empresa.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          title="Más opciones"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -576,6 +552,40 @@ export default function EmpresasPage() {
           </div>
         </div>
       )}
+
+      {/* Three-dot dropdown — fixed position to escape overflow-x-auto clipping */}
+      {menuOpenId !== null && (() => {
+        const empresa = empresas.find((e) => e.id === menuOpenId);
+        if (!empresa) return null;
+        return (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
+            <div
+              style={{ top: menuPos.top, right: menuPos.right }}
+              className="fixed z-40 w-48 bg-white border border-gray-200 rounded-xl shadow-xl shadow-black/10 py-1 overflow-hidden"
+            >
+              <button
+                onClick={() => handleToggleEstado(empresa)}
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {getEstadoEfectivo(empresa) === "ACTIVA" ? (
+                  <><PowerOff className="w-3.5 h-3.5 text-orange-500" />Marcar como Inactiva</>
+                ) : (
+                  <><Power className="w-3.5 h-3.5 text-green-600" />Marcar como Activa</>
+                )}
+              </button>
+              <div className="my-1 border-t border-gray-100" />
+              <button
+                onClick={() => handleDelete(empresa.id)}
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar empresa
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Modal — key forces remount on every open so form always resets to saved data */}
       <EmpresaFormModal
