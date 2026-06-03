@@ -666,7 +666,6 @@ export default function CalendarioPage() {
                       "Año",
                       "Vencimiento",
                       "Días",
-                      "Estado",
                       "Contabilizado",
                       "Declarado",
                       "Pagado",
@@ -686,7 +685,7 @@ export default function CalendarioPage() {
                   {sorted.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={14}
+                        colSpan={13}
                         className="px-4 py-12 text-center text-sm text-gray-400"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -770,16 +769,6 @@ export default function CalendarioPage() {
                               days={days}
                               estado={o.estado}
                               showText={true}
-                            />
-                          </td>
-
-                          {/* Estado (inline dropdown) */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <EstadoDropdown
-                              estado={o.estado}
-                              onChange={(newEstado) =>
-                                handleEstadoChange(o.id, newEstado)
-                              }
                             />
                           </td>
 
@@ -1027,7 +1016,6 @@ export default function CalendarioPage() {
                                 "Período / Año",
                                 "Vencimiento",
                                 "Días",
-                                "Estado",
                                 "Contabilizado",
                                 "Declarado",
                                 "Pagado",
@@ -1086,14 +1074,6 @@ export default function CalendarioPage() {
                                       days={days}
                                       estado={o.estado}
                                       showText={true}
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <EstadoDropdown
-                                      estado={o.estado}
-                                      onChange={(newEstado) =>
-                                        handleEstadoChange(o.id, newEstado)
-                                      }
                                     />
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
