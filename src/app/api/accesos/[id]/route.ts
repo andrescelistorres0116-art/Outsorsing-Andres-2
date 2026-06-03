@@ -25,12 +25,9 @@ function decryptPassword(encrypted: string): string {
   return result.toString("utf-8")
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const { searchParams } = new URL(request.url)
     const reveal = searchParams.get("reveal") === "true"
 
@@ -62,17 +59,14 @@ export async function GET(
     }
 
     return NextResponse.json({ ...acceso, contrasena: acceso.contrasena ? "••••••" : null })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Error fetching acceso" }, { status: 500 })
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const data = await request.json()
     delete data.id
     delete data.createdAt
@@ -92,12 +86,9 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     await prisma.acceso.delete({ where: { id } })
     return NextResponse.json({ message: "Acceso deleted" })
   } catch (error: any) {
