@@ -673,7 +673,7 @@ export default function EmpresaFormModal({
             <DialogDescription className="text-sm text-gray-500 mt-1">
               {mode === "edit"
                 ? "Actualice los datos de la empresa"
-                : "Complete los campos para registrar una nueva empresa en ContaFlow"}
+                : "Complete los campos para registrar una nueva empresa en Outsoursing Andrés"}
             </DialogDescription>
           </DialogHeader>
         </div>

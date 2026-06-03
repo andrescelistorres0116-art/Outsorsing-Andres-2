@@ -73,7 +73,7 @@ export default function Sidebar() {
           </div>
           {!collapsed && (
             <span className="text-lg font-bold text-white tracking-tight truncate">
-              ContaFlow
+              Outsoursing Andrés
             </span>
           )}
         </div>
@@ -119,7 +119,7 @@ export default function Sidebar() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-200 truncate">
-                  Admin ContaFlow
+                  Admin
                 </p>
                 <p className="text-xs text-slate-500 truncate">
                   admin@contaflow.co

@@ -564,31 +564,31 @@ export default function EmpresaDetailPage({
                     texto: "Declaración IVA bimestral radicada exitosamente",
                     fecha: "02/06/2026 · 10:32 am",
                     tipo: "success",
-                    autor: "Admin ContaFlow",
+                    autor: "Admin",
                   },
                   {
                     texto: "Datos de representante legal actualizados",
                     fecha: "18/05/2026 · 3:15 pm",
                     tipo: "info",
-                    autor: "Admin ContaFlow",
+                    autor: "Admin",
                   },
                   {
                     texto: "Retención en la fuente radicada — abril 2026",
                     fecha: "07/05/2026 · 9:44 am",
                     tipo: "success",
-                    autor: "Admin ContaFlow",
+                    autor: "Admin",
                   },
                   {
                     texto: "Resolución de facturación actualizada (vence dic 2027)",
                     fecha: "15/04/2026 · 11:00 am",
                     tipo: "info",
-                    autor: "Admin ContaFlow",
+                    autor: "Admin",
                   },
                   {
-                    texto: "Empresa registrada en el sistema ContaFlow",
+                    texto: "Empresa registrada en el sistema Outsoursing Andrés",
                     fecha: "10/01/2025 · 9:00 am",
                     tipo: "info",
-                    autor: "Admin ContaFlow",
+                    autor: "Admin",
                   },
                 ].map((item, idx, arr) => {
                   const dotColor =

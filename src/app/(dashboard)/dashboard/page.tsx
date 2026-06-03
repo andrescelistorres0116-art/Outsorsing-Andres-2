@@ -235,7 +235,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Resumen ejecutivo · ContaFlow · Junio 2026
+            Resumen ejecutivo · Outsoursing Andrés · Junio 2026
           </p>
         </div>
         <div className="flex items-center gap-2">

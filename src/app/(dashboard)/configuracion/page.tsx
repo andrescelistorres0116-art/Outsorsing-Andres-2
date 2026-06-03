@@ -106,7 +106,7 @@ function RoleBadge({ rol }: { rol: string }) {
 // ─── Tab: General ──────────────────────────────────────────────────────────────
 
 function TabGeneral() {
-  const [companyName, setCompanyName] = useState("ContaFlow")
+  const [companyName, setCompanyName] = useState("Outsoursing Andrés")
   const [timezone, setTimezone] = useState("America/Bogota")
   const [language, setLanguage] = useState("es")
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY")
@@ -501,7 +501,7 @@ function TabSeguridad() {
             <div>
               <p className="text-sm font-semibold text-blue-800">Próximamente</p>
               <p className="text-xs text-blue-600 mt-0.5">
-                La autenticación de dos factores estará disponible en una próxima versión de ContaFlow.
+                La autenticación de dos factores estará disponible en una próxima versión de Outsoursing Andrés.
               </p>
             </div>
           </div>
@@ -672,7 +672,7 @@ export default function ConfiguracionPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Administra la plataforma, usuarios y preferencias de ContaFlow.
+            Administra la plataforma, usuarios y preferencias de Outsoursing Andrés.
           </p>
         </div>
       </div>

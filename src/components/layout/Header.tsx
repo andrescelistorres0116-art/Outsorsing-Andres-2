@@ -163,7 +163,7 @@ export default function Header() {
             </div>
             <div className="hidden md:block text-left min-w-0">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate max-w-[120px]">
-                Admin ContaFlow
+                Admin
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight truncate max-w-[120px]">
                 Administrador
@@ -182,7 +182,7 @@ export default function Header() {
               <div className="absolute right-0 top-11 z-20 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 overflow-hidden py-1">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Admin ContaFlow
+                    Admin
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     admin@contaflow.co

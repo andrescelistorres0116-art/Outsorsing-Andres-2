@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ContaFlow - Plataforma Contable",
+  title: "Outsoursing Andrés",
   description:
     "Plataforma de outsourcing contable y tributario para empresas colombianas. Gestión integral de obligaciones fiscales, nómina y contabilidad.",
   keywords: ["contabilidad", "outsourcing contable", "Colombia", "tributario", "nómina"],

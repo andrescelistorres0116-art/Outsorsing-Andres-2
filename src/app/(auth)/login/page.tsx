@@ -49,11 +49,11 @@ export default function LoginPage() {
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <span className="text-3xl font-bold text-white tracking-tight">
-              ContaFlow
+              Outsoursing Andrés
             </span>
           </div>
           <p className="mt-2 text-slate-400 text-sm font-medium tracking-wide">
-            Plataforma de Outsourcing Contable y Tributario
+            Plataforma de Control Contable y Tributario
           </p>
         </div>
 
@@ -203,7 +203,7 @@ export default function LoginPage() {
           <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
             <p className="text-xs text-slate-500">
-              Acceso exclusivo para empresas registradas en ContaFlow.{" "}
+              Acceso exclusivo para empresas registradas en Outsoursing Andrés.{" "}
               <a
                 href="mailto:soporte@contaflow.co"
                 className="font-medium text-blue-600 hover:underline"
@@ -215,7 +215,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} ContaFlow &mdash; Todos los derechos
+          &copy; {new Date().getFullYear()} Outsoursing Andrés &mdash; Todos los derechos
           reservados
         </p>
       </div>
