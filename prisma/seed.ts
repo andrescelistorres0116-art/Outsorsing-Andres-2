@@ -11,8 +11,8 @@ async function main() {
   console.log('🌱 Seeding database...')
 
   // ─── Users ───────────────────────────────────────────────
-  const adminPass = await bcrypt.hash('admin123', 10)
-  const clientPass = await bcrypt.hash('cliente123', 10)
+  const adminPass = await bcrypt.hash('Admin123!', 10)
+  const clientPass = await bcrypt.hash('Client123!', 10)
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@contaflow.co' },
@@ -378,10 +378,10 @@ async function main() {
   console.log('✅ Empleados created')
   console.log('\n🎉 Seed completado exitosamente!')
   console.log('\n📋 Credenciales de acceso:')
-  console.log('   Admin:    admin@contaflow.co     / admin123')
-  console.log('   Analista: analista@contaflow.co  / admin123')
-  console.log('   Nómina:   nomina@contaflow.co    / admin123')
-  console.log('   Cliente:  cliente@xtours.com.co  / cliente123')
+  console.log('   Admin:    admin@contaflow.co     / Admin123!')
+  console.log('   Analista: analista@contaflow.co  / Admin123!')
+  console.log('   Nómina:   nomina@contaflow.co    / Admin123!')
+  console.log('   Cliente:  cliente@xtours.com.co  / Client123!')
 }
 
 main()
