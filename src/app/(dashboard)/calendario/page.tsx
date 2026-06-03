@@ -493,132 +493,146 @@ export default function CalendarioPage() {
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar empresa, tipo..."
-              className="pl-9 text-sm"
-            />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Buscar</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Empresa, tipo..."
+                className="pl-9 text-sm"
+              />
+            </div>
           </div>
 
           {/* Empresa */}
-          <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODAS">Todas las empresas</SelectItem>
-              {EMPRESAS.map((e) => (
-                <SelectItem key={e.nombre} value={e.nombre}>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: e.color }}
-                    />
-                    {e.nombre}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Empresa</p>
+            <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODAS">Todas las empresas</SelectItem>
+                {EMPRESAS.map((e) => (
+                  <SelectItem key={e.nombre} value={e.nombre}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: e.color }}
+                      />
+                      {e.nombre}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Tipo */}
-          <Select value={filterTipo} onValueChange={setFilterTipo}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Tipo obligación" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos los tipos</SelectItem>
-              {TIPOS_OBLIGACION.filter((t) => t !== "Personalizada").map(
-                (t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo de Obligación</p>
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Tipo obligación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos los tipos</SelectItem>
+                {TIPOS_OBLIGACION.filter((t) => t !== "Personalizada").map(
+                  (t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Responsable */}
-          <Select
-            value={filterResponsable}
-            onValueChange={setFilterResponsable}
-          >
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Responsable" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos</SelectItem>
-              {RESPONSABLES_FILTER.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Responsable</p>
+            <Select value={filterResponsable} onValueChange={setFilterResponsable}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Responsable" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos</SelectItem>
+                {RESPONSABLES_FILTER.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Mes */}
-          <Select value={filterMes} onValueChange={setFilterMes}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Mes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos los meses</SelectItem>
-              {MONTHS.map((m) => (
-                <SelectItem key={m.value} value={m.value}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mes de Vencimiento</p>
+            <Select value={filterMes} onValueChange={setFilterMes}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos los meses</SelectItem>
+                {MONTHS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Año */}
-          <Select value={filterAnio} onValueChange={setFilterAnio}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Año" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TODOS">Todos los años</SelectItem>
-              {[2024, 2025, 2026, 2027].map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Año de Vencimiento</p>
+            <Select value={filterAnio} onValueChange={setFilterAnio}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Año" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos los años</SelectItem>
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Rango de vencimiento */}
-          <div className="sm:col-span-2 flex items-center gap-2">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <CalendarDays className="w-4 h-4 text-gray-400" />
-              <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Vencimiento:</span>
+          <div className="sm:col-span-2 space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rango de Fechas de Vencimiento</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={filterFechaDesde}
+                onChange={(e) => setFilterFechaDesde(e.target.value)}
+                className="text-sm h-9"
+                title="Desde"
+              />
+              <span className="text-xs text-gray-400 shrink-0">—</span>
+              <Input
+                type="date"
+                value={filterFechaHasta}
+                onChange={(e) => setFilterFechaHasta(e.target.value)}
+                className="text-sm h-9"
+                title="Hasta"
+              />
+              {(filterFechaDesde || filterFechaHasta) && (
+                <button
+                  onClick={() => { setFilterFechaDesde(""); setFilterFechaHasta(""); }}
+                  className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Limpiar rango"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <Input
-              type="date"
-              value={filterFechaDesde}
-              onChange={(e) => setFilterFechaDesde(e.target.value)}
-              className="text-sm h-9"
-              title="Desde"
-            />
-            <span className="text-xs text-gray-400 shrink-0">—</span>
-            <Input
-              type="date"
-              value={filterFechaHasta}
-              onChange={(e) => setFilterFechaHasta(e.target.value)}
-              className="text-sm h-9"
-              title="Hasta"
-            />
-            {(filterFechaDesde || filterFechaHasta) && (
-              <button
-                onClick={() => { setFilterFechaDesde(""); setFilterFechaHasta(""); }}
-                className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Limpiar rango"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
           </div>
 
           {/* Clear */}
@@ -627,7 +641,7 @@ export default function CalendarioPage() {
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="text-xs text-gray-500 hover:text-gray-700 gap-1.5 self-center"
+              className="text-xs text-gray-500 hover:text-gray-700 gap-1.5 self-end"
             >
               <X className="w-3.5 h-3.5" />
               Limpiar filtros
