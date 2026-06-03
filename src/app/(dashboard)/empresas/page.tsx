@@ -218,6 +218,14 @@ function fmtDate(iso: string) {
   return `${d}/${m}/${y}`;
 }
 
+function getEstadoEfectivo(empresa: Empresa): "ACTIVA" | "INACTIVA" {
+  if (empresa.fechaFinRelacion) {
+    const today = new Date().toISOString().split("T")[0];
+    if (empresa.fechaFinRelacion <= today) return "INACTIVA";
+  }
+  return empresa.estado;
+}
+
 // ── Components ─────────────────────────────────────────────────────────────────
 
 function EmpresaCard({ empresa }: { empresa: Empresa }) {
@@ -333,7 +341,7 @@ export default function EmpresasPage() {
       e.nit.includes(search) ||
       e.representante.toLowerCase().includes(search.toLowerCase());
     const matchEstado =
-      estadoFilter === "todos" || e.estado === estadoFilter;
+      estadoFilter === "todos" || getEstadoEfectivo(e) === estadoFilter;
     const matchCiudad =
       ciudadFilter === "Todas" || e.ciudad === ciudadFilter;
     return matchSearch && matchEstado && matchCiudad;
@@ -342,8 +350,8 @@ export default function EmpresasPage() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const activas = empresas.filter((e) => e.estado === "ACTIVA").length;
-  const inactivas = empresas.filter((e) => e.estado === "INACTIVA").length;
+  const activas = empresas.filter((e) => getEstadoEfectivo(e) === "ACTIVA").length;
+  const inactivas = empresas.filter((e) => getEstadoEfectivo(e) === "INACTIVA").length;
 
   return (
     <div className="space-y-6">
@@ -540,10 +548,10 @@ export default function EmpresasPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <Badge
-                        variant={empresa.estado === "ACTIVA" ? "success" : "secondary"}
+                        variant={getEstadoEfectivo(empresa) === "ACTIVA" ? "success" : "secondary"}
                         className="text-xs"
                       >
-                        {empresa.estado}
+                        {getEstadoEfectivo(empresa)}
                       </Badge>
                     </td>
                     <td className="px-4 py-4 text-xs text-gray-600">
