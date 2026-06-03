@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Plus,
   Download,
@@ -198,8 +198,19 @@ function StatPill({ label, count, color, icon }: StatPillProps) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function CalendarioPage() {
-  const [obligaciones, setObligaciones] =
-    useState<Obligacion[]>(OBLIGACIONES_MOCK);
+  const [obligaciones, setObligaciones] = useState<Obligacion[]>(() => {
+    if (typeof window === "undefined") return OBLIGACIONES_MOCK;
+    try {
+      const stored = localStorage.getItem("calendario-obligaciones");
+      return stored ? (JSON.parse(stored) as Obligacion[]) : OBLIGACIONES_MOCK;
+    } catch {
+      return OBLIGACIONES_MOCK;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("calendario-obligaciones", JSON.stringify(obligaciones));
+  }, [obligaciones]);
   const [search, setSearch] = useState("");
   const [filterEmpresa, setFilterEmpresa] = useState("TODAS");
   const [filterTipo, setFilterTipo] = useState("TODOS");
