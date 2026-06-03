@@ -185,6 +185,7 @@ export default function ObligacionFormModal({
       estado: form.estado,
       responsable: form.responsable.trim(),
       observaciones: form.observaciones.trim() || undefined,
+      contabilizado: editingObligacion?.contabilizado ?? false,
     };
 
     setTimeout(() => {
