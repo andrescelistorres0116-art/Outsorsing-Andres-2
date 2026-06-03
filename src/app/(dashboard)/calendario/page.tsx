@@ -339,6 +339,12 @@ export default function CalendarioPage() {
     );
   }
 
+  function handleContabilizadoChange(id: string, value: boolean) {
+    setObligaciones((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, contabilizado: value } : o))
+    );
+  }
+
   function handleSave(obligacion: Obligacion) {
     setObligaciones((prev) => {
       const idx = prev.findIndex((o) => o.id === obligacion.id);
@@ -378,6 +384,7 @@ export default function CalendarioPage() {
       "Fecha Vencimiento",
       "Días",
       "Estado",
+      "Contabilizado",
       "Responsable",
       "Observaciones",
     ];
@@ -391,6 +398,7 @@ export default function CalendarioPage() {
       formatDate(o.fechaVencimiento),
       getDaysUntil(o.fechaVencimiento),
       ESTADOS_LABELS[o.estado],
+      o.contabilizado ? "Sí" : "No",
       o.responsable,
       o.observaciones || "",
     ]);
@@ -643,6 +651,7 @@ export default function CalendarioPage() {
                       "Vencimiento",
                       "Días",
                       "Estado",
+                      "Contabilizado",
                       "Responsable",
                       "",
                     ].map((col) => (
@@ -659,7 +668,7 @@ export default function CalendarioPage() {
                   {sorted.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={12}
                         className="px-4 py-12 text-center text-sm text-gray-400"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -754,6 +763,34 @@ export default function CalendarioPage() {
                                 handleEstadoChange(o.id, newEstado)
                               }
                             />
+                          </td>
+
+                          {/* Contabilizado */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, true); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
+                                  o.contabilizado
+                                    ? "bg-green-500 text-white border-green-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-green-400 hover:text-green-600"
+                                )}
+                              >
+                                Sí
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, false); }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
+                                  !o.contabilizado
+                                    ? "bg-gray-500 text-white border-gray-500"
+                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                )}
+                              >
+                                No
+                              </button>
+                            </div>
                           </td>
 
                           {/* Responsable */}
@@ -917,6 +954,7 @@ export default function CalendarioPage() {
                                 "Vencimiento",
                                 "Días",
                                 "Estado",
+                                "Contabilizado",
                                 "Responsable",
                                 "",
                               ].map((col) => (
@@ -981,6 +1019,32 @@ export default function CalendarioPage() {
                                         handleEstadoChange(o.id, newEstado)
                                       }
                                     />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, true); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
+                                          o.contabilizado
+                                            ? "bg-green-500 text-white border-green-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-green-400 hover:text-green-600"
+                                        )}
+                                      >
+                                        Sí
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, false); }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
+                                          !o.contabilizado
+                                            ? "bg-gray-500 text-white border-gray-500"
+                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                        )}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[120px] truncate">
                                     {o.responsable}
