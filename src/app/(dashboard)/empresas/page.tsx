@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -151,7 +151,19 @@ const VALUE_TO_REGIMEN: Record<string, string> = {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
-  const [empresas, setEmpresas] = useState<Empresa[]>(EMPRESAS_MOCK);
+  const [empresas, setEmpresas] = useState<Empresa[]>(() => {
+    if (typeof window === "undefined") return EMPRESAS_MOCK;
+    try {
+      const stored = localStorage.getItem("empresas-data");
+      return stored ? (JSON.parse(stored) as Empresa[]) : EMPRESAS_MOCK;
+    } catch {
+      return EMPRESAS_MOCK;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("empresas-data", JSON.stringify(empresas));
+  }, [empresas]);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("todos");
