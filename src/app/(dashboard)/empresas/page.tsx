@@ -294,19 +294,40 @@ function EmpresaCard({ empresa }: { empresa: Empresa }) {
   );
 }
 
+// ── Regimen mapping helpers ────────────────────────────────────────────────────
+
+const REGIMEN_TO_VALUE: Record<string, string> = {
+  "Régimen Ordinario": "ordinario",
+  "SIMPLE": "simple",
+  "Régimen Simple": "simple",
+  "Gran Contribuyente": "gran_contribuyente",
+  "Régimen Especial": "especial",
+  "No Contribuyente": "no_contribuyente",
+};
+
+const VALUE_TO_REGIMEN: Record<string, string> = {
+  ordinario: "Régimen Ordinario",
+  simple: "SIMPLE",
+  gran_contribuyente: "Gran Contribuyente",
+  especial: "Régimen Especial",
+  no_contribuyente: "No Contribuyente",
+};
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
+  const [empresas, setEmpresas] = useState<Empresa[]>(EMPRESAS);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("todos");
   const [ciudadFilter, setCiudadFilter] = useState("Todas");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
 
   const PER_PAGE = 8;
 
-  const filtered = EMPRESAS.filter((e) => {
+  const filtered = empresas.filter((e) => {
     const matchSearch =
       e.razonSocial.toLowerCase().includes(search.toLowerCase()) ||
       e.nit.includes(search) ||
@@ -321,8 +342,8 @@ export default function EmpresasPage() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const activas = EMPRESAS.filter((e) => e.estado === "ACTIVA").length;
-  const inactivas = EMPRESAS.filter((e) => e.estado === "INACTIVA").length;
+  const activas = empresas.filter((e) => e.estado === "ACTIVA").length;
+  const inactivas = empresas.filter((e) => e.estado === "INACTIVA").length;
 
   return (
     <div className="space-y-6">
@@ -346,7 +367,7 @@ export default function EmpresasPage() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Empresas", value: EMPRESAS.length, color: "text-gray-900", bg: "bg-white" },
+          { label: "Total Empresas", value: empresas.length, color: "text-gray-900", bg: "bg-white" },
           { label: "Activas", value: activas, color: "text-green-700", bg: "bg-green-50" },
           { label: "Inactivas", value: inactivas, color: "text-gray-500", bg: "bg-white" },
         ].map((s) => (
@@ -545,7 +566,11 @@ export default function EmpresasPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                         </Link>
-                        <button className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Editar">
+                        <button
+                          onClick={() => { setEditingEmpresa(empresa); setModalOpen(true); }}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          title="Editar"
+                        >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Más opciones">
@@ -639,7 +664,45 @@ export default function EmpresasPage() {
       )}
 
       {/* Modal */}
-      <EmpresaFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <EmpresaFormModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingEmpresa(null); }}
+        mode={editingEmpresa ? "edit" : "create"}
+        initialData={editingEmpresa ? {
+          razonSocial: editingEmpresa.razonSocial,
+          nit: editingEmpresa.nit.split("-")[0] ?? editingEmpresa.nit,
+          dv: editingEmpresa.nit.split("-")[1] ?? "",
+          ciudad: editingEmpresa.ciudad,
+          departamento: editingEmpresa.departamento,
+          telefono: editingEmpresa.telefono,
+          correo: editingEmpresa.correo,
+          estado: editingEmpresa.estado,
+          repNombre: editingEmpresa.representante,
+          regimen: REGIMEN_TO_VALUE[editingEmpresa.regimen] ?? "",
+          fechaInicioRelacion: editingEmpresa.fechaInicioRelacion,
+          fechaFinRelacion: editingEmpresa.fechaFinRelacion ?? "",
+        } : undefined}
+        onSave={(data) => {
+          if (editingEmpresa) {
+            setEmpresas((prev) => prev.map((e) =>
+              e.id === editingEmpresa.id ? {
+                ...e,
+                razonSocial: data.razonSocial,
+                nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
+                ciudad: data.ciudad,
+                departamento: data.departamento,
+                telefono: data.telefono,
+                correo: data.correo,
+                estado: data.estado as "ACTIVA" | "INACTIVA",
+                representante: data.repNombre,
+                regimen: VALUE_TO_REGIMEN[data.regimen] ?? data.regimen,
+                fechaInicioRelacion: data.fechaInicioRelacion,
+                fechaFinRelacion: data.fechaFinRelacion || undefined,
+              } : e
+            ));
+          }
+        }}
+      />
     </div>
   );
 }

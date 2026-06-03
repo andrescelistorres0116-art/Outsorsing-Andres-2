@@ -617,6 +617,7 @@ interface EmpresaFormModalProps {
   onClose: () => void;
   initialData?: Partial<FormData>;
   mode?: "create" | "edit";
+  onSave?: (data: FormData) => void;
 }
 
 export default function EmpresaFormModal({
@@ -624,6 +625,7 @@ export default function EmpresaFormModal({
   onClose,
   initialData,
   mode = "create",
+  onSave,
 }: EmpresaFormModalProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -667,8 +669,7 @@ export default function EmpresaFormModal({
       setErrors(stepErrors);
       return;
     }
-    // Here you'd call an API / server action
-    console.log("Saving empresa:", formData);
+    onSave?.(formData);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
