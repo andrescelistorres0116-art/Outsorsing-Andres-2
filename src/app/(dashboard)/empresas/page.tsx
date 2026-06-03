@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCircle2,
+  Trash2,
+  PowerOff,
+  Power,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -347,6 +350,7 @@ export default function EmpresasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalKey, setModalKey] = useState(0);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
 
   function openCreate() {
     setEditingEmpresa(null);
@@ -358,6 +362,21 @@ export default function EmpresasPage() {
     setEditingEmpresa(empresa);
     setModalKey((k) => k + 1);
     setModalOpen(true);
+  }
+
+  function handleDelete(id: number) {
+    setEmpresas((prev) => prev.filter((e) => e.id !== id));
+    setMenuOpenId(null);
+  }
+
+  function handleToggleEstado(empresa: Empresa) {
+    const efectivo = getEstadoEfectivo(empresa);
+    setEmpresas((prev) => prev.map((e) =>
+      e.id === empresa.id
+        ? { ...e, estado: efectivo === "ACTIVA" ? "INACTIVA" : "ACTIVA", fechaFinRelacion: undefined }
+        : e
+    ));
+    setMenuOpenId(null);
   }
 
   const PER_PAGE = 8;
@@ -608,9 +627,47 @@ export default function EmpresasPage() {
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Más opciones">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        {/* Three-dot dropdown */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setMenuOpenId(menuOpenId === empresa.id ? null : empresa.id)}
+                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            title="Más opciones"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                          {menuOpenId === empresa.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                              <div className="absolute right-0 top-8 z-20 w-48 bg-white border border-gray-200 rounded-xl shadow-lg shadow-black/10 py-1 overflow-hidden">
+                                <button
+                                  onClick={() => handleToggleEstado(empresa)}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  {getEstadoEfectivo(empresa) === "ACTIVA" ? (
+                                    <>
+                                      <PowerOff className="w-3.5 h-3.5 text-orange-500" />
+                                      Marcar como Inactiva
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Power className="w-3.5 h-3.5 text-green-600" />
+                                      Marcar como Activa
+                                    </>
+                                  )}
+                                </button>
+                                <div className="my-1 border-t border-gray-100" />
+                                <button
+                                  onClick={() => handleDelete(empresa.id)}
+                                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Eliminar empresa
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
