@@ -55,15 +55,6 @@ const RESPONSABLES_FILTER = [
   "Luisa Herrera",
 ];
 
-const ESTADOS_FILTER: { value: EstadoObligacion | "TODOS"; label: string }[] = [
-  { value: "TODOS", label: "Todos los estados" },
-  { value: "PENDIENTE", label: "Pendiente" },
-  { value: "EN_PROCESO", label: "En Proceso" },
-  { value: "PRESENTADO", label: "Presentado" },
-  { value: "PAGADO", label: "Pagado" },
-  { value: "VENCIDO", label: "Vencido" },
-];
-
 const MONTHS = [
   { value: "0", label: "Enero" },
   { value: "1", label: "Febrero" },
@@ -211,9 +202,6 @@ export default function CalendarioPage() {
     useState<Obligacion[]>(OBLIGACIONES_MOCK);
   const [search, setSearch] = useState("");
   const [filterEmpresa, setFilterEmpresa] = useState("TODAS");
-  const [filterEstado, setFilterEstado] = useState<
-    EstadoObligacion | "TODOS"
-  >("TODOS");
   const [filterTipo, setFilterTipo] = useState("TODOS");
   const [filterResponsable, setFilterResponsable] = useState("TODOS");
   const [filterMes, setFilterMes] = useState("TODOS");
@@ -261,7 +249,6 @@ export default function CalendarioPage() {
         return false;
       if (filterEmpresa !== "TODAS" && o.empresa !== filterEmpresa)
         return false;
-      if (filterEstado !== "TODOS" && o.estado !== filterEstado) return false;
       if (filterTipo !== "TODOS" && o.tipoObligacion !== filterTipo)
         return false;
       if (filterResponsable !== "TODOS" && o.responsable !== filterResponsable)
@@ -280,7 +267,6 @@ export default function CalendarioPage() {
     obligaciones,
     search,
     filterEmpresa,
-    filterEstado,
     filterTipo,
     filterResponsable,
     filterMes,
@@ -317,7 +303,6 @@ export default function CalendarioPage() {
   const hasActiveFilters =
     search ||
     filterEmpresa !== "TODAS" ||
-    filterEstado !== "TODOS" ||
     filterTipo !== "TODOS" ||
     filterResponsable !== "TODOS" ||
     filterMes !== "TODOS" ||
@@ -326,7 +311,6 @@ export default function CalendarioPage() {
   function clearFilters() {
     setSearch("");
     setFilterEmpresa("TODAS");
-    setFilterEstado("TODOS");
     setFilterTipo("TODOS");
     setFilterResponsable("TODOS");
     setFilterMes("TODOS");
@@ -521,25 +505,6 @@ export default function CalendarioPage() {
                     />
                     {e.nombre}
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Estado */}
-          <Select
-            value={filterEstado}
-            onValueChange={(v) =>
-              setFilterEstado(v as EstadoObligacion | "TODOS")
-            }
-          >
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              {ESTADOS_FILTER.map((e) => (
-                <SelectItem key={e.value} value={e.value}>
-                  {e.label}
                 </SelectItem>
               ))}
             </SelectContent>
