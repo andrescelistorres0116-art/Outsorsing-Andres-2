@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     ])
 
     // Return masked password indicator in list
-    const masked = accesos.map((a) => ({
+    const masked = accesos.map((a: any) => ({
       ...a,
       contrasena: "••••••",
     }))
