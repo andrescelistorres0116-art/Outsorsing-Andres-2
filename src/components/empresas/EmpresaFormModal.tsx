@@ -59,6 +59,9 @@ interface FormData {
   softwareContable: string;
   tipoNomina: string;
   periodicidadNomina: string;
+  // Relación
+  fechaInicioRelacion: string;
+  fechaFinRelacion: string;
 }
 
 interface Errors {
@@ -89,6 +92,8 @@ const INITIAL_FORM: FormData = {
   softwareContable: "",
   tipoNomina: "",
   periodicidadNomina: "",
+  fechaInicioRelacion: "",
+  fechaFinRelacion: "",
 };
 
 // ── Step definitions ───────────────────────────────────────────────────────────
@@ -132,6 +137,10 @@ function validateStep(step: number, data: FormData): Errors {
     if (!data.departamento.trim()) errors.departamento = "Campo requerido";
     if (data.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)) {
       errors.correo = "Correo inválido";
+    }
+    if (!data.fechaInicioRelacion) errors.fechaInicioRelacion = "Campo requerido";
+    if (data.fechaFinRelacion && data.fechaInicioRelacion && data.fechaFinRelacion < data.fechaInicioRelacion) {
+      errors.fechaFinRelacion = "Debe ser posterior a la fecha de inicio";
     }
   }
   if (step === 2) {
@@ -335,6 +344,25 @@ function Step1({
             <SelectItem value="INACTIVA">Inactiva</SelectItem>
           </SelectContent>
         </Select>
+      </Field>
+      <Field label="Fecha Inicio Relación" id="fechaInicioRelacion" error={errors.fechaInicioRelacion} required>
+        <Input
+          id="fechaInicioRelacion"
+          type="date"
+          value={data.fechaInicioRelacion}
+          onChange={(e) => onChange("fechaInicioRelacion", e.target.value)}
+          className={errors.fechaInicioRelacion ? "border-red-400" : ""}
+        />
+      </Field>
+      <Field label="Fecha Fin Relación" id="fechaFinRelacion" error={errors.fechaFinRelacion}>
+        <Input
+          id="fechaFinRelacion"
+          type="date"
+          value={data.fechaFinRelacion}
+          onChange={(e) => onChange("fechaFinRelacion", e.target.value)}
+          className={errors.fechaFinRelacion ? "border-red-400" : ""}
+        />
+        <p className="text-[11px] text-gray-400 mt-0.5">Opcional — dejar vacío si la relación sigue activa</p>
       </Field>
     </div>
   );

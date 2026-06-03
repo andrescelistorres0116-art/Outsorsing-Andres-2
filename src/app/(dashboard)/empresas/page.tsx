@@ -44,6 +44,8 @@ interface Empresa {
   representante: string;
   telefono: string;
   correo: string;
+  fechaInicioRelacion: string;
+  fechaFinRelacion?: string;
 }
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Carlos Ramírez",
     telefono: "601 320 4500",
     correo: "contabilidad@xtours.co",
+    fechaInicioRelacion: "2020-01-15",
   },
   {
     id: 2,
@@ -72,6 +75,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Diana Zaraza",
     telefono: "601 298 7600",
     correo: "diana@diazar.com",
+    fechaInicioRelacion: "2019-06-01",
   },
   {
     id: 3,
@@ -84,6 +88,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Jorge Hilo",
     telefono: "604 444 3200",
     correo: "info@300hilos.com",
+    fechaInicioRelacion: "2021-03-10",
   },
   {
     id: 4,
@@ -96,6 +101,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Ana Herrera",
     telefono: "605 360 1122",
     correo: "administracion@textilesnorte.co",
+    fechaInicioRelacion: "2020-08-20",
   },
   {
     id: 5,
@@ -108,6 +114,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Roberto Castillo",
     telefono: "601 625 8800",
     correo: "rcastillo@inversionescastillo.com",
+    fechaInicioRelacion: "2018-11-05",
   },
   {
     id: 6,
@@ -120,6 +127,7 @@ const EMPRESAS: Empresa[] = [
     representante: "María Torres",
     telefono: "602 884 5600",
     correo: "mtorres@comercialtorres.co",
+    fechaInicioRelacion: "2022-02-14",
   },
   {
     id: 7,
@@ -132,6 +140,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Luis Andrade",
     telefono: "607 697 4400",
     correo: "logistica@andinasas.co",
+    fechaInicioRelacion: "2021-09-01",
   },
   {
     id: 8,
@@ -144,6 +153,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Felipe Cima",
     telefono: "604 311 9900",
     correo: "fcima@constructoracima.com",
+    fechaInicioRelacion: "2023-04-15",
   },
   {
     id: 9,
@@ -156,6 +166,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Sandra Prado",
     telefono: "602 552 7700",
     correo: "sprado@inmopacifico.com",
+    fechaInicioRelacion: "2022-07-22",
   },
   {
     id: 10,
@@ -168,6 +179,7 @@ const EMPRESAS: Empresa[] = [
     representante: "Andrés Morales",
     telefono: "601 789 3300",
     correo: "amorales@consdig.co",
+    fechaInicioRelacion: "2020-05-10",
   },
   {
     id: 11,
@@ -180,6 +192,8 @@ const EMPRESAS: Empresa[] = [
     representante: "Patricia Vega",
     telefono: "605 419 6600",
     correo: "pvega@servilogistica.co",
+    fechaInicioRelacion: "2019-03-15",
+    fechaFinRelacion: "2024-12-31",
   },
   {
     id: 12,
@@ -192,10 +206,17 @@ const EMPRESAS: Empresa[] = [
     representante: "Jaime Salcedo",
     telefono: "608 662 1800",
     correo: "jsalcedo@agrosanpablo.co",
+    fechaInicioRelacion: "2020-10-01",
+    fechaFinRelacion: "2025-06-30",
   },
 ];
 
 const CIUDADES = ["Todas", "Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Villavicencio"];
+
+function fmtDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 // ── Components ─────────────────────────────────────────────────────────────────
 
@@ -452,6 +473,12 @@ export default function EmpresasPage() {
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Representante
                   </th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Inicio Relación
+                  </th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Fin Relación
+                  </th>
                   <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -500,6 +527,16 @@ export default function EmpresasPage() {
                     </td>
                     <td className="px-4 py-4 text-xs text-gray-600">
                       {empresa.representante}
+                    </td>
+                    <td className="px-4 py-4 text-xs text-gray-600 whitespace-nowrap">
+                      {fmtDate(empresa.fechaInicioRelacion)}
+                    </td>
+                    <td className="px-4 py-4 text-xs whitespace-nowrap">
+                      {empresa.fechaFinRelacion ? (
+                        <span className="text-red-500 font-medium">{fmtDate(empresa.fechaFinRelacion)}</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
