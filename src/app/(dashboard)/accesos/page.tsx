@@ -1,0 +1,671 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import {
+  ShieldCheck,
+  Plus,
+  Search,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Pencil,
+  KeyRound,
+  Building2,
+  CreditCard,
+  FileSignature,
+  Landmark,
+  ShieldAlert,
+  Briefcase,
+  Globe,
+  Tag,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import AccesoFormModal, { AccesoFormData, TipoAcceso } from "@/components/accesos/AccesoFormModal";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface Acceso {
+  id: number;
+  empresa: string;
+  tipo: TipoAcceso;
+  plataforma: string;
+  usuario: string;
+  contrasena: string;
+  correoAsociado?: string;
+  tags: string[];
+  ultimoAcceso: string;
+}
+
+// ── Mock Data ──────────────────────────────────────────────────────────────────
+
+const ACCESOS: Acceso[] = [
+  {
+    id: 1,
+    empresa: "X TOURS SAS",
+    tipo: "DIAN",
+    plataforma: "DIAN - Muisca",
+    usuario: "xtours901234@gmail.com",
+    contrasena: "Xtours#2024*",
+    correoAsociado: "xtours901234@gmail.com",
+    tags: ["principal", "declaraciones"],
+    ultimoAcceso: "2026-05-28",
+  },
+  {
+    id: 2,
+    empresa: "DIAZAR LTDA",
+    tipo: "DIAN",
+    plataforma: "DIAN - Muisca",
+    usuario: "diazar800@hotmail.com",
+    contrasena: "Diazar@800!",
+    correoAsociado: "diazar800@hotmail.com",
+    tags: ["declaraciones", "retención"],
+    ultimoAcceso: "2026-05-30",
+  },
+  {
+    id: 3,
+    empresa: "300 HILOS SAS",
+    tipo: "DIAN",
+    plataforma: "DIAN - Muisca",
+    usuario: "contabilidad@300hilos.com",
+    contrasena: "H1los#Conta24",
+    correoAsociado: "contabilidad@300hilos.com",
+    tags: ["IVA", "renta"],
+    ultimoAcceso: "2026-06-01",
+  },
+  {
+    id: 4,
+    empresa: "DIAZAR LTDA",
+    tipo: "HACIENDA",
+    plataforma: "Secretaría Hacienda Bogotá",
+    usuario: "DIAZAR123",
+    contrasena: "Hac!enda2024",
+    tags: ["impuesto-industria", "bogotá"],
+    ultimoAcceso: "2026-05-15",
+  },
+  {
+    id: 5,
+    empresa: "X TOURS SAS",
+    tipo: "PARAFISCAL",
+    plataforma: "MiPlanilla",
+    usuario: "xtours_planilla",
+    contrasena: "Plan!lla#X24",
+    correoAsociado: "nomina@xtours.co",
+    tags: ["parafiscales", "aportes"],
+    ultimoAcceso: "2026-06-01",
+  },
+  {
+    id: 6,
+    empresa: "300 HILOS SAS",
+    tipo: "PARAFISCAL",
+    plataforma: "Aportes en Línea",
+    usuario: "300hilos_apl",
+    contrasena: "APL300H!los",
+    correoAsociado: "rrhh@300hilos.com",
+    tags: ["parafiscales"],
+    ultimoAcceso: "2026-05-31",
+  },
+  {
+    id: 7,
+    empresa: "X TOURS SAS",
+    tipo: "BANCO",
+    plataforma: "Banco de Bogotá",
+    usuario: "901234567",
+    contrasena: "BogXt0urs#24",
+    tags: ["banco", "pagos"],
+    ultimoAcceso: "2026-06-02",
+  },
+  {
+    id: 8,
+    empresa: "DIAZAR LTDA",
+    tipo: "BANCO",
+    plataforma: "Davivienda Empresarial",
+    usuario: "8001234560",
+    contrasena: "Dav!viend@800",
+    tags: ["banco", "nomina"],
+    ultimoAcceso: "2026-06-02",
+  },
+  {
+    id: 9,
+    empresa: "300 HILOS SAS",
+    tipo: "CAMARA",
+    plataforma: "Cámara de Comercio Bogotá",
+    usuario: "ccb.300hilos@gmail.com",
+    contrasena: "CCB300H!24",
+    correoAsociado: "ccb.300hilos@gmail.com",
+    tags: ["registro-mercantil"],
+    ultimoAcceso: "2026-04-10",
+  },
+  {
+    id: 10,
+    empresa: "X TOURS SAS",
+    tipo: "SOFTWARE_CONTABLE",
+    plataforma: "Siigo",
+    usuario: "xtours.siigo",
+    contrasena: "S!igo#Xtours24",
+    correoAsociado: "contabilidad@xtours.co",
+    tags: ["contabilidad", "software"],
+    ultimoAcceso: "2026-06-03",
+  },
+  {
+    id: 11,
+    empresa: "300 HILOS SAS",
+    tipo: "SOFTWARE_CONTABLE",
+    plataforma: "Siigo",
+    usuario: "hilos.siigo",
+    contrasena: "S!igo#300H24",
+    correoAsociado: "info@300hilos.com",
+    tags: ["contabilidad", "software"],
+    ultimoAcceso: "2026-06-03",
+  },
+  {
+    id: 12,
+    empresa: "DIAZAR LTDA",
+    tipo: "UGPP",
+    plataforma: "UGPP - Portal",
+    usuario: "ugpp.diazar@hotmail.com",
+    contrasena: "UGPP@D1azar",
+    correoAsociado: "ugpp.diazar@hotmail.com",
+    tags: ["UGPP", "verificación"],
+    ultimoAcceso: "2026-03-22",
+  },
+  {
+    id: 13,
+    empresa: "X TOURS SAS",
+    tipo: "FIRMA_DIGITAL",
+    plataforma: "Certicámara",
+    usuario: "xtours.firma@gmail.com",
+    contrasena: "F1rma#Cert24",
+    correoAsociado: "xtours.firma@gmail.com",
+    tags: ["firma", "certificado"],
+    ultimoAcceso: "2026-05-05",
+  },
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const TIPO_CONFIG: Record<
+  TipoAcceso,
+  { label: string; color: string; border: string; bg: string; badgeClass: string; Icon: React.ElementType }
+> = {
+  DIAN: {
+    label: "DIAN",
+    color: "text-red-700",
+    border: "border-red-200",
+    bg: "bg-red-50",
+    badgeClass: "bg-red-100 text-red-700 border-red-200",
+    Icon: KeyRound,
+  },
+  HACIENDA: {
+    label: "Hacienda",
+    color: "text-orange-700",
+    border: "border-orange-200",
+    bg: "bg-orange-50",
+    badgeClass: "bg-orange-100 text-orange-700 border-orange-200",
+    Icon: Landmark,
+  },
+  PARAFISCAL: {
+    label: "Parafiscal",
+    color: "text-purple-700",
+    border: "border-purple-200",
+    bg: "bg-purple-50",
+    badgeClass: "bg-purple-100 text-purple-700 border-purple-200",
+    Icon: ShieldAlert,
+  },
+  BANCO: {
+    label: "Banco",
+    color: "text-blue-700",
+    border: "border-blue-200",
+    bg: "bg-blue-50",
+    badgeClass: "bg-blue-100 text-blue-700 border-blue-200",
+    Icon: CreditCard,
+  },
+  CAMARA: {
+    label: "Cámara",
+    color: "text-teal-700",
+    border: "border-teal-200",
+    bg: "bg-teal-50",
+    badgeClass: "bg-teal-100 text-teal-700 border-teal-200",
+    Icon: Building2,
+  },
+  UGPP: {
+    label: "UGPP",
+    color: "text-amber-700",
+    border: "border-amber-200",
+    bg: "bg-amber-50",
+    badgeClass: "bg-amber-100 text-amber-700 border-amber-200",
+    Icon: ShieldCheck,
+  },
+  SUPERSOCIEDADES: {
+    label: "Supersociedades",
+    color: "text-indigo-700",
+    border: "border-indigo-200",
+    bg: "bg-indigo-50",
+    badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    Icon: Briefcase,
+  },
+  SOFTWARE_CONTABLE: {
+    label: "Software Cont.",
+    color: "text-green-700",
+    border: "border-green-200",
+    bg: "bg-green-50",
+    badgeClass: "bg-green-100 text-green-700 border-green-200",
+    Icon: Globe,
+  },
+  FACTURACION: {
+    label: "Facturación",
+    color: "text-cyan-700",
+    border: "border-cyan-200",
+    bg: "bg-cyan-50",
+    badgeClass: "bg-cyan-100 text-cyan-700 border-cyan-200",
+    Icon: FileSignature,
+  },
+  FIRMA_DIGITAL: {
+    label: "Firma Digital",
+    color: "text-violet-700",
+    border: "border-violet-200",
+    bg: "bg-violet-50",
+    badgeClass: "bg-violet-100 text-violet-700 border-violet-200",
+    Icon: FileSignature,
+  },
+  OTRO: {
+    label: "Otro",
+    color: "text-gray-600",
+    border: "border-gray-200",
+    bg: "bg-gray-50",
+    badgeClass: "bg-gray-100 text-gray-600 border-gray-200",
+    Icon: Globe,
+  },
+};
+
+function formatDate(dateStr: string) {
+  const [y, m, d] = dateStr.split("-");
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${d} ${months[parseInt(m) - 1]} ${y}`;
+}
+
+// ── Credential Card ────────────────────────────────────────────────────────────
+
+function AccesoCard({
+  acceso,
+  onEdit,
+}: {
+  acceso: Acceso;
+  onEdit: (a: Acceso) => void;
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const cfg = TIPO_CONFIG[acceso.tipo];
+  const Icon = cfg.Icon;
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(acceso.contrasena);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback for environments without clipboard API
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [acceso.contrasena]);
+
+  return (
+    <Card
+      className={`border-l-4 ${cfg.border} hover:shadow-md transition-all duration-200 flex flex-col`}
+    >
+      <CardContent className="p-4 flex flex-col gap-3 flex-1">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${cfg.bg} shrink-0`}>
+              <Icon className={`w-5 h-5 ${cfg.color}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900 leading-tight truncate">
+                {acceso.plataforma}
+              </p>
+              <p className="text-xs text-gray-400 truncate mt-0.5">{acceso.empresa}</p>
+            </div>
+          </div>
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold shrink-0 ${cfg.badgeClass}`}
+          >
+            {cfg.label}
+          </span>
+        </div>
+
+        {/* Credentials */}
+        <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Usuario:</span>
+            <span className="text-xs text-gray-800 font-mono truncate flex-1">
+              {acceso.usuario}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Contraseña:</span>
+            <span className="text-xs text-gray-800 font-mono flex-1 truncate">
+              {showPassword ? acceso.contrasena : "●●●●●●●●"}
+            </span>
+            <button
+              onClick={() => setShowPassword((v) => !v)}
+              className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors shrink-0"
+              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-3.5 h-3.5" />
+              ) : (
+                <Eye className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Tags */}
+        {acceso.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {acceso.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200"
+              >
+                <Tag className="w-2.5 h-2.5" />
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-auto">
+          <span className="text-xs text-gray-400">
+            Último acceso: {formatDate(acceso.ultimoAcceso)}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit(acceso)}
+              className="h-7 px-2 text-xs gap-1 text-gray-500 hover:text-blue-600 hover:border-blue-300"
+            >
+              <Pencil className="w-3 h-3" />
+              Editar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopy}
+              className={`h-7 px-2 text-xs gap-1 transition-all ${
+                copied
+                  ? "border-green-400 text-green-600 bg-green-50"
+                  : "text-gray-500 hover:text-blue-600 hover:border-blue-300"
+              }`}
+              title="Copiar contraseña"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  Copiar
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
+
+export default function AccesosPage() {
+  const [accesos, setAccesos] = useState<Acceso[]>(ACCESOS);
+  const [search, setSearch] = useState("");
+  const [empresaFilter, setEmpresaFilter] = useState("todas");
+  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState<Partial<AccesoFormData> | undefined>();
+  const [editMode, setEditMode] = useState<"create" | "edit">("create");
+  const [editId, setEditId] = useState<number | null>(null);
+
+  const empresas = Array.from(new Set(ACCESOS.map((a) => a.empresa))).sort();
+
+  const filtered = accesos.filter((a) => {
+    const q = search.toLowerCase();
+    const matchSearch =
+      a.plataforma.toLowerCase().includes(q) ||
+      a.empresa.toLowerCase().includes(q) ||
+      a.usuario.toLowerCase().includes(q) ||
+      a.tags.some((t) => t.toLowerCase().includes(q));
+    const matchEmpresa = empresaFilter === "todas" || a.empresa === empresaFilter;
+    const matchTipo = tipoFilter === "todos" || a.tipo === tipoFilter;
+    return matchSearch && matchEmpresa && matchTipo;
+  });
+
+  const handleOpenCreate = () => {
+    setEditData(undefined);
+    setEditMode("create");
+    setEditId(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = (a: Acceso) => {
+    setEditData({
+      empresa: a.empresa,
+      tipo: a.tipo,
+      plataforma: a.plataforma,
+      usuario: a.usuario,
+      contrasena: a.contrasena,
+      confirmarContrasena: a.contrasena,
+      correoAsociado: a.correoAsociado ?? "",
+      tags: a.tags,
+    });
+    setEditMode("edit");
+    setEditId(a.id);
+    setModalOpen(true);
+  };
+
+  const handleSave = (data: AccesoFormData) => {
+    if (editMode === "create") {
+      const newAcceso: Acceso = {
+        id: Date.now(),
+        empresa: data.empresa,
+        tipo: data.tipo as TipoAcceso,
+        plataforma: data.plataforma,
+        usuario: data.usuario,
+        contrasena: data.contrasena,
+        correoAsociado: data.correoAsociado || undefined,
+        tags: data.tags,
+        ultimoAcceso: new Date().toISOString().split("T")[0],
+      };
+      setAccesos((prev) => [newAcceso, ...prev]);
+    } else if (editId !== null) {
+      setAccesos((prev) =>
+        prev.map((a) =>
+          a.id === editId
+            ? {
+                ...a,
+                empresa: data.empresa,
+                tipo: data.tipo as TipoAcceso,
+                plataforma: data.plataforma,
+                usuario: data.usuario,
+                contrasena: data.contrasena,
+                correoAsociado: data.correoAsociado || undefined,
+                tags: data.tags,
+              }
+            : a
+        )
+      );
+    }
+    setModalOpen(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/25">
+            <ShieldCheck className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Directorio de Accesos</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Bóveda segura de credenciales para todas las plataformas
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={handleOpenCreate}
+          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Agregar Acceso
+        </Button>
+      </div>
+
+      {/* Security Banner */}
+      <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+        <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
+        <p className="text-sm text-blue-700">
+          <span className="font-semibold">Acceso seguro:</span> Las contraseñas están cifradas.
+          Solo usuarios autorizados pueden ver las contraseñas.
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Accesos", value: accesos.length, color: "text-gray-900", bg: "bg-white" },
+          {
+            label: "DIAN",
+            value: accesos.filter((a) => a.tipo === "DIAN").length,
+            color: "text-red-700",
+            bg: "bg-red-50",
+          },
+          {
+            label: "Bancos",
+            value: accesos.filter((a) => a.tipo === "BANCO").length,
+            color: "text-blue-700",
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Parafiscales",
+            value: accesos.filter((a) => a.tipo === "PARAFISCAL").length,
+            color: "text-purple-700",
+            bg: "bg-purple-50",
+          },
+        ].map((s) => (
+          <Card key={s.label} className={`${s.bg} border`}>
+            <CardContent className="p-4">
+              <p className="text-xs font-medium text-gray-500">{s.label}</p>
+              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Search & Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Buscar plataforma, empresa, usuario..."
+                className="pl-9 h-9 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Empresa filter */}
+            <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
+              <SelectTrigger className="w-44 h-9 text-sm">
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las empresas</SelectItem>
+                {empresas.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Tipo filter */}
+            <Select value={tipoFilter} onValueChange={setTipoFilter}>
+              <SelectTrigger className="w-44 h-9 text-sm">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los tipos</SelectItem>
+                <SelectItem value="DIAN">DIAN</SelectItem>
+                <SelectItem value="HACIENDA">Hacienda</SelectItem>
+                <SelectItem value="PARAFISCAL">Parafiscal</SelectItem>
+                <SelectItem value="BANCO">Banco</SelectItem>
+                <SelectItem value="CAMARA">Cámara de Comercio</SelectItem>
+                <SelectItem value="UGPP">UGPP</SelectItem>
+                <SelectItem value="SUPERSOCIEDADES">Supersociedades</SelectItem>
+                <SelectItem value="SOFTWARE_CONTABLE">Software Contable</SelectItem>
+                <SelectItem value="FACTURACION">Facturación</SelectItem>
+                <SelectItem value="FIRMA_DIGITAL">Firma Digital</SelectItem>
+                <SelectItem value="OTRO">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex-1 hidden sm:block" />
+
+            <p className="text-sm text-gray-500 shrink-0">
+              <span className="font-semibold text-gray-900">{filtered.length}</span> acceso
+              {filtered.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <KeyRound className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No se encontraron accesos</p>
+          <p className="text-gray-400 text-sm mt-1">Intenta con otros filtros o agrega uno nuevo</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((acceso) => (
+            <AccesoCard key={acceso.id} acceso={acceso} onEdit={handleEdit} />
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
+      <AccesoFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSave}
+        initialData={editData}
+        mode={editMode}
+      />
+    </div>
+  );
+}
