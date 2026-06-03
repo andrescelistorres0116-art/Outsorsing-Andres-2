@@ -765,11 +765,17 @@ export default function CalendarioPage() {
 
                           {/* Días badge */}
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <VencimientoBadge
-                              days={days}
-                              estado={o.estado}
-                              showText={true}
-                            />
+                            {o.contabilizado && o.declarado && o.pagado ? (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                ✓ Hecho
+                              </span>
+                            ) : (
+                              <VencimientoBadge
+                                days={days}
+                                estado={o.estado}
+                                showText={true}
+                              />
+                            )}
                           </td>
 
                           {/* Contabilizado */}
@@ -1070,11 +1076,17 @@ export default function CalendarioPage() {
                                     {formatDate(o.fechaVencimiento)}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    <VencimientoBadge
-                                      days={days}
-                                      estado={o.estado}
-                                      showText={true}
-                                    />
+                                    {o.contabilizado && o.declarado && o.pagado ? (
+                                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                        ✓ Hecho
+                                      </span>
+                                    ) : (
+                                      <VencimientoBadge
+                                        days={days}
+                                        estado={o.estado}
+                                        showText={true}
+                                      />
+                                    )}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
                                     <div className="flex gap-1">
