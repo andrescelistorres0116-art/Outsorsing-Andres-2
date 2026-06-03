@@ -78,10 +78,10 @@ function isActiva(emp: EmpresaMock): boolean {
 }
 
 // Generate expected rows for a given month from empresa configuration
-function generarFilas(mes: number, anio: number): ReporteNomina[] {
+function generarFilas(empresas: EmpresaMock[], mes: number, anio: number): ReporteNomina[] {
   const rows: ReporteNomina[] = [];
 
-  EMPRESAS_MOCK
+  empresas
     .filter(
       (emp) =>
         isActiva(emp) &&
@@ -188,6 +188,17 @@ function periodoLabel(p: Periodo) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NominaPage() {
+  // Read empresas from localStorage so newly created companies appear automatically
+  const [empresasData] = useState<EmpresaMock[]>(() => {
+    if (typeof window === "undefined") return EMPRESAS_MOCK;
+    try {
+      const stored = localStorage.getItem("empresas-data");
+      return stored ? (JSON.parse(stored) as EmpresaMock[]) : EMPRESAS_MOCK;
+    } catch {
+      return EMPRESAS_MOCK;
+    }
+  });
+
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -210,19 +221,20 @@ export default function NominaPage() {
 
   // Generate base rows for selected month and merge with overrides
   const reportes = useMemo<ReporteNomina[]>(() => {
-    return generarFilas(selectedMes, selectedAnio).map((row) => ({
+    return generarFilas(empresasData, selectedMes, selectedAnio).map((row) => ({
       ...row,
       ...(overrides[row.id] ?? {}),
     }));
-  }, [selectedMes, selectedAnio, overrides]);
+  }, [empresasData, selectedMes, selectedAnio, overrides]);
 
   // Empresa list from active companies with nómina configured
   const empresasConNomina = useMemo(
     () =>
-      EMPRESAS_MOCK.filter(
-        (e) => isActiva(e) && e.periodicidadNomina && e.periodicidadNomina !== "no_aplica"
-      ).map((e) => e.razonSocial).sort(),
-    []
+      empresasData
+        .filter((e) => isActiva(e) && e.periodicidadNomina && e.periodicidadNomina !== "no_aplica")
+        .map((e) => e.razonSocial)
+        .sort(),
+    [empresasData]
   );
 
   const filtered = reportes.filter((r) => {
