@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff, X, Plus } from "lucide-react";
+import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 export type TipoAcceso =
   | "DIAN"
@@ -59,11 +60,7 @@ interface AccesoFormModalProps {
   mode?: "create" | "edit";
 }
 
-const EMPRESAS = [
-  "X TOURS SAS",
-  "DIAZAR LTDA",
-  "300 HILOS SAS",
-];
+const EMPRESAS = EMPRESAS_MOCK.map((e) => e.razonSocial).sort();
 
 const TIPOS_ACCESO: { value: TipoAcceso; label: string }[] = [
   { value: "DIAN", label: "DIAN" },
