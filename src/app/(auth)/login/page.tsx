@@ -1,20 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Building2, Eye, EyeOff, Lock, Mail, TrendingUp } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Authentication logic goes here
-    setTimeout(() => setIsLoading(false), 1500);
+    setError("");
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError("Correo o contraseña incorrectos.");
+      setIsLoading(false);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (
@@ -138,6 +154,13 @@ export default function LoginPage() {
                   ¿Olvidaste tu contraseña?
                 </a>
               </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
 
               {/* Submit button */}
               <button
