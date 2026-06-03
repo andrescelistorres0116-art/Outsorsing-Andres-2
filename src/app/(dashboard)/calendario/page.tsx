@@ -206,6 +206,8 @@ export default function CalendarioPage() {
   const [filterResponsable, setFilterResponsable] = useState("TODOS");
   const [filterMes, setFilterMes] = useState("TODOS");
   const [filterAnio, setFilterAnio] = useState("TODOS");
+  const [filterFechaDesde, setFilterFechaDesde] = useState("");
+  const [filterFechaHasta, setFilterFechaHasta] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [editingObligacion, setEditingObligacion] =
@@ -261,6 +263,12 @@ export default function CalendarioPage() {
         const d = new Date(o.fechaVencimiento + "T00:00:00");
         if (d.getFullYear() !== Number(filterAnio)) return false;
       }
+      if (filterFechaDesde) {
+        if (o.fechaVencimiento < filterFechaDesde) return false;
+      }
+      if (filterFechaHasta) {
+        if (o.fechaVencimiento > filterFechaHasta) return false;
+      }
       return true;
     });
   }, [
@@ -271,6 +279,8 @@ export default function CalendarioPage() {
     filterResponsable,
     filterMes,
     filterAnio,
+    filterFechaDesde,
+    filterFechaHasta,
   ]);
 
   // Sorted: vencidas first, then by date asc
@@ -306,7 +316,9 @@ export default function CalendarioPage() {
     filterTipo !== "TODOS" ||
     filterResponsable !== "TODOS" ||
     filterMes !== "TODOS" ||
-    filterAnio !== "TODOS";
+    filterAnio !== "TODOS" ||
+    filterFechaDesde !== "" ||
+    filterFechaHasta !== "";
 
   function clearFilters() {
     setSearch("");
@@ -315,6 +327,8 @@ export default function CalendarioPage() {
     setFilterResponsable("TODOS");
     setFilterMes("TODOS");
     setFilterAnio("TODOS");
+    setFilterFechaDesde("");
+    setFilterFechaHasta("");
   }
 
   function handleEstadoChange(id: string, newEstado: EstadoObligacion) {
@@ -574,6 +588,38 @@ export default function CalendarioPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Rango de vencimiento */}
+          <div className="sm:col-span-2 flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <CalendarDays className="w-4 h-4 text-gray-400" />
+              <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Vencimiento:</span>
+            </div>
+            <Input
+              type="date"
+              value={filterFechaDesde}
+              onChange={(e) => setFilterFechaDesde(e.target.value)}
+              className="text-sm h-9"
+              title="Desde"
+            />
+            <span className="text-xs text-gray-400 shrink-0">—</span>
+            <Input
+              type="date"
+              value={filterFechaHasta}
+              onChange={(e) => setFilterFechaHasta(e.target.value)}
+              className="text-sm h-9"
+              title="Hasta"
+            />
+            {(filterFechaDesde || filterFechaHasta) && (
+              <button
+                onClick={() => { setFilterFechaDesde(""); setFilterFechaHasta(""); }}
+                className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Limpiar rango"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Clear */}
           {hasActiveFilters && (
