@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   Bell,
@@ -198,7 +199,10 @@ export default function Header() {
                   </button>
                 </div>
                 <div className="py-1 border-t border-slate-100 dark:border-slate-800">
-                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
                     <LogOut className="w-4 h-4" />
                     Cerrar Sesión
                   </button>
