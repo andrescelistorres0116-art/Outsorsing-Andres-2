@@ -5,7 +5,6 @@ import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   Bell,
-  Search,
   Sun,
   Moon,
   ChevronDown,
@@ -56,17 +55,6 @@ export default function Header() {
 
       {/* Right controls */}
       <div className="flex items-center gap-2">
-        {/* Search bar */}
-        <div className="hidden sm:flex items-center gap-2 w-64 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-text group">
-          <Search className="w-4 h-4 shrink-0 text-slate-400" />
-          <span className="text-slate-400 dark:text-slate-500 select-none">
-            Buscar empresa, obligación...
-          </span>
-          <kbd className="ml-auto hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded">
-            ⌘K
-          </kbd>
-        </div>
-
         {/* Dark mode toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
