@@ -874,14 +874,14 @@ export default function CalendarioPage() {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => handleEdit(o)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
                                 title="Editar"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDelete(o.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                 title="Eliminar"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1175,13 +1175,13 @@ export default function CalendarioPage() {
                                     <div className="flex items-center gap-1">
                                       <button
                                         onClick={() => handleEdit(o)}
-                                        className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                        className="w-6 h-6 flex items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
                                       >
                                         <Pencil className="w-3 h-3" />
                                       </button>
                                       <button
                                         onClick={() => handleDelete(o.id)}
-                                        className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                        className="w-6 h-6 flex items-center justify-center rounded text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                       >
                                         <Trash2 className="w-3 h-3" />
                                       </button>
