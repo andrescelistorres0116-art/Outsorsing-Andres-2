@@ -1,7 +1,6 @@
 import type { EmpresaMock } from "./empresas-mock";
+import { readStore } from "./persist";
 
-// Module-level store — shared across all requests in the same server process.
-// Populated when the admin visits the Empresas page; resets on server restart.
 export const empresaStore: { list: EmpresaMock[] } = {
-  list: [],
+  list: readStore("empresas", [] as EmpresaMock[]),
 };

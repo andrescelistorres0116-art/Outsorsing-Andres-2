@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AppUser } from "@/lib/app-auth";
 import { userStore } from "@/lib/user-store";
+import { writeStore } from "@/lib/persist";
 
 export function GET() {
   return NextResponse.json(userStore.list);
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email ya registrado" }, { status: 409 });
   }
   userStore.list.push(user);
+  writeStore("users", userStore.list);
   return NextResponse.json({ ok: true });
 }
 
@@ -25,6 +27,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   }
   userStore.list[idx] = updated;
+  writeStore("users", userStore.list);
   return NextResponse.json({ ok: true });
 }
 
@@ -34,5 +37,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "No se puede eliminar al admin" }, { status: 403 });
   }
   userStore.list = userStore.list.filter((u) => u.id !== id);
+  writeStore("users", userStore.list);
   return NextResponse.json({ ok: true });
 }

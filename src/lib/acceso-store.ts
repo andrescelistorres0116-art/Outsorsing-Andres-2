@@ -1,5 +1,4 @@
-// Module-level store — shared across all requests in the same server process.
-// Initialized with the default mock accesos; resets on server restart.
+import { readStore } from "./persist";
 
 export interface AccesoStored {
   id: number;
@@ -115,5 +114,5 @@ const DEFAULT_ACCESOS: AccesoStored[] = [
 ];
 
 export const accesoStore: { list: AccesoStored[] } = {
-  list: DEFAULT_ACCESOS.map((a) => ({ ...a })),
+  list: readStore("accesos", DEFAULT_ACCESOS.map((a) => ({ ...a }))),
 };
