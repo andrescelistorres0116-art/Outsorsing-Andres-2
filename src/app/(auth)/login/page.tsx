@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const user = tryLogin(email, password);
+      const user = await tryLogin(email, password);
       if (!user) {
         setError("Correo o contraseña incorrectos.");
         setIsLoading(false);

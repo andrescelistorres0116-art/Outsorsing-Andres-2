@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AppUser, getUsers, saveUsers, DEFAULT_ADMIN } from "@/lib/app-auth";
+import { AppUser } from "@/lib/app-auth";
 import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import { EmpresaMock } from "@/lib/empresas-mock";
 
@@ -60,7 +60,10 @@ export default function UsuariosPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof UserFormData | "general", string>>>({});
 
   useEffect(() => {
-    setUsers(getUsers());
+    fetch("/api/app-users")
+      .then((r) => r.json())
+      .then((data: AppUser[]) => setUsers(data))
+      .catch(() => {});
     try {
       const stored = localStorage.getItem("empresas-data");
       if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
@@ -123,21 +126,29 @@ export default function UsuariosPage() {
     return Object.keys(errs).length === 0;
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!validate()) return;
 
-    const current = getUsers();
-
     if (editingUser) {
-      const updated = current.map((u) =>
-        u.id === editingUser.id
-          ? { ...u, nombre: form.nombre, email: form.email, password: form.password, empresaIds: form.empresaIds, activo: form.activo }
-          : u
-      );
-      saveUsers(updated);
-      setUsers(updated);
+      const updated: AppUser = {
+        ...editingUser,
+        nombre: form.nombre,
+        email: form.email,
+        password: form.password,
+        empresaIds: form.empresaIds,
+        activo: form.activo,
+      };
+      const res = await fetch("/api/app-users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
+        handleClose();
+      }
     } else {
-      const maxId = current
+      const maxId = users
         .map((u) => {
           const n = parseInt(u.id.replace("user-", ""), 10);
           return isNaN(n) ? 0 : n;
@@ -153,18 +164,28 @@ export default function UsuariosPage() {
         activo: form.activo,
         creadoEn: new Date().toISOString().split("T")[0],
       };
-      const updated = [...current, newUser];
-      saveUsers(updated);
-      setUsers(updated);
+      const res = await fetch("/api/app-users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      if (res.ok) {
+        setUsers((prev) => [...prev, newUser]);
+        handleClose();
+      }
     }
-    handleClose();
   }
 
-  function handleDelete(user: AppUser) {
+  async function handleDelete(user: AppUser) {
     if (user.role === "admin") return;
-    const updated = users.filter((u) => u.id !== user.id);
-    saveUsers(updated);
-    setUsers(updated);
+    const res = await fetch("/api/app-users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: user.id }),
+    });
+    if (res.ok) {
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    }
   }
 
   function toggleEmpresa(id: number) {

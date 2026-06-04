@@ -114,18 +114,15 @@ export function clearSession(): void {
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 
-export function tryLogin(email: string, password: string): AppUser | null {
+export async function tryLogin(email: string, password: string): Promise<AppUser | null> {
   try {
-    const normalizedEmail = email.trim().toLowerCase();
-    const users = getUsers();
-    return (
-      users.find(
-        (u) =>
-          u.email.trim().toLowerCase() === normalizedEmail &&
-          u.password === password &&
-          u.activo
-      ) ?? null
-    );
+    const res = await fetch("/api/app-users/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AppUser | null;
   } catch {
     return null;
   }
