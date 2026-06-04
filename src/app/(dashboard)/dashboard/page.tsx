@@ -190,11 +190,12 @@ interface StatCardProps {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
+  href?: string;
 }
 
-function StatCard({ title, value, sub, icon, color, bgColor }: StatCardProps) {
-  return (
-    <Card className="relative overflow-hidden">
+function StatCard({ title, value, sub, icon, color, bgColor, href }: StatCardProps) {
+  const inner = (
+    <Card className={`relative overflow-hidden transition-shadow ${href ? "hover:shadow-md cursor-pointer" : ""}`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -209,6 +210,8 @@ function StatCard({ title, value, sub, icon, color, bgColor }: StatCardProps) {
       </CardContent>
     </Card>
   );
+  if (href) return <Link href={href}>{inner}</Link>;
+  return inner;
 }
 
 // ── Custom Tooltip for chart ───────────────────────────────────────────────────
@@ -255,6 +258,7 @@ export default function DashboardPage() {
           icon={<Building2 className="w-6 h-6 text-green-600" />}
           color="text-green-600"
           bgColor="bg-green-50"
+          href="/empresas"
         />
         <StatCard
           title="Obligaciones Vencidas"
@@ -263,6 +267,7 @@ export default function DashboardPage() {
           icon={<AlertTriangle className="w-6 h-6 text-red-600" />}
           color="text-red-600"
           bgColor="bg-red-50"
+          href="/calendario"
         />
         <StatCard
           title="Vencen Esta Semana"
@@ -271,6 +276,7 @@ export default function DashboardPage() {
           icon={<Clock className="w-6 h-6 text-orange-600" />}
           color="text-orange-600"
           bgColor="bg-orange-50"
+          href="/calendario"
         />
         <StatCard
           title="Pendientes Nómina"
@@ -279,6 +285,7 @@ export default function DashboardPage() {
           icon={<Users className="w-6 h-6 text-blue-600" />}
           color="text-blue-600"
           bgColor="bg-blue-50"
+          href="/nomina"
         />
       </div>
 
