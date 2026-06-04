@@ -125,12 +125,18 @@ export default function AccesoFormModal({
   const set = (field: keyof AccesoFormData, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const AUTO_PLATAFORMA: Partial<Record<TipoAcceso, string>> = {
+    DIAN: "DIAN - Muisca",
+    HACIENDA_BOGOTA: "Secretaría de Hacienda Bogotá",
+    HACIENDA_CALI: "Secretaría de Hacienda Cali",
+  };
+
   const handleTipoChange = (v: string) => {
+    const tipo = v as TipoAcceso;
     setForm((prev) => ({
       ...prev,
-      tipo: v as TipoAcceso,
-      // Auto-fill plataforma for DIAN
-      plataforma: v === "DIAN" ? "DIAN - Muisca" : prev.plataforma,
+      tipo,
+      plataforma: AUTO_PLATAFORMA[tipo] ?? prev.plataforma,
     }));
   };
 
@@ -184,7 +190,7 @@ export default function AccesoFormModal({
     onClose();
   };
 
-  const isDian = form.tipo === "DIAN";
+  const isDian = form.tipo === "DIAN" || form.tipo === "HACIENDA_BOGOTA" || form.tipo === "HACIENDA_CALI";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
