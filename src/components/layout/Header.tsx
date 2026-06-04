@@ -3,14 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, clearSession, initials, AppSession } from "@/lib/app-auth";
-import { useTheme } from "next-themes";
 import {
   Bell,
-  Sun,
-  Moon,
   ChevronDown,
   LogOut,
-  User,
   Settings,
   AlertTriangle,
   Users,
@@ -18,7 +14,6 @@ import {
 import type { AppNotification } from "@/app/api/app-notifications/route";
 
 export default function Header() {
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -70,16 +65,6 @@ export default function Header() {
 
       {/* Right controls */}
       <div className="flex items-center gap-2">
-        {/* Dark mode toggle */}
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150"
-          aria-label="Alternar modo oscuro"
-        >
-          <Sun className="w-4 h-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 absolute" />
-          <Moon className="w-4 h-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 absolute" />
-        </button>
-
         {/* Notifications */}
         <div className="relative">
           <button
@@ -233,13 +218,6 @@ export default function Header() {
                   </p>
                 </div>
                 <div className="py-1">
-                  <button
-                    onClick={() => { setShowUserMenu(false); router.push("/configuracion?tab=seguridad"); }}
-                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <User className="w-4 h-4 text-slate-400" />
-                    Mi Perfil
-                  </button>
                   <button
                     onClick={() => { setShowUserMenu(false); router.push("/configuracion"); }}
                     className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
