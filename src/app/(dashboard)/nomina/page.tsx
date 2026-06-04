@@ -198,21 +198,19 @@ export default function NominaPage() {
   }, []);
 
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set();
-    try {
-      const stored = localStorage.getItem("nomina-deleted-ids");
-      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem("nomina-deleted-ids", JSON.stringify([...deletedIds]));
-  }, [deletedIds]);
-  const [selectedMes, setSelectedMes] = useState(6);   // Junio (current)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [selectedMes, setSelectedMes] = useState(6);
   const [selectedAnio] = useState(2026);
+
+  // Load per-month deleted IDs — new key per month so past deletions don't bleed across months
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`nomina-deleted-${selectedMes}-${selectedAnio}`);
+      setDeletedIds(stored ? new Set(JSON.parse(stored) as string[]) : new Set());
+    } catch {
+      setDeletedIds(new Set());
+    }
+  }, [selectedMes, selectedAnio]);
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [periodoFilter, setPeriodoFilter] = useState<"todos" | Periodo>("todos");
   const [estadoFilter, setEstadoFilter] = useState<"todos" | EstadoNomina>("todos");
@@ -243,9 +241,9 @@ export default function NominaPage() {
     return matchEmpresa && matchPeriodo && matchEstado;
   });
 
-  const pendientes = reportes.filter((r) => r.estado === "BORRADOR").length;
-  const enviados   = reportes.filter((r) => r.estado === "ENVIADO").length;
-  const aprobados  = reportes.filter((r) => r.estado === "APROBADO").length;
+  const pendientes = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "BORRADOR").length;
+  const enviados   = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "ENVIADO").length;
+  const aprobados  = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "APROBADO").length;
 
   function handleAprobar(id: string) {
     setOverrides((prev) => ({
@@ -259,7 +257,16 @@ export default function NominaPage() {
   }
 
   function handleEliminar(id: string) {
-    setDeletedIds((prev) => new Set([...prev, id]));
+    setDeletedIds((prev) => {
+      const next = new Set([...prev, id]);
+      try {
+        localStorage.setItem(
+          `nomina-deleted-${selectedMes}-${selectedAnio}`,
+          JSON.stringify([...next])
+        );
+      } catch {}
+      return next;
+    });
   }
 
   function goMes(delta: number) {
@@ -272,7 +279,7 @@ export default function NominaPage() {
     setPeriodoFilter("todos");
     setEmpresaFilter("todas");
     setEstadoFilter("todos");
-    setDeletedIds(new Set());
+    // deletedIds are reloaded by the useEffect that watches selectedMes
   }
 
   return (
