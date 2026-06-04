@@ -1,4 +1,6 @@
-// Client-side user and session management — stored in localStorage
+// Client-side user and session management
+// Uses localStorage for persistence + an in-memory cache so the session
+// survives client-side navigations even if localStorage is restricted.
 
 export interface AppUser {
   id: string;
@@ -22,6 +24,9 @@ export interface AppSession {
 const USERS_KEY = "app-users";
 const SESSION_KEY = "app-session";
 
+// In-memory cache — survives client-side navigation, cleared on hard reload
+let sessionCache: AppSession | null = null;
+
 export const DEFAULT_ADMIN: AppUser = {
   id: "admin-1",
   nombre: "Admin",
@@ -33,19 +38,21 @@ export const DEFAULT_ADMIN: AppUser = {
   creadoEn: "2026-01-01",
 };
 
+// ── Users ──────────────────────────────────────────────────────────────────────
+
 export function getUsers(): AppUser[] {
+  // Always return at least the default admin — never depends on localStorage alone
   if (typeof window === "undefined") return [DEFAULT_ADMIN];
   try {
     const raw = localStorage.getItem(USERS_KEY);
     if (!raw) {
-      localStorage.setItem(USERS_KEY, JSON.stringify([DEFAULT_ADMIN]));
+      try { localStorage.setItem(USERS_KEY, JSON.stringify([DEFAULT_ADMIN])); } catch {}
       return [DEFAULT_ADMIN];
     }
     const users = JSON.parse(raw) as AppUser[];
-    // Always ensure at least one admin exists
     if (!users.find((u) => u.role === "admin")) {
       const all = [DEFAULT_ADMIN, ...users];
-      localStorage.setItem(USERS_KEY, JSON.stringify(all));
+      try { localStorage.setItem(USERS_KEY, JSON.stringify(all)); } catch {}
       return all;
     }
     return users;
@@ -55,17 +62,25 @@ export function getUsers(): AppUser[] {
 }
 
 export function saveUsers(users: AppUser[]): void {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  } catch {}
 }
 
+// ── Session ────────────────────────────────────────────────────────────────────
+
 export function getSession(): AppSession | null {
+  // In-memory cache takes priority (available even when localStorage is restricted)
+  if (sessionCache) return sessionCache;
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as AppSession) : null;
-  } catch {
-    return null;
-  }
+    if (raw) {
+      sessionCache = JSON.parse(raw) as AppSession;
+      return sessionCache;
+    }
+  } catch {}
+  return null;
 }
 
 export function setAppSession(user: AppUser): void {
@@ -76,23 +91,36 @@ export function setAppSession(user: AppUser): void {
     role: user.role,
     empresaIds: user.empresaIds,
   };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionCache = session; // Always succeeds
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {}
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
+  sessionCache = null;
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {}
 }
 
+// ── Auth ───────────────────────────────────────────────────────────────────────
+
 export function tryLogin(email: string, password: string): AppUser | null {
-  const users = getUsers();
-  return (
-    users.find(
-      (u) =>
-        u.email.toLowerCase() === email.toLowerCase() &&
-        u.password === password &&
-        u.activo
-    ) ?? null
-  );
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const users = getUsers();
+    return (
+      users.find(
+        (u) =>
+          u.email.trim().toLowerCase() === normalizedEmail &&
+          u.password === password &&
+          u.activo
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
 }
 
 export function initials(name: string): string {

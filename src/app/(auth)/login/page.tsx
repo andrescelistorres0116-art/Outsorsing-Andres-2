@@ -19,14 +19,20 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    const user = tryLogin(email, password);
-    if (!user) {
-      setError("Correo o contraseña incorrectos.");
-    } else {
-      setAppSession(user);
-      router.push(user.role === "cliente" ? "/nomina" : "/dashboard");
+    try {
+      const user = tryLogin(email, password);
+      if (!user) {
+        setError("Correo o contraseña incorrectos.");
+        setIsLoading(false);
+      } else {
+        setAppSession(user);
+        router.push(user.role === "cliente" ? "/nomina" : "/dashboard");
+        // keep isLoading true while navigating so button stays disabled
+      }
+    } catch {
+      setError("Ocurrió un error inesperado. Intente nuevamente.");
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
