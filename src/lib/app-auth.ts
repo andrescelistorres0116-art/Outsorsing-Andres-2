@@ -74,7 +74,9 @@ export function getSession(): AppSession | null {
   if (sessionCache) return sessionCache;
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw =
+      localStorage.getItem(SESSION_KEY) ??
+      sessionStorage.getItem(SESSION_KEY);
     if (raw) {
       sessionCache = JSON.parse(raw) as AppSession;
       return sessionCache;
@@ -92,16 +94,15 @@ export function setAppSession(user: AppUser): void {
     empresaIds: user.empresaIds,
   };
   sessionCache = session; // Always succeeds
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  } catch {}
+  const raw = JSON.stringify(session);
+  try { localStorage.setItem(SESSION_KEY, raw); } catch {}
+  try { sessionStorage.setItem(SESSION_KEY, raw); } catch {}
 }
 
 export function clearSession(): void {
   sessionCache = null;
-  try {
-    localStorage.removeItem(SESSION_KEY);
-  } catch {}
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+  try { sessionStorage.removeItem(SESSION_KEY); } catch {}
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
