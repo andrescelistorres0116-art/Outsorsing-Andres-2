@@ -197,10 +197,19 @@ export default function NominaPage() {
     } catch {}
   }, []);
 
+  const TODAY_MES = new Date().getMonth() + 1;
+  const TODAY_ANIO = new Date().getFullYear();
+
+  const [activeTab, setActiveTab] = useState<"actual" | "historico">("actual");
+  const [histMes, setHistMes] = useState(TODAY_MES === 1 ? 12 : TODAY_MES - 1);
+  const [histAnio, setHistAnio] = useState(TODAY_MES === 1 ? TODAY_ANIO - 1 : TODAY_ANIO);
+
+  // Active month: always today's month for "actual" tab, navigator for "historico"
+  const selectedMes = activeTab === "actual" ? TODAY_MES : histMes;
+  const selectedAnio = activeTab === "actual" ? TODAY_ANIO : histAnio;
+
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [selectedMes, setSelectedMes] = useState(6);
-  const [selectedAnio] = useState(2026);
 
   // Load per-month deleted IDs — new key per month so past deletions don't bleed across months
   useEffect(() => {
@@ -211,6 +220,7 @@ export default function NominaPage() {
       setDeletedIds(new Set());
     }
   }, [selectedMes, selectedAnio]);
+
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [periodoFilter, setPeriodoFilter] = useState<"todos" | Periodo>("todos");
   const [estadoFilter, setEstadoFilter] = useState<"todos" | EstadoNomina>("todos");
@@ -269,17 +279,25 @@ export default function NominaPage() {
     });
   }
 
-  function goMes(delta: number) {
-    setSelectedMes((m) => {
-      const next = m + delta;
-      if (next < 1) return 12;
-      if (next > 12) return 1;
-      return next;
-    });
+  function goHistMes(delta: number) {
+    let newMes = histMes + delta;
+    let newAnio = histAnio;
+    if (newMes < 1)  { newMes = 12; newAnio--; }
+    if (newMes > 12) { newMes = 1;  newAnio++; }
+    // Block navigation into current or future months
+    if (newAnio > TODAY_ANIO || (newAnio === TODAY_ANIO && newMes >= TODAY_MES)) return;
+    setHistMes(newMes);
+    setHistAnio(newAnio);
     setPeriodoFilter("todos");
     setEmpresaFilter("todas");
     setEstadoFilter("todos");
-    // deletedIds are reloaded by the useEffect that watches selectedMes
+  }
+
+  function switchTab(tab: "actual" | "historico") {
+    setActiveTab(tab);
+    setPeriodoFilter("todos");
+    setEmpresaFilter("todas");
+    setEstadoFilter("todos");
   }
 
   return (
@@ -298,24 +316,50 @@ export default function NominaPage() {
           </div>
         </div>
 
-        {/* Month navigator */}
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+        {/* Month badge (actual) / navigator (historico) */}
+        {activeTab === "actual" ? (
+          <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2">
+            <span className="text-sm font-semibold text-indigo-700">
+              {MESES[TODAY_MES - 1]} {TODAY_ANIO}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+            <button
+              onClick={() => goHistMes(-1)}
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-semibold text-gray-900 min-w-[130px] text-center">
+              {MESES[histMes - 1]} {histAnio}
+            </span>
+            <button
+              onClick={() => goHistMes(1)}
+              disabled={histAnio > TODAY_ANIO || (histAnio === TODAY_ANIO && histMes >= TODAY_MES - 1)}
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500 disabled:text-gray-200 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200">
+        {(["actual", "historico"] as const).map((tab) => (
           <button
-            onClick={() => goMes(-1)}
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+            key={tab}
+            onClick={() => switchTab(tab)}
+            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
-            <ChevronLeft className="w-4 h-4" />
+            {tab === "actual" ? "Novedades Mes Actual" : "Histórico"}
           </button>
-          <span className="text-sm font-semibold text-gray-900 min-w-[130px] text-center">
-            {MESES[selectedMes - 1]} {selectedAnio}
-          </span>
-          <button
-            onClick={() => goMes(1)}
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        ))}
       </div>
 
       {/* Stats */}
