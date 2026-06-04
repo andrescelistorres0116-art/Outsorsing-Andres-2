@@ -97,12 +97,19 @@ export function setAppSession(user: AppUser): void {
   const raw = JSON.stringify(session);
   try { localStorage.setItem(SESSION_KEY, raw); } catch {}
   try { sessionStorage.setItem(SESSION_KEY, raw); } catch {}
+  // Cookie lets the server-side proxy verify auth on navigation
+  try {
+    document.cookie = `${SESSION_KEY}=1; path=/; samesite=lax`;
+  } catch {}
 }
 
 export function clearSession(): void {
   sessionCache = null;
   try { localStorage.removeItem(SESSION_KEY); } catch {}
   try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+  try {
+    document.cookie = `${SESSION_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  } catch {}
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
