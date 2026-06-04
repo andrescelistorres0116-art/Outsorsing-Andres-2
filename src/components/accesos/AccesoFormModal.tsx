@@ -24,15 +24,12 @@ import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 export type TipoAcceso =
   | "DIAN"
-  | "HACIENDA"
+  | "HACIENDA_BOGOTA"
+  | "HACIENDA_CALI"
   | "PARAFISCAL"
-  | "BANCO"
   | "CAMARA"
-  | "UGPP"
   | "SUPERSOCIEDADES"
   | "SOFTWARE_CONTABLE"
-  | "FACTURACION"
-  | "FIRMA_DIGITAL"
   | "OTRO";
 
 export interface AccesoFormData {
@@ -44,14 +41,10 @@ export interface AccesoFormData {
   contrasena: string;
   confirmarContrasena: string;
   correoAsociado: string;
-  banco: string;
-  municipio: string;
   preguntasSeguridad: string;
   tokenAdicional: string;
   observaciones: string;
   tags: string[];
-  logoUrl: string;
-  colorKey: string;
 }
 
 interface AccesoFormModalProps {
@@ -65,17 +58,14 @@ interface AccesoFormModalProps {
 const EMPRESAS = EMPRESAS_MOCK.map((e) => e.razonSocial).sort();
 
 const TIPOS_ACCESO: { value: TipoAcceso; label: string }[] = [
-  { value: "DIAN", label: "DIAN" },
-  { value: "HACIENDA", label: "Secretaría de Hacienda" },
-  { value: "PARAFISCAL", label: "Parafiscales" },
-  { value: "BANCO", label: "Banco" },
-  { value: "CAMARA", label: "Cámara de Comercio" },
-  { value: "UGPP", label: "UGPP" },
-  { value: "SUPERSOCIEDADES", label: "Supersociedades" },
+  { value: "DIAN",             label: "DIAN" },
+  { value: "HACIENDA_BOGOTA",  label: "Secretaría de Hacienda Bogotá" },
+  { value: "HACIENDA_CALI",    label: "Secretaría de Hacienda Cali" },
+  { value: "PARAFISCAL",       label: "Parafiscales" },
+  { value: "CAMARA",           label: "Cámara de Comercio" },
+  { value: "SUPERSOCIEDADES",  label: "Supersociedades" },
   { value: "SOFTWARE_CONTABLE", label: "Software Contable" },
-  { value: "FACTURACION", label: "Facturación Electrónica" },
-  { value: "FIRMA_DIGITAL", label: "Firma Digital" },
-  { value: "OTRO", label: "Otro" },
+  { value: "OTRO",             label: "Otro" },
 ];
 
 const PLATAFORMAS_PARAFISCAL = [
@@ -84,21 +74,6 @@ const PLATAFORMAS_PARAFISCAL = [
   "SOI",
   "Arus",
   "Otra",
-];
-
-export const COLOR_PALETTE: { key: string; hex: string; label: string }[] = [
-  { key: "red",    hex: "#DC2626", label: "Rojo" },
-  { key: "orange", hex: "#EA580C", label: "Naranja" },
-  { key: "amber",  hex: "#D97706", label: "Ámbar" },
-  { key: "green",  hex: "#16A34A", label: "Verde" },
-  { key: "teal",   hex: "#0D9488", label: "Teal" },
-  { key: "cyan",   hex: "#0891B2", label: "Cyan" },
-  { key: "blue",   hex: "#2563EB", label: "Azul" },
-  { key: "indigo", hex: "#4F46E5", label: "Índigo" },
-  { key: "purple", hex: "#9333EA", label: "Morado" },
-  { key: "pink",   hex: "#EC4899", label: "Rosa" },
-  { key: "rose",   hex: "#E11D48", label: "Fucsia" },
-  { key: "gray",   hex: "#6B7280", label: "Gris" },
 ];
 
 const DEFAULT_FORM: AccesoFormData = {
@@ -110,14 +85,10 @@ const DEFAULT_FORM: AccesoFormData = {
   contrasena: "",
   confirmarContrasena: "",
   correoAsociado: "",
-  banco: "",
-  municipio: "",
   preguntasSeguridad: "",
   tokenAdicional: "",
   observaciones: "",
   tags: [],
-  logoUrl: "",
-  colorKey: "",
 };
 
 export default function AccesoFormModal({
@@ -238,7 +209,7 @@ export default function AccesoFormModal({
             <Input
               value={form.plataforma}
               onChange={(e) => set("plataforma", e.target.value)}
-              placeholder="Ej: Siigo, Banco Bogotá, MiPlanilla..."
+              placeholder="Ej: Siigo, MiPlanilla, Muisca..."
               className={errors.plataforma ? "border-red-400" : ""}
             />
             {errors.plataforma && <p className="text-xs text-red-500">{errors.plataforma}</p>}
@@ -263,30 +234,6 @@ export default function AccesoFormModal({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-
-          {/* Banco (condicional) */}
-          {form.tipo === "BANCO" && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">Banco</Label>
-              <Input
-                value={form.banco}
-                onChange={(e) => set("banco", e.target.value)}
-                placeholder="Ej: Banco de Bogotá, Davivienda..."
-              />
-            </div>
-          )}
-
-          {/* Municipio (condicional) */}
-          {form.tipo === "HACIENDA" && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">Municipio</Label>
-              <Input
-                value={form.municipio}
-                onChange={(e) => set("municipio", e.target.value)}
-                placeholder="Ej: Bogotá, Medellín..."
-              />
             </div>
           )}
 
@@ -439,81 +386,6 @@ export default function AccesoFormModal({
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Apariencia */}
-          <div className="space-y-3 md:col-span-2 border-t pt-3">
-            <Label className="text-sm font-medium text-gray-700">
-              Apariencia <span className="text-gray-400 font-normal">(opcional)</span>
-            </Label>
-
-            {/* Color de la tarjeta */}
-            <div className="space-y-1.5">
-              <p className="text-xs text-gray-500">Color de la tarjeta</p>
-              <div className="flex flex-wrap gap-2 items-center">
-                <button
-                  type="button"
-                  onClick={() => set("colorKey", "")}
-                  className={`w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center bg-white ${
-                    !form.colorKey
-                      ? "border-gray-700 shadow-sm"
-                      : "border-gray-200 hover:border-gray-400"
-                  }`}
-                  title="Automático (según tipo)"
-                >
-                  <span className="text-xs text-gray-400 font-bold">A</span>
-                </button>
-                {COLOR_PALETTE.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    onClick={() => set("colorKey", c.key)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all ${
-                      form.colorKey === c.key
-                        ? "border-gray-700 shadow-sm scale-110"
-                        : "border-transparent hover:border-gray-400"
-                    }`}
-                    style={{ backgroundColor: c.hex }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Logo URL */}
-            <div className="space-y-1.5">
-              <p className="text-xs text-gray-500">Logo de la plataforma (URL de imagen)</p>
-              <div className="flex items-center gap-2">
-                {form.logoUrl && (
-                  <div className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
-                    <img
-                      src={form.logoUrl}
-                      alt="preview"
-                      className="w-7 h-7 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                )}
-                <Input
-                  value={form.logoUrl}
-                  onChange={(e) => set("logoUrl", e.target.value)}
-                  placeholder="https://... (pega el enlace del logo)"
-                  className="flex-1 text-xs"
-                />
-                {form.logoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => set("logoUrl", "")}
-                    className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
-                    title="Quitar logo"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
         </div>
 

@@ -12,8 +12,6 @@ import {
   Pencil,
   KeyRound,
   Building2,
-  CreditCard,
-  FileSignature,
   Landmark,
   ShieldAlert,
   Briefcase,
@@ -45,8 +43,6 @@ interface Acceso {
   correoAsociado?: string;
   tags: string[];
   ultimoAcceso: string;
-  logoUrl?: string;
-  colorKey?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -88,7 +84,7 @@ const ACCESOS: Acceso[] = [
   {
     id: 4,
     empresa: "DIAZAR LTDA",
-    tipo: "HACIENDA",
+    tipo: "HACIENDA_BOGOTA",
     plataforma: "Secretaría Hacienda Bogotá",
     usuario: "DIAZAR123",
     contrasena: "Hac!enda2024",
@@ -116,26 +112,6 @@ const ACCESOS: Acceso[] = [
     correoAsociado: "rrhh@300hilos.com",
     tags: ["parafiscales"],
     ultimoAcceso: "2026-05-31",
-  },
-  {
-    id: 7,
-    empresa: "X TOURS SAS",
-    tipo: "BANCO",
-    plataforma: "Banco de Bogotá",
-    usuario: "901234567",
-    contrasena: "BogXt0urs#24",
-    tags: ["banco", "pagos"],
-    ultimoAcceso: "2026-06-02",
-  },
-  {
-    id: 8,
-    empresa: "DIAZAR LTDA",
-    tipo: "BANCO",
-    plataforma: "Davivienda Empresarial",
-    usuario: "8001234560",
-    contrasena: "Dav!viend@800",
-    tags: ["banco", "nomina"],
-    ultimoAcceso: "2026-06-02",
   },
   {
     id: 9,
@@ -170,140 +146,94 @@ const ACCESOS: Acceso[] = [
     tags: ["contabilidad", "software"],
     ultimoAcceso: "2026-06-03",
   },
-  {
-    id: 12,
-    empresa: "DIAZAR LTDA",
-    tipo: "UGPP",
-    plataforma: "UGPP - Portal",
-    usuario: "ugpp.diazar@hotmail.com",
-    contrasena: "UGPP@D1azar",
-    correoAsociado: "ugpp.diazar@hotmail.com",
-    tags: ["UGPP", "verificación"],
-    ultimoAcceso: "2026-03-22",
-  },
-  {
-    id: 13,
-    empresa: "X TOURS SAS",
-    tipo: "FIRMA_DIGITAL",
-    plataforma: "Certicámara",
-    usuario: "xtours.firma@gmail.com",
-    contrasena: "F1rma#Cert24",
-    correoAsociado: "xtours.firma@gmail.com",
-    tags: ["firma", "certificado"],
-    ultimoAcceso: "2026-05-05",
-  },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Tipo Config — logo y color por tipo ────────────────────────────────────────
 
 const TIPO_CONFIG: Record<
   TipoAcceso,
-  { label: string; color: string; border: string; bg: string; badgeClass: string; Icon: React.ElementType }
+  {
+    label: string;
+    color: string;
+    border: string;
+    bg: string;
+    badgeClass: string;
+    Icon: React.ElementType;
+    logoUrl: string;
+  }
 > = {
   DIAN: {
     label: "DIAN",
+    color: "text-green-700",
+    border: "border-green-400",
+    bg: "bg-green-50",
+    badgeClass: "bg-green-100 text-green-700 border-green-200",
+    Icon: KeyRound,
+    logoUrl: "https://normograma.dian.gov.co/dian/compilacion/images/LogoDian.png",
+  },
+  HACIENDA_BOGOTA: {
+    label: "Hacienda Bogotá",
     color: "text-red-700",
-    border: "border-red-200",
+    border: "border-red-400",
     bg: "bg-red-50",
     badgeClass: "bg-red-100 text-red-700 border-red-200",
-    Icon: KeyRound,
-  },
-  HACIENDA: {
-    label: "Hacienda",
-    color: "text-orange-700",
-    border: "border-orange-200",
-    bg: "bg-orange-50",
-    badgeClass: "bg-orange-100 text-orange-700 border-orange-200",
     Icon: Landmark,
+    logoUrl: "https://vectorseek.com/wp-content/uploads/2023/09/Bogota-Logo-Vector.svg-.png",
+  },
+  HACIENDA_CALI: {
+    label: "Hacienda Cali",
+    color: "text-blue-900",
+    border: "border-blue-700",
+    bg: "bg-blue-50",
+    badgeClass: "bg-blue-100 text-blue-900 border-blue-300",
+    Icon: Landmark,
+    logoUrl: "https://datos.cali.gov.co/uploads/group/2018-11-30-210214.804606EscudosAlcaldiaSecretariasYDepartamentos-03.jpg",
   },
   PARAFISCAL: {
     label: "Parafiscal",
-    color: "text-purple-700",
-    border: "border-purple-200",
-    bg: "bg-purple-50",
-    badgeClass: "bg-purple-100 text-purple-700 border-purple-200",
+    color: "text-orange-700",
+    border: "border-orange-400",
+    bg: "bg-orange-50",
+    badgeClass: "bg-orange-100 text-orange-700 border-orange-200",
     Icon: ShieldAlert,
-  },
-  BANCO: {
-    label: "Banco",
-    color: "text-blue-700",
-    border: "border-blue-200",
-    bg: "bg-blue-50",
-    badgeClass: "bg-blue-100 text-blue-700 border-blue-200",
-    Icon: CreditCard,
+    logoUrl: "https://www.ugpp.gov.co/wp-content/uploads/2024/11/Logo-UGPP.png",
   },
   CAMARA: {
-    label: "Cámara",
-    color: "text-teal-700",
-    border: "border-teal-200",
-    bg: "bg-teal-50",
-    badgeClass: "bg-teal-100 text-teal-700 border-teal-200",
+    label: "Cámara de Comercio",
+    color: "text-red-700",
+    border: "border-red-400",
+    bg: "bg-red-50",
+    badgeClass: "bg-red-100 text-red-700 border-red-200",
     Icon: Building2,
-  },
-  UGPP: {
-    label: "UGPP",
-    color: "text-amber-700",
-    border: "border-amber-200",
-    bg: "bg-amber-50",
-    badgeClass: "bg-amber-100 text-amber-700 border-amber-200",
-    Icon: ShieldCheck,
+    logoUrl: "https://images.seeklogo.com/logo-png/47/1/camara-de-comercio-de-bogota-logo-png_seeklogo-472369.png",
   },
   SUPERSOCIEDADES: {
     label: "Supersociedades",
-    color: "text-indigo-700",
-    border: "border-indigo-200",
-    bg: "bg-indigo-50",
-    badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    color: "text-stone-700",
+    border: "border-stone-400",
+    bg: "bg-stone-50",
+    badgeClass: "bg-stone-100 text-stone-700 border-stone-200",
     Icon: Briefcase,
+    logoUrl: "https://www.auditoriaygestion.co/wp-content/uploads/2015/12/supersociedades.jpg",
   },
   SOFTWARE_CONTABLE: {
     label: "Software Cont.",
-    color: "text-green-700",
-    border: "border-green-200",
-    bg: "bg-green-50",
-    badgeClass: "bg-green-100 text-green-700 border-green-200",
+    color: "text-sky-600",
+    border: "border-sky-400",
+    bg: "bg-sky-50",
+    badgeClass: "bg-sky-100 text-sky-700 border-sky-200",
     Icon: Globe,
-  },
-  FACTURACION: {
-    label: "Facturación",
-    color: "text-cyan-700",
-    border: "border-cyan-200",
-    bg: "bg-cyan-50",
-    badgeClass: "bg-cyan-100 text-cyan-700 border-cyan-200",
-    Icon: FileSignature,
-  },
-  FIRMA_DIGITAL: {
-    label: "Firma Digital",
-    color: "text-violet-700",
-    border: "border-violet-200",
-    bg: "bg-violet-50",
-    badgeClass: "bg-violet-100 text-violet-700 border-violet-200",
-    Icon: FileSignature,
+    logoUrl: "",
   },
   OTRO: {
     label: "Otro",
-    color: "text-gray-600",
-    border: "border-gray-200",
-    bg: "bg-gray-50",
-    badgeClass: "bg-gray-100 text-gray-600 border-gray-200",
+    color: "text-purple-700",
+    border: "border-purple-400",
+    bg: "bg-purple-50",
+    badgeClass: "bg-purple-100 text-purple-700 border-purple-200",
     Icon: Globe,
+    logoUrl: "",
   },
-};
-
-// Color overrides when user picks a custom color
-const CARD_COLOR_MAP: Record<string, { color: string; border: string; bg: string; badgeClass: string }> = {
-  red:    { color: "text-red-700",    border: "border-red-400",    bg: "bg-red-50",    badgeClass: "bg-red-100 text-red-700 border-red-200" },
-  orange: { color: "text-orange-700", border: "border-orange-400", bg: "bg-orange-50", badgeClass: "bg-orange-100 text-orange-700 border-orange-200" },
-  amber:  { color: "text-amber-700",  border: "border-amber-400",  bg: "bg-amber-50",  badgeClass: "bg-amber-100 text-amber-700 border-amber-200" },
-  green:  { color: "text-green-700",  border: "border-green-400",  bg: "bg-green-50",  badgeClass: "bg-green-100 text-green-700 border-green-200" },
-  teal:   { color: "text-teal-700",   border: "border-teal-400",   bg: "bg-teal-50",   badgeClass: "bg-teal-100 text-teal-700 border-teal-200" },
-  cyan:   { color: "text-cyan-700",   border: "border-cyan-400",   bg: "bg-cyan-50",   badgeClass: "bg-cyan-100 text-cyan-700 border-cyan-200" },
-  blue:   { color: "text-blue-700",   border: "border-blue-400",   bg: "bg-blue-50",   badgeClass: "bg-blue-100 text-blue-700 border-blue-200" },
-  indigo: { color: "text-indigo-700", border: "border-indigo-400", bg: "bg-indigo-50", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-  purple: { color: "text-purple-700", border: "border-purple-400", bg: "bg-purple-50", badgeClass: "bg-purple-100 text-purple-700 border-purple-200" },
-  pink:   { color: "text-pink-700",   border: "border-pink-400",   bg: "bg-pink-50",   badgeClass: "bg-pink-100 text-pink-700 border-pink-200" },
-  rose:   { color: "text-rose-700",   border: "border-rose-400",   bg: "bg-rose-50",   badgeClass: "bg-rose-100 text-rose-700 border-rose-200" },
-  gray:   { color: "text-gray-600",   border: "border-gray-400",   bg: "bg-gray-50",   badgeClass: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
 function formatDate(dateStr: string) {
@@ -327,12 +257,9 @@ function AccesoCard({
   const [copied, setCopied] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
-  const tipoCfg = TIPO_CONFIG[acceso.tipo];
-  const colorOverride = acceso.colorKey ? CARD_COLOR_MAP[acceso.colorKey] : null;
-  const cfg = colorOverride
-    ? { ...tipoCfg, ...colorOverride }
-    : tipoCfg;
-  const Icon = tipoCfg.Icon;
+  const cfg = TIPO_CONFIG[acceso.tipo];
+  const Icon = cfg.Icon;
+  const showLogo = !!cfg.logoUrl && !logoError;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -346,18 +273,16 @@ function AccesoCard({
   }, [acceso.contrasena]);
 
   return (
-    <Card
-      className={`border-l-4 ${cfg.border} hover:shadow-md transition-all duration-200 flex flex-col`}
-    >
+    <Card className={`border-l-4 ${cfg.border} hover:shadow-md transition-all duration-200 flex flex-col`}>
       <CardContent className="p-4 flex flex-col gap-3 flex-1">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${cfg.bg} shrink-0 overflow-hidden`}>
-              {acceso.logoUrl && !logoError ? (
+              {showLogo ? (
                 <img
-                  src={acceso.logoUrl}
-                  alt={acceso.plataforma}
+                  src={cfg.logoUrl}
+                  alt={cfg.label}
                   className="w-8 h-8 object-contain"
                   onError={() => setLogoError(true)}
                 />
@@ -372,9 +297,7 @@ function AccesoCard({
               <p className="text-xs text-gray-400 truncate mt-0.5">{acceso.empresa}</p>
             </div>
           </div>
-          <span
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold shrink-0 ${cfg.badgeClass}`}
-          >
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold shrink-0 ${cfg.badgeClass}`}>
             {cfg.label}
           </span>
         </div>
@@ -383,9 +306,7 @@ function AccesoCard({
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Usuario:</span>
-            <span className="text-xs text-gray-800 font-mono truncate flex-1">
-              {acceso.usuario}
-            </span>
+            <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.usuario}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Contraseña:</span>
@@ -397,11 +318,7 @@ function AccesoCard({
               className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors shrink-0"
               title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPassword ? (
-                <EyeOff className="w-3.5 h-3.5" />
-              ) : (
-                <Eye className="w-3.5 h-3.5" />
-              )}
+              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
@@ -448,15 +365,9 @@ function AccesoCard({
               title="Copiar contraseña"
             >
               {copied ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Copiado!
-                </>
+                <><Check className="w-3 h-3" />Copiado!</>
               ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  Copiar
-                </>
+                <><Copy className="w-3 h-3" />Copiar</>
               )}
             </Button>
             <Button
@@ -488,7 +399,7 @@ export default function AccesosPage() {
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
   const [editId, setEditId] = useState<number | null>(null);
 
-  const empresas = Array.from(new Set(ACCESOS.map((a) => a.empresa))).sort();
+  const empresas = Array.from(new Set(accesos.map((a) => a.empresa))).sort();
 
   const filtered = accesos.filter((a) => {
     const q = search.toLowerCase();
@@ -519,8 +430,6 @@ export default function AccesosPage() {
       confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "",
       tags: a.tags,
-      logoUrl: a.logoUrl ?? "",
-      colorKey: a.colorKey ?? "",
     });
     setEditMode("edit");
     setEditId(a.id);
@@ -543,8 +452,6 @@ export default function AccesosPage() {
         correoAsociado: data.correoAsociado || undefined,
         tags: data.tags,
         ultimoAcceso: new Date().toISOString().split("T")[0],
-        logoUrl: data.logoUrl || undefined,
-        colorKey: data.colorKey || undefined,
       };
       setAccesos((prev) => [newAcceso, ...prev]);
     } else if (editId !== null) {
@@ -560,8 +467,6 @@ export default function AccesosPage() {
                 contrasena: data.contrasena,
                 correoAsociado: data.correoAsociado || undefined,
                 tags: data.tags,
-                logoUrl: data.logoUrl || undefined,
-                colorKey: data.colorKey || undefined,
               }
             : a
         )
@@ -610,20 +515,20 @@ export default function AccesosPage() {
           {
             label: "DIAN",
             value: accesos.filter((a) => a.tipo === "DIAN").length,
+            color: "text-green-700",
+            bg: "bg-green-50",
+          },
+          {
+            label: "Hacienda",
+            value: accesos.filter((a) => a.tipo === "HACIENDA_BOGOTA" || a.tipo === "HACIENDA_CALI").length,
             color: "text-red-700",
             bg: "bg-red-50",
           },
           {
-            label: "Bancos",
-            value: accesos.filter((a) => a.tipo === "BANCO").length,
-            color: "text-blue-700",
-            bg: "bg-blue-50",
-          },
-          {
             label: "Parafiscales",
             value: accesos.filter((a) => a.tipo === "PARAFISCAL").length,
-            color: "text-purple-700",
-            bg: "bg-purple-50",
+            color: "text-orange-700",
+            bg: "bg-orange-50",
           },
         ].map((s) => (
           <Card key={s.label} className={`${s.bg} border`}>
@@ -639,7 +544,6 @@ export default function AccesosPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            {/* Search */}
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -650,7 +554,6 @@ export default function AccesosPage() {
               />
             </div>
 
-            {/* Empresa filter */}
             <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
               <SelectTrigger className="w-44 h-9 text-sm">
                 <SelectValue placeholder="Empresa" />
@@ -658,30 +561,24 @@ export default function AccesosPage() {
               <SelectContent>
                 <SelectItem value="todas">Todas las empresas</SelectItem>
                 {empresas.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            {/* Tipo filter */}
             <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger className="w-44 h-9 text-sm">
+              <SelectTrigger className="w-48 h-9 text-sm">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los tipos</SelectItem>
                 <SelectItem value="DIAN">DIAN</SelectItem>
-                <SelectItem value="HACIENDA">Hacienda</SelectItem>
+                <SelectItem value="HACIENDA_BOGOTA">Hacienda Bogotá</SelectItem>
+                <SelectItem value="HACIENDA_CALI">Hacienda Cali</SelectItem>
                 <SelectItem value="PARAFISCAL">Parafiscal</SelectItem>
-                <SelectItem value="BANCO">Banco</SelectItem>
                 <SelectItem value="CAMARA">Cámara de Comercio</SelectItem>
-                <SelectItem value="UGPP">UGPP</SelectItem>
                 <SelectItem value="SUPERSOCIEDADES">Supersociedades</SelectItem>
                 <SelectItem value="SOFTWARE_CONTABLE">Software Contable</SelectItem>
-                <SelectItem value="FACTURACION">Facturación</SelectItem>
-                <SelectItem value="FIRMA_DIGITAL">Firma Digital</SelectItem>
                 <SelectItem value="OTRO">Otro</SelectItem>
               </SelectContent>
             </Select>
@@ -711,7 +608,6 @@ export default function AccesosPage() {
         </div>
       )}
 
-      {/* Modal */}
       <AccesoFormModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
