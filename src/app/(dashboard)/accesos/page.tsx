@@ -46,6 +46,7 @@ interface Acceso {
   tipoDocumento?: string;
   // Generic-specific
   nitEmpresa?: string;
+  nombreSoftware?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -305,6 +306,12 @@ function AccesoCard({
               <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.nitEmpresa}</span>
             </div>
           )}
+          {acceso.nombreSoftware && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Software:</span>
+              <span className="text-xs text-gray-800 truncate flex-1">{acceso.nombreSoftware}</span>
+            </div>
+          )}
           {acceso.tipo === "DIAN" && acceso.nitTercero && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT tercero:</span>
@@ -544,7 +551,7 @@ export default function AccesosPage() {
       usuario: a.usuario, contrasena: a.contrasena, confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "", tags: a.tags,
       nitTercero: a.nitTercero ?? "", tipoDocumento: a.tipoDocumento ?? "",
-      nitEmpresa: a.nitEmpresa ?? "", observaciones: "",
+      nitEmpresa: a.nitEmpresa ?? "", nombreSoftware: a.nombreSoftware ?? "", observaciones: "",
     });
     setEditMode("edit");
     setEditId(a.id);
@@ -570,6 +577,7 @@ export default function AccesosPage() {
         tags: data.tags, ultimoAcceso: new Date().toISOString().split("T")[0],
         nitTercero: data.nitTercero || undefined, tipoDocumento: data.tipoDocumento || undefined,
         nitEmpresa: data.nitEmpresa || undefined,
+        nombreSoftware: data.nombreSoftware || undefined,
       }, ...prev]);
     } else if (editId !== null) {
       setAccesos((prev) =>
@@ -581,6 +589,7 @@ export default function AccesosPage() {
             tags: data.tags, nitTercero: data.nitTercero || undefined,
             tipoDocumento: data.tipoDocumento || undefined,
             nitEmpresa: data.nitEmpresa || undefined,
+            nombreSoftware: data.nombreSoftware || undefined,
           } : a
         )
       );

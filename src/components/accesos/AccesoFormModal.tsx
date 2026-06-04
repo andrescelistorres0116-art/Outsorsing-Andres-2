@@ -43,6 +43,7 @@ export interface AccesoFormData {
   tags: string[];
   // NIT fields
   nitEmpresa: string;
+  nombreSoftware: string;
   nitTercero: string;
   // DIAN / Hacienda specific
   tipoDocumento: string;
@@ -106,6 +107,7 @@ const DEFAULT_FORM: AccesoFormData = {
   observaciones: "",
   tags: [],
   nitEmpresa: "",
+  nombreSoftware: "",
   nitTercero: "",
   tipoDocumento: "",
   correoAsociado: "",
@@ -336,6 +338,20 @@ export default function AccesoFormModal({
                   placeholder="Ej: 900123456-7"
                 />
               </div>
+
+              {/* Nombre del software (solo SOFTWARE_CONTABLE) */}
+              {form.tipo === "SOFTWARE_CONTABLE" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Nombre del software <span className="text-gray-400 font-normal">(opcional)</span>
+                  </Label>
+                  <Input
+                    value={form.nombreSoftware}
+                    onChange={(e) => set("nombreSoftware", e.target.value)}
+                    placeholder="Ej: Siigo, World Office, Helisa..."
+                  />
+                </div>
+              )}
 
               {/* Usuario */}
               <div className="space-y-1.5">
