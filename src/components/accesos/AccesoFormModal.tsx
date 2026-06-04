@@ -50,6 +50,8 @@ export interface AccesoFormData {
   tokenAdicional: string;
   observaciones: string;
   tags: string[];
+  logoUrl: string;
+  colorKey: string;
 }
 
 interface AccesoFormModalProps {
@@ -84,6 +86,21 @@ const PLATAFORMAS_PARAFISCAL = [
   "Otra",
 ];
 
+export const COLOR_PALETTE: { key: string; hex: string; label: string }[] = [
+  { key: "red",    hex: "#DC2626", label: "Rojo" },
+  { key: "orange", hex: "#EA580C", label: "Naranja" },
+  { key: "amber",  hex: "#D97706", label: "Ámbar" },
+  { key: "green",  hex: "#16A34A", label: "Verde" },
+  { key: "teal",   hex: "#0D9488", label: "Teal" },
+  { key: "cyan",   hex: "#0891B2", label: "Cyan" },
+  { key: "blue",   hex: "#2563EB", label: "Azul" },
+  { key: "indigo", hex: "#4F46E5", label: "Índigo" },
+  { key: "purple", hex: "#9333EA", label: "Morado" },
+  { key: "pink",   hex: "#EC4899", label: "Rosa" },
+  { key: "rose",   hex: "#E11D48", label: "Fucsia" },
+  { key: "gray",   hex: "#6B7280", label: "Gris" },
+];
+
 const DEFAULT_FORM: AccesoFormData = {
   empresa: "",
   tipo: "",
@@ -99,6 +116,8 @@ const DEFAULT_FORM: AccesoFormData = {
   tokenAdicional: "",
   observaciones: "",
   tags: [],
+  logoUrl: "",
+  colorKey: "",
 };
 
 export default function AccesoFormModal({
@@ -420,6 +439,81 @@ export default function AccesoFormModal({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Apariencia */}
+          <div className="space-y-3 md:col-span-2 border-t pt-3">
+            <Label className="text-sm font-medium text-gray-700">
+              Apariencia <span className="text-gray-400 font-normal">(opcional)</span>
+            </Label>
+
+            {/* Color de la tarjeta */}
+            <div className="space-y-1.5">
+              <p className="text-xs text-gray-500">Color de la tarjeta</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => set("colorKey", "")}
+                  className={`w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center bg-white ${
+                    !form.colorKey
+                      ? "border-gray-700 shadow-sm"
+                      : "border-gray-200 hover:border-gray-400"
+                  }`}
+                  title="Automático (según tipo)"
+                >
+                  <span className="text-xs text-gray-400 font-bold">A</span>
+                </button>
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => set("colorKey", c.key)}
+                    className={`w-7 h-7 rounded-full border-2 transition-all ${
+                      form.colorKey === c.key
+                        ? "border-gray-700 shadow-sm scale-110"
+                        : "border-transparent hover:border-gray-400"
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                    title={c.label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Logo URL */}
+            <div className="space-y-1.5">
+              <p className="text-xs text-gray-500">Logo de la plataforma (URL de imagen)</p>
+              <div className="flex items-center gap-2">
+                {form.logoUrl && (
+                  <div className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                    <img
+                      src={form.logoUrl}
+                      alt="preview"
+                      className="w-7 h-7 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+                <Input
+                  value={form.logoUrl}
+                  onChange={(e) => set("logoUrl", e.target.value)}
+                  placeholder="https://... (pega el enlace del logo)"
+                  className="flex-1 text-xs"
+                />
+                {form.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => set("logoUrl", "")}
+                    className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                    title="Quitar logo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

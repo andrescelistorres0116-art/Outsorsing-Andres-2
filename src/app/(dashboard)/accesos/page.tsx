@@ -22,7 +22,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,6 +45,8 @@ interface Acceso {
   correoAsociado?: string;
   tags: string[];
   ultimoAcceso: string;
+  logoUrl?: string;
+  colorKey?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -289,6 +290,22 @@ const TIPO_CONFIG: Record<
   },
 };
 
+// Color overrides when user picks a custom color
+const CARD_COLOR_MAP: Record<string, { color: string; border: string; bg: string; badgeClass: string }> = {
+  red:    { color: "text-red-700",    border: "border-red-400",    bg: "bg-red-50",    badgeClass: "bg-red-100 text-red-700 border-red-200" },
+  orange: { color: "text-orange-700", border: "border-orange-400", bg: "bg-orange-50", badgeClass: "bg-orange-100 text-orange-700 border-orange-200" },
+  amber:  { color: "text-amber-700",  border: "border-amber-400",  bg: "bg-amber-50",  badgeClass: "bg-amber-100 text-amber-700 border-amber-200" },
+  green:  { color: "text-green-700",  border: "border-green-400",  bg: "bg-green-50",  badgeClass: "bg-green-100 text-green-700 border-green-200" },
+  teal:   { color: "text-teal-700",   border: "border-teal-400",   bg: "bg-teal-50",   badgeClass: "bg-teal-100 text-teal-700 border-teal-200" },
+  cyan:   { color: "text-cyan-700",   border: "border-cyan-400",   bg: "bg-cyan-50",   badgeClass: "bg-cyan-100 text-cyan-700 border-cyan-200" },
+  blue:   { color: "text-blue-700",   border: "border-blue-400",   bg: "bg-blue-50",   badgeClass: "bg-blue-100 text-blue-700 border-blue-200" },
+  indigo: { color: "text-indigo-700", border: "border-indigo-400", bg: "bg-indigo-50", badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  purple: { color: "text-purple-700", border: "border-purple-400", bg: "bg-purple-50", badgeClass: "bg-purple-100 text-purple-700 border-purple-200" },
+  pink:   { color: "text-pink-700",   border: "border-pink-400",   bg: "bg-pink-50",   badgeClass: "bg-pink-100 text-pink-700 border-pink-200" },
+  rose:   { color: "text-rose-700",   border: "border-rose-400",   bg: "bg-rose-50",   badgeClass: "bg-rose-100 text-rose-700 border-rose-200" },
+  gray:   { color: "text-gray-600",   border: "border-gray-400",   bg: "bg-gray-50",   badgeClass: "bg-gray-100 text-gray-600 border-gray-200" },
+};
+
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
   const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -308,9 +325,14 @@ function AccesoCard({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
-  const cfg = TIPO_CONFIG[acceso.tipo];
-  const Icon = cfg.Icon;
+  const tipoCfg = TIPO_CONFIG[acceso.tipo];
+  const colorOverride = acceso.colorKey ? CARD_COLOR_MAP[acceso.colorKey] : null;
+  const cfg = colorOverride
+    ? { ...tipoCfg, ...colorOverride }
+    : tipoCfg;
+  const Icon = tipoCfg.Icon;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -318,7 +340,6 @@ function AccesoCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback for environments without clipboard API
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -332,8 +353,17 @@ function AccesoCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${cfg.bg} shrink-0`}>
-              <Icon className={`w-5 h-5 ${cfg.color}`} />
+            <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${cfg.bg} shrink-0 overflow-hidden`}>
+              {acceso.logoUrl && !logoError ? (
+                <img
+                  src={acceso.logoUrl}
+                  alt={acceso.plataforma}
+                  className="w-8 h-8 object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <Icon className={`w-5 h-5 ${cfg.color}`} />
+              )}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 leading-tight truncate">
@@ -489,6 +519,8 @@ export default function AccesosPage() {
       confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "",
       tags: a.tags,
+      logoUrl: a.logoUrl ?? "",
+      colorKey: a.colorKey ?? "",
     });
     setEditMode("edit");
     setEditId(a.id);
@@ -511,6 +543,8 @@ export default function AccesosPage() {
         correoAsociado: data.correoAsociado || undefined,
         tags: data.tags,
         ultimoAcceso: new Date().toISOString().split("T")[0],
+        logoUrl: data.logoUrl || undefined,
+        colorKey: data.colorKey || undefined,
       };
       setAccesos((prev) => [newAcceso, ...prev]);
     } else if (editId !== null) {
@@ -526,6 +560,8 @@ export default function AccesosPage() {
                 contrasena: data.contrasena,
                 correoAsociado: data.correoAsociado || undefined,
                 tags: data.tags,
+                logoUrl: data.logoUrl || undefined,
+                colorKey: data.colorKey || undefined,
               }
             : a
         )
