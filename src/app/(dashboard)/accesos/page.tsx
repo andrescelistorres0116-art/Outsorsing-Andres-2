@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ShieldCheck,
   Plus,
@@ -417,9 +417,31 @@ function AccesoCard({
 
 export default function AccesosPage() {
   const [accesos, setAccesos] = useState<Acceso[]>(ACCESOS);
+  const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [tipoFilter, setTipoFilter] = useState("todos");
+
+  // Load from server on mount
+  useEffect(() => {
+    fetch("/api/app-accesos")
+      .then((r) => r.json())
+      .then((data: Acceso[]) => {
+        if (Array.isArray(data)) setAccesos(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  // Sync to server on every change (after initial load)
+  useEffect(() => {
+    if (!loaded) return;
+    fetch("/api/app-accesos", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(accesos),
+    }).catch(() => {});
+  }, [accesos, loaded]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Partial<AccesoFormData> | undefined>();
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
