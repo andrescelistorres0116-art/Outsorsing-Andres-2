@@ -44,6 +44,8 @@ interface Acceso {
   // DIAN-specific
   nitTercero?: string;
   tipoDocumento?: string;
+  // Generic-specific
+  nitEmpresa?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -297,6 +299,12 @@ function AccesoCard({
 
         {/* Credentials */}
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+          {acceso.nitEmpresa && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT empresa:</span>
+              <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.nitEmpresa}</span>
+            </div>
+          )}
           {acceso.tipo === "DIAN" && acceso.nitTercero && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT tercero:</span>
@@ -536,6 +544,7 @@ export default function AccesosPage() {
       usuario: a.usuario, contrasena: a.contrasena, confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "", tags: a.tags,
       nitTercero: a.nitTercero ?? "", tipoDocumento: a.tipoDocumento ?? "",
+      nitEmpresa: a.nitEmpresa ?? "", observaciones: "",
     });
     setEditMode("edit");
     setEditId(a.id);
@@ -560,6 +569,7 @@ export default function AccesosPage() {
         contrasena: data.contrasena, correoAsociado: data.correoAsociado || undefined,
         tags: data.tags, ultimoAcceso: new Date().toISOString().split("T")[0],
         nitTercero: data.nitTercero || undefined, tipoDocumento: data.tipoDocumento || undefined,
+        nitEmpresa: data.nitEmpresa || undefined,
       }, ...prev]);
     } else if (editId !== null) {
       setAccesos((prev) =>
@@ -570,6 +580,7 @@ export default function AccesosPage() {
             contrasena: data.contrasena, correoAsociado: data.correoAsociado || undefined,
             tags: data.tags, nitTercero: data.nitTercero || undefined,
             tipoDocumento: data.tipoDocumento || undefined,
+            nitEmpresa: data.nitEmpresa || undefined,
           } : a
         )
       );
