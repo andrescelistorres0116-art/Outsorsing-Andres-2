@@ -233,11 +233,17 @@ export default function Header() {
                   </p>
                 </div>
                 <div className="py-1">
-                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  <button
+                    onClick={() => { setShowUserMenu(false); router.push("/configuracion?tab=seguridad"); }}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
                     <User className="w-4 h-4 text-slate-400" />
                     Mi Perfil
                   </button>
-                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  <button
+                    onClick={() => { setShowUserMenu(false); router.push("/configuracion"); }}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
                     <Settings className="w-4 h-4 text-slate-400" />
                     Configuración
                   </button>

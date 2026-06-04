@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   Settings,
   Building2,
@@ -661,7 +662,10 @@ function TabNotificaciones() {
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default function ConfiguracionPage() {
+function ConfiguracionContent() {
+  const params = useSearchParams();
+  const defaultTab = params.get("tab") ?? "general";
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -678,7 +682,7 @@ export default function ConfiguracionPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="general">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="bg-gray-100 h-10">
           <TabsTrigger value="general" className="gap-2 text-sm">
             <Building2 className="w-3.5 h-3.5" />
@@ -715,5 +719,13 @@ export default function ConfiguracionPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function ConfiguracionPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConfiguracionContent />
+    </Suspense>
   )
 }
