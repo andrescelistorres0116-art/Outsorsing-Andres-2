@@ -22,13 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import AccesoFormModal, { AccesoFormData, TipoAcceso } from "@/components/accesos/AccesoFormModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -602,34 +596,36 @@ export default function AccesosPage() {
               />
             </div>
 
-            <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
-              <SelectTrigger className="w-44 h-9 text-sm">
-                <SelectValue placeholder="Empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas las empresas</SelectItem>
-                {empresas.map((e) => (
-                  <SelectItem key={e} value={e}>{e}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={empresaFilter}
+              onValueChange={setEmpresaFilter}
+              placeholder="Empresa"
+              searchPlaceholder="Buscar empresa..."
+              className="w-44"
+              options={[
+                { value: "todas", label: "Todas las empresas" },
+                ...empresas.map((e) => ({ value: e, label: e })),
+              ]}
+            />
 
-            <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger className="w-48 h-9 text-sm">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los tipos</SelectItem>
-                <SelectItem value="DIAN">DIAN</SelectItem>
-                <SelectItem value="HACIENDA_BOGOTA">Hacienda Bogotá</SelectItem>
-                <SelectItem value="HACIENDA_CALI">Hacienda Cali</SelectItem>
-                <SelectItem value="PARAFISCAL">Parafiscal</SelectItem>
-                <SelectItem value="CAMARA">Cámara de Comercio</SelectItem>
-                <SelectItem value="SUPERSOCIEDADES">Supersociedades</SelectItem>
-                <SelectItem value="SOFTWARE_CONTABLE">Software Contable</SelectItem>
-                <SelectItem value="OTRO">Otro</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={tipoFilter}
+              onValueChange={setTipoFilter}
+              placeholder="Tipo"
+              searchPlaceholder="Buscar tipo..."
+              className="w-48"
+              options={[
+                { value: "todos",            label: "Todos los tipos" },
+                { value: "DIAN",             label: "DIAN" },
+                { value: "HACIENDA_BOGOTA",  label: "Hacienda Bogotá" },
+                { value: "HACIENDA_CALI",    label: "Hacienda Cali" },
+                { value: "PARAFISCAL",       label: "Parafiscal" },
+                { value: "CAMARA",           label: "Cámara de Comercio" },
+                { value: "SUPERSOCIEDADES",  label: "Supersociedades" },
+                { value: "SOFTWARE_CONTABLE", label: "Software Contable" },
+                { value: "OTRO",             label: "Otro" },
+              ]}
+            />
 
             <div className="flex-1 hidden sm:block" />
 
