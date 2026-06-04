@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getSession, clearSession, initials, AppSession } from "@/lib/app-auth";
 import { useTheme } from "next-themes";
 import {
   Bell,
@@ -15,8 +16,24 @@ import {
 
 export default function Header() {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [session, setSession] = useState<AppSession | null>(null);
+
+  useEffect(() => {
+    setSession(getSession());
+  }, []);
+
+  const userName = session?.nombre ?? "Admin";
+  const userEmail = session?.email ?? "";
+  const userRole = session?.role === "admin" ? "Administrador" : "Cliente";
+  const userInitials = session ? initials(session.nombre) : "?";
+
+  function handleLogout() {
+    clearSession();
+    router.push("/login");
+  }
 
   const notifications = [
     {
@@ -147,14 +164,14 @@ export default function Header() {
             className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold shadow-sm shrink-0">
-              AC
+              {userInitials}
             </div>
             <div className="hidden md:block text-left min-w-0">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate max-w-[120px]">
-                Admin
+                {userName}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight truncate max-w-[120px]">
-                Administrador
+                {userRole}
               </p>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden md:block shrink-0" />
@@ -170,10 +187,10 @@ export default function Header() {
               <div className="absolute right-0 top-11 z-20 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 overflow-hidden py-1">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Admin
+                    {userName}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    admin@contaflow.co
+                    {userEmail}
                   </p>
                 </div>
                 <div className="py-1">
@@ -188,7 +205,7 @@ export default function Header() {
                 </div>
                 <div className="py-1 border-t border-slate-100 dark:border-slate-800">
                   <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={handleLogout}
                     className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />

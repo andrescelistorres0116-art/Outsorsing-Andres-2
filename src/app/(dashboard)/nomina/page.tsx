@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EMPRESAS_MOCK, EmpresaMock } from "@/lib/empresas-mock";
+import { getSession, AppSession } from "@/lib/app-auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,12 @@ function periodoLabel(p: Periodo) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NominaPage() {
+  const [appSession, setAppSession] = useState<AppSession | null>(null);
+
+  useEffect(() => {
+    setAppSession(getSession());
+  }, []);
+
   // Read empresas from localStorage so newly created companies appear automatically
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
 
@@ -245,6 +252,8 @@ export default function NominaPage() {
 
   const filtered = reportes.filter((r) => {
     if (deletedIds.has(r.id)) return false;
+    // Client users only see their assigned empresas
+    if (appSession?.role === "cliente" && !appSession.empresaIds.includes(r.empresaNumId)) return false;
     const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
     const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
     const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;

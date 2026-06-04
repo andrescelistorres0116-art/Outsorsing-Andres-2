@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { tryLogin, setAppSession } from "@/lib/app-auth";
 import { useRouter } from "next/navigation";
 import { Building2, Eye, EyeOff, Lock, Mail, TrendingUp } from "lucide-react";
 
@@ -19,18 +19,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
+    const user = tryLogin(email, password);
+    if (!user) {
       setError("Correo o contraseña incorrectos.");
-      setIsLoading(false);
     } else {
-      router.push("/dashboard");
+      setAppSession(user);
+      router.push(user.role === "cliente" ? "/nomina" : "/dashboard");
     }
+    setIsLoading(false);
   };
 
   return (

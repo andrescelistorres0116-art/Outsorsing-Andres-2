@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -13,46 +13,50 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserCog,
 } from "lucide-react";
-import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { getSession, clearSession, initials, AppSession } from "@/lib/app-auth";
 
-const navItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Empresas",
-    href: "/empresas",
-    icon: Building2,
-  },
-  {
-    label: "Accesos",
-    href: "/accesos",
-    icon: KeyRound,
-  },
-  {
-    label: "Calendario Tributario",
-    href: "/calendario",
-    icon: CalendarCheck,
-  },
-  {
-    label: "Nómina",
-    href: "/nomina",
-    icon: Users,
-  },
-  {
-    label: "Configuración",
-    href: "/configuracion",
-    icon: Settings,
-  },
+const ADMIN_NAV = [
+  { label: "Dashboard",           href: "/dashboard",   icon: LayoutDashboard },
+  { label: "Empresas",            href: "/empresas",    icon: Building2 },
+  { label: "Accesos",             href: "/accesos",     icon: KeyRound },
+  { label: "Calendario Tributario", href: "/calendario", icon: CalendarCheck },
+  { label: "Nómina",              href: "/nomina",      icon: Users },
+  { label: "Configuración",       href: "/configuracion", icon: Settings },
+];
+
+const ADMIN_EXTRA = [
+  { label: "Usuarios", href: "/usuarios", icon: UserCog },
+];
+
+const CLIENT_NAV = [
+  { label: "Nómina", href: "/nomina", icon: Users },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [session, setSession] = useState<AppSession | null>(null);
+
+  useEffect(() => {
+    setSession(getSession());
+  }, []);
+
+  const isAdmin = session?.role !== "cliente";
+  const navItems = isAdmin ? ADMIN_NAV : CLIENT_NAV;
+  const extraItems = isAdmin ? ADMIN_EXTRA : [];
+
+  const userInitials = session ? initials(session.nombre) : "?";
+  const userName = session?.nombre ?? "";
+  const userEmail = session?.email ?? "";
+
+  function handleLogout() {
+    clearSession();
+    router.push("/login");
+  }
 
   return (
     <>
@@ -86,8 +90,7 @@ export default function Sidebar() {
             </p>
           )}
           {navItems.map(({ label, href, icon: Icon }) => {
-            const isActive =
-              pathname === href || pathname.startsWith(href + "/");
+            const isActive = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={href}
@@ -100,37 +103,67 @@ export default function Sidebar() {
                 } ${collapsed ? "justify-center px-2" : ""}`}
               >
                 <Icon
-                  className={`shrink-0 ${
-                    collapsed ? "w-5 h-5" : "w-4 h-4"
-                  } ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"}`}
+                  className={`shrink-0 ${collapsed ? "w-5 h-5" : "w-4 h-4"} ${
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                  }`}
                 />
                 {!collapsed && <span className="truncate">{label}</span>}
               </Link>
             );
           })}
+
+          {/* Admin-only section */}
+          {extraItems.length > 0 && (
+            <>
+              {!collapsed && (
+                <p className="px-3 mt-4 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Administración
+                </p>
+              )}
+              {collapsed && <div className="my-2 border-t border-slate-800/60" />}
+              {extraItems.map(({ label, href, icon: Icon }) => {
+                const isActive = pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={collapsed ? label : undefined}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 group ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                    } ${collapsed ? "justify-center px-2" : ""}`}
+                  >
+                    <Icon
+                      className={`shrink-0 ${collapsed ? "w-5 h-5" : "w-4 h-4"} ${
+                        isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                      }`}
+                    />
+                    {!collapsed && <span className="truncate">{label}</span>}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
-        {/* Bottom section: user info + logout */}
+        {/* Bottom: user info + logout + collapse */}
         <div className="border-t border-slate-800 p-3 space-y-1">
           {!collapsed && (
-            <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800 transition-colors cursor-default">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">
-                AC
+                {userInitials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-200 truncate">
-                  Admin
-                </p>
-                <p className="text-xs text-slate-500 truncate">
-                  admin@contaflow.co
-                </p>
+                <p className="text-sm font-medium text-slate-200 truncate">{userName}</p>
+                <p className="text-xs text-slate-500 truncate">{userEmail}</p>
               </div>
             </div>
           )}
 
           <button
             title={collapsed ? "Cerrar sesión" : undefined}
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={handleLogout}
             className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-150 ${
               collapsed ? "justify-center px-2" : ""
             }`}
@@ -139,7 +172,6 @@ export default function Sidebar() {
             {!collapsed && <span>Cerrar Sesión</span>}
           </button>
 
-          {/* Collapse toggle */}
           <button
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? "Expandir menú" : "Colapsar menú"}
@@ -162,8 +194,7 @@ export default function Sidebar() {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 py-2">
         {navItems.slice(0, 5).map(({ label, href, icon: Icon }) => {
-          const isActive =
-            pathname === href || pathname.startsWith(href + "/");
+          const isActive = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
