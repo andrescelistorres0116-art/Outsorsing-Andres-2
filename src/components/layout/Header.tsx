@@ -12,7 +12,10 @@ import {
   LogOut,
   User,
   Settings,
+  AlertTriangle,
+  Users,
 } from "lucide-react";
+import type { AppNotification } from "@/app/api/app-notifications/route";
 
 export default function Header() {
   const { theme, setTheme } = useTheme();
@@ -20,9 +23,18 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setSession(getSession());
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/app-notifications")
+      .then((r) => r.json())
+      .then((data: AppNotification[]) => setNotifications(data))
+      .catch(() => {});
   }, []);
 
   const userName = session?.nombre ?? "Admin";
@@ -35,31 +47,17 @@ export default function Header() {
     router.push("/login");
   }
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Obligación próxima",
-      message: "IVA bimestral vence en 3 días — Empresa ABC Ltda.",
-      time: "hace 1h",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Nómina procesada",
-      message: "Liquidación de junio aprobada para XYZ S.A.S.",
-      time: "hace 3h",
-      unread: true,
-    },
-    {
-      id: 3,
-      title: "Nuevo acceso creado",
-      message: "Se registró acceso DIAN para cliente Inversiones Reyes.",
-      time: "ayer",
-      unread: false,
-    },
-  ];
+  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  function markAllRead() {
+    setReadIds(new Set(notifications.map((n) => n.id)));
+  }
+
+  function diasLabel(dias: number): string {
+    if (dias === 0) return "vence hoy";
+    if (dias === 1) return "vence mañana";
+    return `vence en ${dias} días`;
+  }
 
   return (
     <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-6 gap-4 shrink-0 z-10">
@@ -113,39 +111,80 @@ export default function Header() {
                     Notificaciones
                   </h3>
                   {unreadCount > 0 && (
-                    <span className="text-xs text-blue-600 font-medium cursor-pointer hover:text-blue-700">
+                    <button
+                      onClick={markAllRead}
+                      className="text-xs text-blue-600 font-medium hover:text-blue-700"
+                    >
                       Marcar todo como leído
-                    </span>
+                    </button>
                   )}
                 </div>
+
                 <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer ${
-                        n.unread ? "bg-blue-50/40 dark:bg-blue-900/10" : ""
-                      }`}
-                    >
-                      {n.unread && (
-                        <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                      )}
-                      {!n.unread && <div className="mt-1.5 w-2 h-2 shrink-0" />}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {n.title}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          {n.message}
-                        </p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                          {n.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  {notifications.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">
+                      Sin alertas pendientes
+                    </p>
+                  ) : (
+                    notifications.map((n) => {
+                      const isUnread = !readIds.has(n.id);
+                      const Icon =
+                        n.tipo === "nomina" ? Users : AlertTriangle;
+                      const iconColor =
+                        n.tipo === "nomina"
+                          ? "text-blue-500"
+                          : n.diasRestantes === 0
+                          ? "text-red-500"
+                          : n.diasRestantes <= 2
+                          ? "text-orange-500"
+                          : "text-yellow-500";
+                      return (
+                        <div
+                          key={n.id}
+                          onClick={() =>
+                            setReadIds((prev) => new Set([...prev, n.id]))
+                          }
+                          className={`flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer ${
+                            isUnread
+                              ? "bg-blue-50/40 dark:bg-blue-900/10"
+                              : ""
+                          }`}
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            {isUnread ? (
+                              <div className="w-2 h-2 rounded-full bg-blue-600 mt-1" />
+                            ) : (
+                              <div className="w-2 h-2" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <Icon className={`w-3 h-3 shrink-0 ${iconColor}`} />
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                {n.title}
+                              </p>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                              {n.message}
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                              {diasLabel(n.diasRestantes)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
+
                 <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800">
-                  <button className="w-full text-xs text-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium py-0.5">
+                  <button
+                    onClick={() => {
+                      setShowNotifications(false);
+                      router.push("/calendario");
+                    }}
+                    className="w-full text-xs text-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium py-0.5"
+                  >
                     Ver todas las notificaciones
                   </button>
                 </div>
