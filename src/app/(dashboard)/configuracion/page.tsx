@@ -5,14 +5,11 @@ import { useSearchParams } from "next/navigation"
 import {
   Settings,
   Building2,
-  Users,
   Shield,
   Bell,
   Upload,
   Eye,
   EyeOff,
-  Pencil,
-  UserX,
   Clock,
   Key,
   CheckCircle2,
@@ -26,83 +23,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-
-// ─── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_USERS = [
-  {
-    id: "1",
-    nombre: "Ana Rodríguez",
-    correo: "ana.rodriguez@contaflow.co",
-    rol: "ADMIN",
-    estado: "Activo",
-    ultimoAcceso: "hoy, 09:14",
-  },
-  {
-    id: "2",
-    nombre: "Carlos Mendoza",
-    correo: "carlos.mendoza@contaflow.co",
-    rol: "ANALYST",
-    estado: "Activo",
-    ultimoAcceso: "ayer, 16:42",
-  },
-  {
-    id: "3",
-    nombre: "Laura Gómez",
-    correo: "laura.gomez@contaflow.co",
-    rol: "NOMINA",
-    estado: "Activo",
-    ultimoAcceso: "hace 2 días",
-  },
-  {
-    id: "4",
-    nombre: "Pedro Vargas",
-    correo: "pedro.vargas@contaflow.co",
-    rol: "CLIENT",
-    estado: "Inactivo",
-    ultimoAcceso: "hace 15 días",
-  },
-  {
-    id: "5",
-    nombre: "Sofía Castro",
-    correo: "sofia.castro@contaflow.co",
-    rol: "ANALYST",
-    estado: "Activo",
-    ultimoAcceso: "hoy, 11:30",
-  },
-]
-
-const MOCK_ACCESS_LOGS = [
-  { id: "1", usuario: "Ana Rodríguez", empresa: "X TOURS SAS", accion: "Contraseña revelada", tiempo: "hoy 09:14" },
-  { id: "2", usuario: "Carlos Mendoza", empresa: "DIAZAR LTDA", accion: "Contraseña revelada", tiempo: "hoy 08:55" },
-  { id: "3", usuario: "Ana Rodríguez", empresa: "300 HILOS SAS", accion: "Contraseña revelada", tiempo: "ayer 17:02" },
-  { id: "4", usuario: "Laura Gómez", empresa: "TEXTILES DEL NORTE", accion: "Contraseña revelada", tiempo: "ayer 14:30" },
-  { id: "5", usuario: "Carlos Mendoza", empresa: "X TOURS SAS", accion: "Contraseña revelada", tiempo: "ayer 11:18" },
-  { id: "6", usuario: "Sofía Castro", empresa: "INVERSIONES CASTILLO", accion: "Contraseña revelada", tiempo: "hace 2 días" },
-  { id: "7", usuario: "Ana Rodríguez", empresa: "COMERCIAL TORRES", accion: "Contraseña revelada", tiempo: "hace 2 días" },
-  { id: "8", usuario: "Carlos Mendoza", empresa: "DIAZAR LTDA", accion: "Contraseña revelada", tiempo: "hace 3 días" },
-  { id: "9", usuario: "Laura Gómez", empresa: "300 HILOS SAS", accion: "Contraseña revelada", tiempo: "hace 4 días" },
-  { id: "10", usuario: "Sofía Castro", empresa: "X TOURS SAS", accion: "Contraseña revelada", tiempo: "hace 5 días" },
-]
-
-// ─── Role badge helper ─────────────────────────────────────────────────────────
-
-function RoleBadge({ rol }: { rol: string }) {
-  const map: Record<string, { label: string; className: string }> = {
-    ADMIN: { label: "Admin", className: "bg-purple-100 text-purple-800 border-purple-200" },
-    ANALYST: { label: "Analista", className: "bg-blue-100 text-blue-800 border-blue-200" },
-    NOMINA: { label: "Nómina", className: "bg-green-100 text-green-800 border-green-200" },
-    CLIENT: { label: "Cliente", className: "bg-gray-100 text-gray-700 border-gray-200" },
-  }
-  const config = map[rol] ?? { label: rol, className: "bg-gray-100 text-gray-600 border-gray-200" }
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${config.className}`}
-    >
-      {config.label}
-    </span>
-  )
-}
 
 // ─── Tab: General ──────────────────────────────────────────────────────────────
 
@@ -225,116 +145,6 @@ function TabGeneral() {
           )}
         </Button>
       </div>
-    </div>
-  )
-}
-
-// ─── Tab: Usuarios ─────────────────────────────────────────────────────────────
-
-function TabUsuarios() {
-  const [users, setUsers] = useState(MOCK_USERS)
-
-  function toggleUser(id: string) {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, estado: u.estado === "Activo" ? "Inactivo" : "Activo" }
-          : u
-      )
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          {users.filter((u) => u.estado === "Activo").length} usuarios activos
-        </p>
-        <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Users className="w-3.5 h-3.5" />
-          Nuevo Usuario
-        </Button>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {["Nombre", "Correo", "Rol", "Estado", "Último acceso", "Acciones"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold shrink-0">
-                          {u.nombre.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </div>
-                        <span className="font-medium text-gray-900 whitespace-nowrap">
-                          {u.nombre}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500 text-xs">{u.correo}</td>
-                    <td className="px-5 py-3.5">
-                      <RoleBadge rol={u.rol} />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                          u.estado === "Activo"
-                            ? "bg-green-100 text-green-800 border-green-200"
-                            : "bg-gray-100 text-gray-600 border-gray-200"
-                        }`}
-                      >
-                        {u.estado}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-400 text-xs whitespace-nowrap">
-                      {u.ultimoAcceso}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600"
-                          title="Editar usuario"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-7 w-7 p-0 ${
-                            u.estado === "Activo"
-                              ? "text-gray-400 hover:text-red-600"
-                              : "text-gray-400 hover:text-green-600"
-                          }`}
-                          title={u.estado === "Activo" ? "Desactivar usuario" : "Activar usuario"}
-                          onClick={() => toggleUser(u.id)}
-                        >
-                          <UserX className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
@@ -509,48 +319,6 @@ function TabSeguridad() {
         </CardContent>
       </Card>
 
-      {/* Access log */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Últimos Accesos a Credenciales</CardTitle>
-          <CardDescription>
-            Registro de los últimos 10 momentos en que se reveló una contraseña.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {["Usuario", "Empresa", "Acción", "Fecha"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {MOCK_ACCESS_LOGS.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3 text-gray-800 font-medium text-xs">{log.usuario}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">{log.empresa}</td>
-                    <td className="px-5 py-3">
-                      <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-0.5 font-medium">
-                        <Eye className="w-3 h-3" />
-                        {log.accion}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-gray-400 text-xs whitespace-nowrap">{log.tiempo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
@@ -688,10 +456,6 @@ function ConfiguracionContent() {
             <Building2 className="w-3.5 h-3.5" />
             General
           </TabsTrigger>
-          <TabsTrigger value="usuarios" className="gap-2 text-sm">
-            <Users className="w-3.5 h-3.5" />
-            Usuarios
-          </TabsTrigger>
           <TabsTrigger value="seguridad" className="gap-2 text-sm">
             <Shield className="w-3.5 h-3.5" />
             Seguridad
@@ -706,9 +470,6 @@ function ConfiguracionContent() {
           <TabGeneral />
         </TabsContent>
 
-        <TabsContent value="usuarios" className="mt-6">
-          <TabUsuarios />
-        </TabsContent>
 
         <TabsContent value="seguridad" className="mt-6">
           <TabSeguridad />
