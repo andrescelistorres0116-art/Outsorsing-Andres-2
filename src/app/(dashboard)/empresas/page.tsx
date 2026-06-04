@@ -168,7 +168,14 @@ export default function EmpresasPage() {
   });
 
   useEffect(() => {
-    localStorage.setItem("empresas-data", JSON.stringify(empresas));
+    const json = JSON.stringify(empresas);
+    localStorage.setItem("empresas-data", json);
+    // Sync to server so client browsers can read the current empresa list
+    fetch("/api/app-empresas", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: json,
+    }).catch(() => {});
   }, [empresas]);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");

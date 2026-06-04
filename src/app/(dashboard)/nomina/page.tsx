@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EMPRESAS_MOCK, EmpresaMock } from "@/lib/empresas-mock";
+import { EmpresaMock } from "@/lib/empresas-mock";
 import { getSession, AppSession } from "@/lib/app-auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -194,14 +194,33 @@ export default function NominaPage() {
     setAppSession(getSession());
   }, []);
 
-  // Read empresas from localStorage so newly created companies appear automatically
-  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+  // Empresas loaded from server so all browsers see the same data
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("empresas-data");
-      if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
-    } catch {}
+    fetch("/api/app-empresas")
+      .then((r) => r.json())
+      .then((data: EmpresaMock[]) => {
+        if (data.length > 0) {
+          setEmpresasData(data);
+        } else {
+          // Server store empty (not yet synced) — fall back to localStorage only
+          try {
+            const stored = localStorage.getItem("empresas-data");
+            if (stored) {
+              const parsed = JSON.parse(stored) as EmpresaMock[];
+              if (parsed.length > 0) setEmpresasData(parsed);
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {
+        // Network error — fall back to localStorage
+        try {
+          const stored = localStorage.getItem("empresas-data");
+          if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
+        } catch {}
+      });
   }, []);
 
   const TODAY_MES = new Date().getMonth() + 1;
