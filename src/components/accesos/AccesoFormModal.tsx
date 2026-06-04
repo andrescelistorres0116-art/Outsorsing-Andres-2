@@ -45,6 +45,9 @@ export interface AccesoFormData {
   tokenAdicional: string;
   observaciones: string;
   tags: string[];
+  // DIAN-specific
+  nitTercero: string;
+  tipoDocumento: string;
 }
 
 interface AccesoFormModalProps {
@@ -68,12 +71,22 @@ const TIPOS_ACCESO: { value: TipoAcceso; label: string }[] = [
   { value: "OTRO",             label: "Otro" },
 ];
 
-const PLATAFORMAS_PARAFISCAL = [
-  "MiPlanilla",
-  "Aportes en Línea",
-  "SOI",
-  "Arus",
-  "Otra",
+const PLATAFORMAS_PARAFISCAL = ["MiPlanilla", "Aportes en Línea", "SOI", "Arus", "Otra"];
+
+const TIPOS_DOCUMENTO = [
+  "Tarjeta de identidad",
+  "Registro civil de nacimiento",
+  "Cédula de ciudadanía",
+  "Certificado registraduría sin identificación",
+  "Tarjeta de extranjería",
+  "Cédula de extranjería",
+  "Pasaporte",
+  "Documento de identificación extranjero",
+  "Sin identificación del exterior o para uso definido DIAN",
+  "Documento de identificación extranjero persona jurídica",
+  "Carné diplomático",
+  "Permiso especial de permanencia PEP",
+  "Permiso de protección temporal PPT",
 ];
 
 const DEFAULT_FORM: AccesoFormData = {
@@ -89,6 +102,8 @@ const DEFAULT_FORM: AccesoFormData = {
   tokenAdicional: "",
   observaciones: "",
   tags: [],
+  nitTercero: "",
+  tipoDocumento: "",
 };
 
 export default function AccesoFormModal({
@@ -109,6 +124,15 @@ export default function AccesoFormModal({
 
   const set = (field: keyof AccesoFormData, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleTipoChange = (v: string) => {
+    setForm((prev) => ({
+      ...prev,
+      tipo: v as TipoAcceso,
+      // Auto-fill plataforma for DIAN
+      plataforma: v === "DIAN" ? "DIAN - Muisca" : prev.plataforma,
+    }));
+  };
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -132,11 +156,16 @@ export default function AccesoFormModal({
     const newErrors: Partial<Record<keyof AccesoFormData, string>> = {};
     if (!form.empresa) newErrors.empresa = "Seleccione una empresa";
     if (!form.tipo) newErrors.tipo = "Seleccione el tipo de acceso";
-    if (!form.plataforma) newErrors.plataforma = "Ingrese el nombre de la plataforma";
-    if (!form.usuario) newErrors.usuario = "Ingrese el usuario";
     if (!form.contrasena) newErrors.contrasena = "Ingrese la contraseña";
     if (form.contrasena && form.confirmarContrasena && form.contrasena !== form.confirmarContrasena) {
       newErrors.confirmarContrasena = "Las contraseñas no coinciden";
+    }
+    if (form.tipo === "DIAN") {
+      if (!form.tipoDocumento) newErrors.tipoDocumento = "Seleccione el tipo de documento";
+      if (!form.usuario) newErrors.usuario = "Ingrese el número de documento";
+    } else {
+      if (!form.plataforma) newErrors.plataforma = "Ingrese el nombre de la plataforma";
+      if (!form.usuario) newErrors.usuario = "Ingrese el usuario";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -155,6 +184,8 @@ export default function AccesoFormModal({
     onClose();
   };
 
+  const isDian = form.tipo === "DIAN";
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -165,7 +196,8 @@ export default function AccesoFormModal({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-          {/* Empresa */}
+
+          {/* ── Empresa ── */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
               Empresa <span className="text-red-500">*</span>
@@ -183,12 +215,12 @@ export default function AccesoFormModal({
             {errors.empresa && <p className="text-xs text-red-500">{errors.empresa}</p>}
           </div>
 
-          {/* Tipo de Acceso */}
+          {/* ── Tipo de Acceso ── */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
               Tipo de Acceso <span className="text-red-500">*</span>
             </Label>
-            <Select value={form.tipo} onValueChange={(v) => set("tipo", v as TipoAcceso)}>
+            <Select value={form.tipo} onValueChange={handleTipoChange}>
               <SelectTrigger className={errors.tipo ? "border-red-400" : ""}>
                 <SelectValue placeholder="Seleccionar tipo..." />
               </SelectTrigger>
@@ -201,70 +233,122 @@ export default function AccesoFormModal({
             {errors.tipo && <p className="text-xs text-red-500">{errors.tipo}</p>}
           </div>
 
-          {/* Plataforma / Nombre */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Plataforma / Nombre <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              value={form.plataforma}
-              onChange={(e) => set("plataforma", e.target.value)}
-              placeholder="Ej: Siigo, MiPlanilla, Muisca..."
-              className={errors.plataforma ? "border-red-400" : ""}
-            />
-            {errors.plataforma && <p className="text-xs text-red-500">{errors.plataforma}</p>}
-          </div>
+          {/* ══════════ DIAN-specific fields ══════════ */}
+          {isDian && (
+            <>
+              {/* NIT del tercero */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  NIT del tercero <span className="text-gray-400 font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  value={form.nitTercero}
+                  onChange={(e) => set("nitTercero", e.target.value)}
+                  placeholder="Ej: 900123456-7"
+                />
+              </div>
 
-          {/* Plataforma Parafiscal (condicional) */}
-          {form.tipo === "PARAFISCAL" && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                Plataforma Parafiscal
-              </Label>
-              <Select
-                value={form.plataformaParafiscal}
-                onValueChange={(v) => set("plataformaParafiscal", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar plataforma..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLATAFORMAS_PARAFISCAL.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Tipo de documento */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Tipo de documento <span className="text-red-500">*</span>
+                </Label>
+                <Select value={form.tipoDocumento} onValueChange={(v) => set("tipoDocumento", v)}>
+                  <SelectTrigger className={errors.tipoDocumento ? "border-red-400" : ""}>
+                    <SelectValue placeholder="Seleccionar tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_DOCUMENTO.map((td) => (
+                      <SelectItem key={td} value={td}>{td}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.tipoDocumento && <p className="text-xs text-red-500">{errors.tipoDocumento}</p>}
+              </div>
+
+              {/* Número de documento */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Número de documento <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={form.usuario}
+                  onChange={(e) => set("usuario", e.target.value)}
+                  placeholder="Número de documento..."
+                  className={errors.usuario ? "border-red-400" : ""}
+                />
+                {errors.usuario && <p className="text-xs text-red-500">{errors.usuario}</p>}
+              </div>
+            </>
           )}
 
-          {/* Usuario */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Usuario <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              value={form.usuario}
-              onChange={(e) => set("usuario", e.target.value)}
-              placeholder="Usuario o NIT..."
-              className={errors.usuario ? "border-red-400" : ""}
-            />
-            {errors.usuario && <p className="text-xs text-red-500">{errors.usuario}</p>}
-          </div>
+          {/* ══════════ Generic fields (non-DIAN) ══════════ */}
+          {!isDian && (
+            <>
+              {/* Plataforma */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Plataforma / Nombre <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={form.plataforma}
+                  onChange={(e) => set("plataforma", e.target.value)}
+                  placeholder="Ej: Siigo, MiPlanilla..."
+                  className={errors.plataforma ? "border-red-400" : ""}
+                />
+                {errors.plataforma && <p className="text-xs text-red-500">{errors.plataforma}</p>}
+              </div>
 
-          {/* Correo Asociado */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Correo Asociado <span className="text-gray-400 font-normal">(opcional)</span>
-            </Label>
-            <Input
-              type="email"
-              value={form.correoAsociado}
-              onChange={(e) => set("correoAsociado", e.target.value)}
-              placeholder="correo@empresa.com"
-            />
-          </div>
+              {/* Plataforma Parafiscal */}
+              {form.tipo === "PARAFISCAL" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Plataforma Parafiscal</Label>
+                  <Select
+                    value={form.plataformaParafiscal}
+                    onValueChange={(v) => set("plataformaParafiscal", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar plataforma..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PLATAFORMAS_PARAFISCAL.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-          {/* Contraseña */}
+              {/* Usuario */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Usuario <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={form.usuario}
+                  onChange={(e) => set("usuario", e.target.value)}
+                  placeholder="Usuario o NIT..."
+                  className={errors.usuario ? "border-red-400" : ""}
+                />
+                {errors.usuario && <p className="text-xs text-red-500">{errors.usuario}</p>}
+              </div>
+
+              {/* Correo Asociado */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Correo Asociado <span className="text-gray-400 font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  type="email"
+                  value={form.correoAsociado}
+                  onChange={(e) => set("correoAsociado", e.target.value)}
+                  placeholder="correo@empresa.com"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ── Contraseña ── */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
               Contraseña <span className="text-red-500">*</span>
@@ -288,11 +372,9 @@ export default function AccesoFormModal({
             {errors.contrasena && <p className="text-xs text-red-500">{errors.contrasena}</p>}
           </div>
 
-          {/* Confirmar Contraseña */}
+          {/* ── Confirmar Contraseña ── */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Confirmar Contraseña
-            </Label>
+            <Label className="text-sm font-medium text-gray-700">Confirmar Contraseña</Label>
             <div className="relative">
               <Input
                 type={showConfirm ? "text" : "password"}
@@ -314,34 +396,22 @@ export default function AccesoFormModal({
             )}
           </div>
 
-          {/* Token/Código adicional */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Token / Código adicional <span className="text-gray-400 font-normal">(opcional)</span>
-            </Label>
-            <Input
-              value={form.tokenAdicional}
-              onChange={(e) => set("tokenAdicional", e.target.value)}
-              placeholder="Token, PIN, código de seguridad..."
-            />
-          </div>
+          {/* ── Token (solo para tipos no-DIAN) ── */}
+          {!isDian && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">
+                Token / Código adicional <span className="text-gray-400 font-normal">(opcional)</span>
+              </Label>
+              <Input
+                value={form.tokenAdicional}
+                onChange={(e) => set("tokenAdicional", e.target.value)}
+                placeholder="Token, PIN, código de seguridad..."
+              />
+            </div>
+          )}
 
-          {/* Preguntas de Seguridad */}
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Preguntas de Seguridad <span className="text-gray-400 font-normal">(opcional)</span>
-            </Label>
-            <Textarea
-              value={form.preguntasSeguridad}
-              onChange={(e) => set("preguntasSeguridad", e.target.value)}
-              placeholder="Pregunta: ¿Cuál es el nombre de su primera mascota? Respuesta: Fido"
-              rows={2}
-              className="resize-none"
-            />
-          </div>
-
-          {/* Observaciones */}
-          <div className="space-y-1.5 md:col-span-2">
+          {/* ── Observaciones ── */}
+          <div className={`space-y-1.5 ${isDian ? "md:col-span-2" : ""}`}>
             <Label className="text-sm font-medium text-gray-700">Observaciones</Label>
             <Textarea
               value={form.observaciones}
@@ -352,7 +422,23 @@ export default function AccesoFormModal({
             />
           </div>
 
-          {/* Tags */}
+          {/* ── Preguntas de seguridad (solo no-DIAN) ── */}
+          {!isDian && (
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Preguntas de Seguridad <span className="text-gray-400 font-normal">(opcional)</span>
+              </Label>
+              <Textarea
+                value={form.preguntasSeguridad}
+                onChange={(e) => set("preguntasSeguridad", e.target.value)}
+                placeholder="Pregunta: ¿Cuál es el nombre de su primera mascota? Respuesta: Fido"
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          )}
+
+          {/* ── Etiquetas ── */}
           <div className="space-y-1.5 md:col-span-2">
             <Label className="text-sm font-medium text-gray-700">Etiquetas</Label>
             <div className="flex gap-2">
@@ -390,9 +476,7 @@ export default function AccesoFormModal({
         </div>
 
         <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={handleClose}>
-            Cancelar
-          </Button>
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
             {mode === "create" ? "Guardar Acceso" : "Actualizar Acceso"}
           </Button>

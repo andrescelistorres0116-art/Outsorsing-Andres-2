@@ -37,6 +37,9 @@ interface Acceso {
   correoAsociado?: string;
   tags: string[];
   ultimoAcceso: string;
+  // DIAN-specific
+  nitTercero?: string;
+  tipoDocumento?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -299,8 +302,22 @@ function AccesoCard({
 
         {/* Credentials */}
         <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+          {acceso.tipo === "DIAN" && acceso.nitTercero && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT tercero:</span>
+              <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.nitTercero}</span>
+            </div>
+          )}
+          {acceso.tipo === "DIAN" && acceso.tipoDocumento && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Tipo doc.:</span>
+              <span className="text-xs text-gray-700 truncate flex-1">{acceso.tipoDocumento}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Usuario:</span>
+            <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">
+              {acceso.tipo === "DIAN" ? "Núm. doc.:" : "Usuario:"}
+            </span>
             <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.usuario}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -472,6 +489,8 @@ export default function AccesosPage() {
       confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "",
       tags: a.tags,
+      nitTercero: a.nitTercero ?? "",
+      tipoDocumento: a.tipoDocumento ?? "",
     });
     setEditMode("edit");
     setEditId(a.id);
@@ -494,6 +513,8 @@ export default function AccesosPage() {
         correoAsociado: data.correoAsociado || undefined,
         tags: data.tags,
         ultimoAcceso: new Date().toISOString().split("T")[0],
+        nitTercero: data.nitTercero || undefined,
+        tipoDocumento: data.tipoDocumento || undefined,
       };
       setAccesos((prev) => [newAcceso, ...prev]);
     } else if (editId !== null) {
@@ -509,6 +530,8 @@ export default function AccesosPage() {
                 contrasena: data.contrasena,
                 correoAsociado: data.correoAsociado || undefined,
                 tags: data.tags,
+                nitTercero: data.nitTercero || undefined,
+                tipoDocumento: data.tipoDocumento || undefined,
               }
             : a
         )
