@@ -299,9 +299,11 @@ function formatDate(dateStr: string) {
 function AccesoCard({
   acceso,
   onEdit,
+  onDelete,
 }: {
   acceso: Acceso;
   onEdit: (a: Acceso) => void;
+  onDelete: (id: number) => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -426,6 +428,16 @@ function AccesoCard({
                 </>
               )}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDelete(acceso.id)}
+              className="h-7 px-2 text-xs gap-1 text-gray-500 hover:text-red-600 hover:border-red-300 hover:bg-red-50"
+              title="Eliminar acceso"
+            >
+              <Trash2 className="w-3 h-3" />
+              Eliminar
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -480,6 +492,10 @@ export default function AccesosPage() {
     setEditMode("edit");
     setEditId(a.id);
     setModalOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    setAccesos((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleSave = (data: AccesoFormData) => {
@@ -653,7 +669,7 @@ export default function AccesosPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((acceso) => (
-            <AccesoCard key={acceso.id} acceso={acceso} onEdit={handleEdit} />
+            <AccesoCard key={acceso.id} acceso={acceso} onEdit={handleEdit} onDelete={handleDelete} />
           ))}
         </div>
       )}
