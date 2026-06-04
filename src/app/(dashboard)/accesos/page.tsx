@@ -256,6 +256,7 @@ function AccesoCard({
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const cfg = TIPO_CONFIG[acceso.tipo];
   const Icon = cfg.Icon;
@@ -339,7 +340,30 @@ function AccesoCard({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-auto">
+        <div className="pt-1 border-t border-gray-100 mt-auto">
+          {confirmDelete ? (
+            <div className="flex items-center justify-between gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <span className="text-xs text-red-700 font-medium">¿Eliminar este acceso?</span>
+              <div className="flex gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmDelete(false)}
+                  className="h-7 px-2 text-xs text-gray-600 hover:text-gray-800"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => onDelete(acceso.id)}
+                  className="h-7 px-2 text-xs bg-red-600 hover:bg-red-700 text-white border-0"
+                >
+                  Sí, eliminar
+                </Button>
+              </div>
+            </div>
+          ) : (
+          <div className="flex items-center justify-between">
           <span className="text-xs text-gray-400">
             Último acceso: {formatDate(acceso.ultimoAcceso)}
           </span>
@@ -373,7 +397,7 @@ function AccesoCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onDelete(acceso.id)}
+              onClick={() => setConfirmDelete(true)}
               className="h-7 px-2 text-xs gap-1 text-gray-500 hover:text-red-600 hover:border-red-300 hover:bg-red-50"
               title="Eliminar acceso"
             >
@@ -381,6 +405,8 @@ function AccesoCard({
               Eliminar
             </Button>
           </div>
+          </div>
+          )}
         </div>
       </CardContent>
     </Card>
