@@ -34,7 +34,10 @@ export default function Header() {
 
   const userName = session?.nombre ?? "Admin";
   const userEmail = session?.email ?? "";
-  const userRole = session?.role === "admin" ? "Administrador" : "Cliente";
+  const userRole =
+    session?.role === "admin" ? "Administrador" :
+    session?.role === "contador" ? "Contador" :
+    "Cliente";
   const userInitials = session ? initials(session.nombre) : "?";
 
   function handleLogout() {

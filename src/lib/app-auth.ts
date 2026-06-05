@@ -7,7 +7,7 @@ export interface AppUser {
   nombre: string;
   email: string;
   password: string;
-  role: "admin" | "cliente";
+  role: "admin" | "contador" | "cliente";
   empresaIds: number[];
   activo: boolean;
   creadoEn: string;
@@ -17,7 +17,7 @@ export interface AppSession {
   userId: string;
   nombre: string;
   email: string;
-  role: "admin" | "cliente";
+  role: "admin" | "contador" | "cliente";
   empresaIds: number[];
 }
 

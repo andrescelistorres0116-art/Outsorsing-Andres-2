@@ -10,6 +10,7 @@ import {
   EyeOff,
   Shield,
   User,
+  Calculator,
   X,
   Search,
 } from "lucide-react";
@@ -25,6 +26,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AppUser } from "@/lib/app-auth";
 import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import { EmpresaMock } from "@/lib/empresas-mock";
@@ -35,6 +43,7 @@ interface UserFormData {
   nombre: string;
   email: string;
   password: string;
+  role: "contador" | "cliente";
   empresaIds: number[];
   activo: boolean;
 }
@@ -43,6 +52,7 @@ const DEFAULT_FORM: UserFormData = {
   nombre: "",
   email: "",
   password: "",
+  role: "cliente",
   empresaIds: [],
   activo: true,
 };
@@ -76,6 +86,7 @@ export default function UsuariosPage() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalContadores = users.filter((u) => u.role === "contador").length;
   const totalClientes = users.filter((u) => u.role === "cliente").length;
   const activosClientes = users.filter((u) => u.role === "cliente" && u.activo).length;
 
@@ -93,6 +104,7 @@ export default function UsuariosPage() {
       nombre: user.nombre,
       email: user.email,
       password: user.password,
+      role: user.role === "admin" ? "cliente" : user.role,
       empresaIds: user.empresaIds,
       activo: user.activo,
     });
@@ -135,6 +147,7 @@ export default function UsuariosPage() {
         nombre: form.nombre,
         email: form.email,
         password: form.password,
+        role: editingUser.role === "admin" ? "admin" : form.role,
         empresaIds: form.empresaIds,
         activo: form.activo,
       };
@@ -159,7 +172,7 @@ export default function UsuariosPage() {
         nombre: form.nombre,
         email: form.email,
         password: form.password,
-        role: "cliente",
+        role: form.role,
         empresaIds: form.empresaIds,
         activo: form.activo,
         creadoEn: new Date().toISOString().split("T")[0],
@@ -221,11 +234,12 @@ export default function UsuariosPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "Total Usuarios", value: users.length, color: "text-gray-900", bg: "bg-white" },
-          { label: "Clientes Activos", value: activosClientes, color: "text-violet-700", bg: "bg-violet-50" },
-          { label: "Clientes Totales", value: totalClientes, color: "text-gray-600", bg: "bg-white" },
+          { label: "Total Usuarios",     value: users.length,      color: "text-gray-900",   bg: "bg-white" },
+          { label: "Contadores",         value: totalContadores,   color: "text-blue-700",   bg: "bg-blue-50" },
+          { label: "Clientes Activos",   value: activosClientes,   color: "text-violet-700", bg: "bg-violet-50" },
+          { label: "Clientes Totales",   value: totalClientes,     color: "text-gray-600",   bg: "bg-white" },
         ].map((s) => (
           <Card key={s.label} className={s.bg}>
             <CardContent className="p-4">
@@ -275,7 +289,7 @@ export default function UsuariosPage() {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`flex items-center justify-center w-9 h-9 rounded-full text-white text-xs font-bold shrink-0 ${user.role === "admin" ? "bg-blue-600" : "bg-violet-500"}`}>
+                      <div className={`flex items-center justify-center w-9 h-9 rounded-full text-white text-xs font-bold shrink-0 ${user.role === "admin" ? "bg-blue-600" : user.role === "contador" ? "bg-emerald-600" : "bg-violet-500"}`}>
                         {user.nombre.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
                       </div>
                       <div>
@@ -288,6 +302,10 @@ export default function UsuariosPage() {
                     {user.role === "admin" ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full px-2.5 py-0.5">
                         <Shield className="w-3 h-3" /> Admin
+                      </span>
+                    ) : user.role === "contador" ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full px-2.5 py-0.5">
+                        <Calculator className="w-3 h-3" /> Contador
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 bg-violet-100 rounded-full px-2.5 py-0.5">
@@ -420,13 +438,38 @@ export default function UsuariosPage() {
               {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
             </div>
 
+            {/* Rol */}
+            {editingUser?.role !== "admin" && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Rol <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={form.role}
+                  onValueChange={(v) => setForm((p) => ({ ...p, role: v as "contador" | "cliente" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contador">Contador — accede a Empresas, Accesos y Calendario</SelectItem>
+                    <SelectItem value="cliente">Cliente — accede solo a Nómina</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Empresas — only for non-admin */}
             {editingUser?.role !== "admin" && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
-                  Empresas que puede ver en Nómina
+                  Empresas asignadas
                 </Label>
-                <p className="text-xs text-gray-400">Selecciona las empresas a las que este usuario tendrá acceso</p>
+                <p className="text-xs text-gray-400">
+                  {form.role === "cliente"
+                    ? "Empresas que puede ver en Nómina"
+                    : "Empresas que puede gestionar (Contador)"}
+                </p>
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-52 overflow-y-auto">
                   {empresas
                     .filter((e) => {

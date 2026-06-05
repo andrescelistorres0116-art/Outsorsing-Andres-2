@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import EmpresaFormModal from "@/components/empresas/EmpresaFormModal";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
+import { getSession, AppSession } from "@/lib/app-auth";
 
 // Empresa is EmpresaMock — single source of truth in @/lib/empresas-mock
 type Empresa = EmpresaMock;
@@ -177,6 +178,7 @@ export default function EmpresasPage() {
       body: json,
     }).catch(() => {});
   }, [empresas]);
+  const [session, setSession] = useState<AppSession | null>(null);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("todos");
@@ -187,6 +189,8 @@ export default function EmpresasPage() {
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+
+  useEffect(() => { setSession(getSession()); }, []);
 
   function openCreate() {
     setEditingEmpresa(null);
@@ -247,13 +251,13 @@ export default function EmpresasPage() {
             Gestión de clientes y empresas registradas
           </p>
         </div>
-        <Button
+        {session?.role !== "contador" && <Button
           onClick={openCreate}
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Nueva Empresa
-        </Button>
+        </Button>}
       </div>
 
       {/* Stats bar */}
@@ -586,14 +590,18 @@ export default function EmpresasPage() {
                 <><Power className="w-3.5 h-3.5 text-green-600" />Marcar como Activa</>
               )}
             </button>
-            <div className="my-1 border-t border-gray-100" />
-            <button
-              onClick={() => handleDelete(menuEmpresa.id)}
-              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Eliminar empresa
-            </button>
+            {session?.role !== "contador" && (
+              <>
+                <div className="my-1 border-t border-gray-100" />
+                <button
+                  onClick={() => handleDelete(menuEmpresa.id)}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Eliminar empresa
+                </button>
+              </>
+            )}
           </div>
         </>
       )}

@@ -24,7 +24,10 @@ export default function LoginPage() {
         setIsLoading(false);
       } else {
         setAppSession(user);
-        window.location.href = user.role === "cliente" ? "/nomina" : "/dashboard";
+        window.location.href =
+          user.role === "cliente" ? "/nomina" :
+          user.role === "contador" ? "/empresas" :
+          "/dashboard";
         // keep isLoading true while navigating so button stays disabled
       }
     } catch {

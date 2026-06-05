@@ -31,6 +31,12 @@ const ADMIN_EXTRA = [
   { label: "Usuarios", href: "/usuarios", icon: UserCog },
 ];
 
+const CONTADOR_NAV = [
+  { label: "Empresas",              href: "/empresas",    icon: Building2 },
+  { label: "Accesos",               href: "/accesos",     icon: KeyRound },
+  { label: "Calendario Tributario", href: "/calendario",  icon: CalendarCheck },
+];
+
 const CLIENT_NAV = [
   { label: "Nómina", href: "/nomina", icon: Users },
 ];
@@ -45,9 +51,12 @@ export default function Sidebar() {
     setSession(getSession());
   }, []);
 
-  const isAdmin = session?.role !== "cliente";
-  const navItems = isAdmin ? ADMIN_NAV : CLIENT_NAV;
-  const extraItems = isAdmin ? ADMIN_EXTRA : [];
+  const role = session?.role ?? "cliente";
+  const navItems =
+    role === "admin" ? ADMIN_NAV :
+    role === "contador" ? CONTADOR_NAV :
+    CLIENT_NAV;
+  const extraItems = role === "admin" ? ADMIN_EXTRA : [];
 
   const userInitials = session ? initials(session.nombre) : "?";
   const userName = session?.nombre ?? "";
