@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import AccesoFormModal, { AccesoFormData, TipoAcceso } from "@/components/accesos/AccesoFormModal";
+import { getSession, AppSession } from "@/lib/app-auth";
+import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -484,6 +486,8 @@ function FiltersBar({
 export default function AccesosPage() {
   const [accesos, setAccesos] = useState<Acceso[]>(ACCESOS);
   const [loaded, setLoaded] = useState(false);
+  const [session, setSession] = useState<AppSession | null>(null);
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
 
   // Shared filters
   const [searchActive, setSearchActive] = useState("");
@@ -499,7 +503,19 @@ export default function AccesosPage() {
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
   const [editId, setEditId] = useState<number | null>(null);
 
-  // Load from server on mount
+  // Load session and empresas on mount
+  useEffect(() => {
+    setSession(getSession());
+    try {
+      const stored = localStorage.getItem("empresas-data");
+      if (stored) {
+        const parsed = JSON.parse(stored) as EmpresaMock[];
+        if (parsed.length > 0) setEmpresasData(parsed);
+      }
+    } catch {}
+  }, []);
+
+  // Load accesos from server on mount
   useEffect(() => {
     fetch("/api/app-accesos")
       .then((r) => r.json())
@@ -518,9 +534,23 @@ export default function AccesosPage() {
     }).catch(() => {});
   }, [accesos, loaded]);
 
-  const activeAccesos = accesos.filter((a) => !a.archivado);
-  const archivedAccesos = accesos.filter((a) => !!a.archivado);
-  const empresas = Array.from(new Set(accesos.map((a) => a.empresa))).sort();
+  // For non-admin roles: only show accesos of assigned empresas
+  const empresasPermitidas: Set<string> | null =
+    session && session.role !== "admin"
+      ? new Set(
+          empresasData
+            .filter((e) => session.empresaIds.includes(e.id))
+            .map((e) => e.razonSocial)
+        )
+      : null;
+
+  const visibleAccesos = empresasPermitidas
+    ? accesos.filter((a) => empresasPermitidas!.has(a.empresa))
+    : accesos;
+
+  const activeAccesos = visibleAccesos.filter((a) => !a.archivado);
+  const archivedAccesos = visibleAccesos.filter((a) => !!a.archivado);
+  const empresas = Array.from(new Set(visibleAccesos.map((a) => a.empresa))).sort();
 
   const applyFilters = (list: Acceso[], search: string, empresa: string, tipo: string) =>
     list.filter((a) => {

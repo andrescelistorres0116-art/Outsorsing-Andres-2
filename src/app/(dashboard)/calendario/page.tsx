@@ -38,6 +38,8 @@ import {
   EstadoObligacion,
   Obligacion,
 } from "@/components/calendario/mockData";
+import { getSession, AppSession } from "@/lib/app-auth";
+import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import VencimientoBadge from "@/components/calendario/VencimientoBadge";
 import CalendarioView from "@/components/calendario/CalendarioView";
 import ObligacionFormModal from "@/components/calendario/ObligacionFormModal";
@@ -211,6 +213,31 @@ export default function CalendarioPage() {
   useEffect(() => {
     localStorage.setItem("calendario-obligaciones", JSON.stringify(obligaciones));
   }, [obligaciones]);
+
+  const [session, setSession] = useState<AppSession | null>(null);
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+
+  useEffect(() => {
+    setSession(getSession());
+    try {
+      const stored = localStorage.getItem("empresas-data");
+      if (stored) {
+        const parsed = JSON.parse(stored) as EmpresaMock[];
+        if (parsed.length > 0) setEmpresasData(parsed);
+      }
+    } catch {}
+  }, []);
+
+  // Names of empresas the current user can see (null = all)
+  const empresasPermitidas: Set<string> | null = useMemo(() => {
+    if (!session || session.role === "admin") return null;
+    return new Set(
+      empresasData
+        .filter((e) => session.empresaIds.includes(e.id))
+        .map((e) => e.razonSocial)
+    );
+  }, [session, empresasData]);
+
   const [search, setSearch] = useState("");
   const [filterEmpresa, setFilterEmpresa] = useState("TODAS");
   const [filterTipo, setFilterTipo] = useState("TODOS");
@@ -232,27 +259,33 @@ export default function CalendarioPage() {
     weekEnd.setDate(weekEnd.getDate() + 7);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const vencidas = obligaciones.filter((o) => o.estado === "VENCIDO").length;
-    const estaSemana = obligaciones.filter((o) => {
+    const visible = empresasPermitidas
+      ? obligaciones.filter((o) => empresasPermitidas.has(o.empresa))
+      : obligaciones;
+
+    const vencidas = visible.filter((o) => o.estado === "VENCIDO").length;
+    const estaSemana = visible.filter((o) => {
       if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
       const d = new Date(o.fechaVencimiento + "T00:00:00");
       return d >= now && d <= weekEnd;
     }).length;
-    const esteMes = obligaciones.filter((o) => {
+    const esteMes = visible.filter((o) => {
       if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
       const d = new Date(o.fechaVencimiento + "T00:00:00");
       return d >= now && d <= monthEnd;
     }).length;
-    const completadas = obligaciones.filter(
+    const completadas = visible.filter(
       (o) => o.estado === "PAGADO" || o.estado === "PRESENTADO"
     ).length;
 
     return { vencidas, estaSemana, esteMes, completadas };
-  }, [obligaciones]);
+  }, [obligaciones, empresasPermitidas]);
 
   // Filtered list
   const filtered = useMemo(() => {
     return obligaciones.filter((o) => {
+      // Role-based: only show empresas the user is assigned to
+      if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       if (
         search &&
         !o.empresa.toLowerCase().includes(search.toLowerCase()) &&
@@ -284,6 +317,7 @@ export default function CalendarioPage() {
     });
   }, [
     obligaciones,
+    empresasPermitidas,
     search,
     filterEmpresa,
     filterTipo,
@@ -526,7 +560,7 @@ export default function CalendarioPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {EMPRESAS.map((e) => (
+                {EMPRESAS.filter((e) => !empresasPermitidas || empresasPermitidas.has(e.nombre)).map((e) => (
                   <SelectItem key={e.nombre} value={e.nombre}>
                     <div className="flex items-center gap-2">
                       <span
