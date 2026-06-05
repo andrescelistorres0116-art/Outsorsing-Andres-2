@@ -85,13 +85,6 @@ function getPeriodos(periodicidad: PeriodicidadObligacion): PeriodoOption[] {
   }
 }
 
-const ESTADOS: { value: EstadoObligacion; label: string }[] = [
-  { value: "PENDIENTE", label: "Pendiente" },
-  { value: "EN_PROCESO", label: "En Proceso" },
-  { value: "PRESENTADO", label: "Presentado" },
-  { value: "PAGADO", label: "Pagado" },
-  { value: "VENCIDO", label: "Vencido" },
-];
 
 const MUNICIPIOS = [
   "Nacional",
@@ -228,14 +221,6 @@ export default function ObligacionFormModal({
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: "" }));
   }
-
-  const estadoColors: Record<EstadoObligacion, string> = {
-    PENDIENTE: "text-gray-700",
-    EN_PROCESO: "text-blue-700",
-    PRESENTADO: "text-purple-700",
-    PAGADO: "text-green-700",
-    VENCIDO: "text-red-700",
-  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -436,28 +421,6 @@ export default function ObligacionFormModal({
                 {errors.fechaVencimiento}
               </p>
             )}
-          </div>
-
-          {/* Estado */}
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-1.5 block">
-              Estado
-            </Label>
-            <Select
-              value={form.estado}
-              onValueChange={(v) => setField("estado", v as EstadoObligacion)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ESTADOS.map((e) => (
-                  <SelectItem key={e.value} value={e.value}>
-                    <span className={estadoColors[e.value]}>{e.label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Responsable */}
