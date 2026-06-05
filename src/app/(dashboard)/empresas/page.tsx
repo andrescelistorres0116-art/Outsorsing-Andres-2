@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import EmpresaFormModal from "@/components/empresas/EmpresaFormModal";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
-import { getSession, AppSession } from "@/lib/app-auth";
+import { getSessionFresh, AppSession } from "@/lib/app-auth";
 
 // Empresa is EmpresaMock — single source of truth in @/lib/empresas-mock
 type Empresa = EmpresaMock;
@@ -190,7 +190,7 @@ export default function EmpresasPage() {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
-  useEffect(() => { setSession(getSession()); }, []);
+  useEffect(() => { getSessionFresh().then(setSession); }, []);
 
   function openCreate() {
     setEditingEmpresa(null);
@@ -221,7 +221,13 @@ export default function EmpresasPage() {
 
   const PER_PAGE = 8;
 
-  const filtered = empresas.filter((e) => {
+  // For non-admin roles: restrict to assigned empresaIds
+  const visibleEmpresas =
+    session && session.role !== "admin"
+      ? empresas.filter((e) => session.empresaIds.includes(e.id))
+      : empresas;
+
+  const filtered = visibleEmpresas.filter((e) => {
     const matchSearch =
       e.razonSocial.toLowerCase().includes(search.toLowerCase()) ||
       e.nit.includes(search) ||
@@ -236,8 +242,8 @@ export default function EmpresasPage() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const activas = empresas.filter((e) => getEstadoEfectivo(e) === "ACTIVA").length;
-  const inactivas = empresas.filter((e) => getEstadoEfectivo(e) === "INACTIVA").length;
+  const activas = visibleEmpresas.filter((e) => getEstadoEfectivo(e) === "ACTIVA").length;
+  const inactivas = visibleEmpresas.filter((e) => getEstadoEfectivo(e) === "INACTIVA").length;
 
   const menuEmpresa = menuOpenId !== null ? (empresas.find((e) => e.id === menuOpenId) ?? null) : null;
 
