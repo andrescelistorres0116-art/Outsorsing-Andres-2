@@ -35,6 +35,7 @@ const CONTADOR_NAV = [
   { label: "Empresas",              href: "/empresas",    icon: Building2 },
   { label: "Accesos",               href: "/accesos",     icon: KeyRound },
   { label: "Calendario Tributario", href: "/calendario",  icon: CalendarCheck },
+  { label: "Nómina",                href: "/nomina",      icon: Users },
 ];
 
 const CLIENT_NAV = [

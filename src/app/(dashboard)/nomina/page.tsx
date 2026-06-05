@@ -269,22 +269,24 @@ export default function NominaPage() {
     [empresasData]
   );
 
-  // For the filter dropdown: clients only see their assigned companies
+  const isRestrictedRole = appSession?.role === "cliente" || appSession?.role === "contador";
+
+  // For the filter dropdown: clients and contadores only see their assigned companies
   const empresasParaFiltro = useMemo(
     () =>
-      appSession?.role === "cliente"
+      isRestrictedRole && appSession
         ? empresasConNomina.filter((nombre) => {
             const emp = empresasData.find((e) => e.razonSocial === nombre);
             return emp && appSession.empresaIds.includes(emp.id);
           })
         : empresasConNomina,
-    [empresasConNomina, empresasData, appSession]
+    [empresasConNomina, empresasData, appSession, isRestrictedRole]
   );
 
   const filtered = reportes.filter((r) => {
     if (deletedIds.has(r.id)) return false;
-    // Client users only see their assigned empresas
-    if (appSession?.role === "cliente" && !appSession.empresaIds.includes(r.empresaNumId)) return false;
+    // Clients and contadores only see their assigned empresas
+    if (isRestrictedRole && appSession && !appSession.empresaIds.includes(r.empresaNumId)) return false;
     const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
     const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
     const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;
@@ -293,17 +295,17 @@ export default function NominaPage() {
 
   const pendientes = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
     r.estado === "BORRADOR"
   ).length;
   const enviados = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
     r.estado === "ENVIADO"
   ).length;
   const aprobados = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
     r.estado === "APROBADO"
   ).length;
 
