@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSession, clearSession, initials, AppSession } from "@/lib/app-auth";
+import { getSessionFresh, clearSession, initials, AppSession } from "@/lib/app-auth";
 import {
   Bell,
   ChevronDown,
@@ -12,25 +12,73 @@ import {
   Users,
 } from "lucide-react";
 import type { AppNotification } from "@/app/api/app-notifications/route";
+import type { EmpresaMock } from "@/lib/empresas-mock";
+
+const READ_IDS_KEY = "notification-read-ids";
+
+function loadReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_IDS_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {}
+  return new Set();
+}
+
+function saveReadIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(READ_IDS_KEY, JSON.stringify([...ids]));
+  } catch {}
+}
 
 export default function Header() {
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    setSession(getSession());
-  }, []);
+    // Load readIds from localStorage (persists across navigation)
+    setReadIds(loadReadIds());
 
-  useEffect(() => {
+    // Fetch session (fresh from server for updated empresaIds)
+    getSessionFresh().then(setSession);
+
+    // Fetch all notifications
     fetch("/api/app-notifications")
       .then((r) => r.json())
-      .then((data: AppNotification[]) => setNotifications(data))
+      .then((data: AppNotification[]) => setAllNotifications(data))
+      .catch(() => {});
+
+    // Fetch empresas to map IDs → names for filtering
+    fetch("/api/app-empresas")
+      .then((r) => r.json())
+      .then((data: EmpresaMock[]) => {
+        if (Array.isArray(data) && data.length > 0) setEmpresasData(data);
+      })
       .catch(() => {});
   }, []);
+
+  // Filter notifications to only show empresas assigned to this user
+  const notifications = useMemo(() => {
+    if (!session || session.role === "admin") return allNotifications;
+    if (empresasData.length === 0) return [];
+
+    const allowedNames = new Set(
+      empresasData
+        .filter((e) => session.empresaIds.includes(e.id))
+        .map((e) => e.razonSocial)
+    );
+
+    return allNotifications.filter((n) => {
+      // Messages end with "— EMPRESA NAME"
+      const match = n.message.match(/—\s*(.+)$/);
+      if (!match) return true;
+      return allowedNames.has(match[1].trim());
+    });
+  }, [allNotifications, session, empresasData]);
 
   const userName = session?.nombre ?? "Admin";
   const userEmail = session?.email ?? "";
@@ -48,7 +96,17 @@ export default function Header() {
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
 
   function markAllRead() {
-    setReadIds(new Set(notifications.map((n) => n.id)));
+    const next = new Set(notifications.map((n) => n.id));
+    setReadIds(next);
+    saveReadIds(next);
+  }
+
+  function markOneRead(id: string) {
+    setReadIds((prev) => {
+      const next = new Set([...prev, id]);
+      saveReadIds(next);
+      return next;
+    });
   }
 
   function diasLabel(dias: number): string {
@@ -100,7 +158,7 @@ export default function Header() {
                   </h3>
                   {unreadCount > 0 && (
                     <button
-                      onClick={markAllRead}
+                      onClick={(e) => { e.stopPropagation(); markAllRead(); }}
                       className="text-xs text-blue-600 font-medium hover:text-blue-700"
                     >
                       Marcar todo como leído
@@ -116,8 +174,7 @@ export default function Header() {
                   ) : (
                     notifications.map((n) => {
                       const isUnread = !readIds.has(n.id);
-                      const Icon =
-                        n.tipo === "nomina" ? Users : AlertTriangle;
+                      const Icon = n.tipo === "nomina" ? Users : AlertTriangle;
                       const iconColor =
                         n.tipo === "nomina"
                           ? "text-blue-500"
@@ -129,13 +186,9 @@ export default function Header() {
                       return (
                         <div
                           key={n.id}
-                          onClick={() =>
-                            setReadIds((prev) => new Set([...prev, n.id]))
-                          }
+                          onClick={() => markOneRead(n.id)}
                           className={`flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer ${
-                            isUnread
-                              ? "bg-blue-50/40 dark:bg-blue-900/10"
-                              : ""
+                            isUnread ? "bg-blue-50/40 dark:bg-blue-900/10" : ""
                           }`}
                         >
                           <div className="mt-0.5 shrink-0">
