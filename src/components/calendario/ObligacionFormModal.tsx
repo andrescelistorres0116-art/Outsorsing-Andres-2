@@ -40,9 +40,50 @@ const PERIODICIDADES: PeriodicidadObligacion[] = [
   "Mensual",
   "Bimestral",
   "Trimestral",
+  "Cuatrimestral",
   "Semestral",
   "Anual",
 ];
+
+type PeriodoOption = { value: number; label: string };
+
+function getPeriodos(periodicidad: PeriodicidadObligacion): PeriodoOption[] {
+  const M = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  switch (periodicidad) {
+    case "Mensual":
+      return M.map((label, i) => ({ value: i + 1, label }));
+    case "Bimestral":
+      return [
+        { value: 1,  label: "Enero – Febrero" },
+        { value: 3,  label: "Marzo – Abril" },
+        { value: 5,  label: "Mayo – Junio" },
+        { value: 7,  label: "Julio – Agosto" },
+        { value: 9,  label: "Septiembre – Octubre" },
+        { value: 11, label: "Noviembre – Diciembre" },
+      ];
+    case "Trimestral":
+      return [
+        { value: 1,  label: "Enero – Marzo" },
+        { value: 4,  label: "Abril – Junio" },
+        { value: 7,  label: "Julio – Septiembre" },
+        { value: 10, label: "Octubre – Diciembre" },
+      ];
+    case "Cuatrimestral":
+      return [
+        { value: 1, label: "Enero – Abril" },
+        { value: 5, label: "Mayo – Agosto" },
+        { value: 9, label: "Septiembre – Diciembre" },
+      ];
+    case "Semestral":
+      return [
+        { value: 1, label: "Enero – Junio" },
+        { value: 7, label: "Julio – Diciembre" },
+      ];
+    case "Anual":
+      return [{ value: 1, label: "Año completo" }];
+  }
+}
 
 const ESTADOS: { value: EstadoObligacion; label: string }[] = [
   { value: "PENDIENTE", label: "Pendiente" },
@@ -77,20 +118,6 @@ const RESPONSABLES = [
   "Valentina Ruiz",
 ];
 
-const MESES = [
-  { value: 1, label: "Enero" },
-  { value: 2, label: "Febrero" },
-  { value: 3, label: "Marzo" },
-  { value: 4, label: "Abril" },
-  { value: 5, label: "Mayo" },
-  { value: 6, label: "Junio" },
-  { value: 7, label: "Julio" },
-  { value: 8, label: "Agosto" },
-  { value: 9, label: "Septiembre" },
-  { value: 10, label: "Octubre" },
-  { value: 11, label: "Noviembre" },
-  { value: 12, label: "Diciembre" },
-];
 
 const EMPTY_FORM = {
   empresa: "",
@@ -307,9 +334,12 @@ export default function ObligacionFormModal({
             </Label>
             <Select
               value={form.periodicidad}
-              onValueChange={(v) =>
-                setField("periodicidad", v as PeriodicidadObligacion)
-              }
+              onValueChange={(v) => {
+                const p = v as PeriodicidadObligacion;
+                const firstPeriodo = getPeriodos(p)[0].value;
+                setForm((prev) => ({ ...prev, periodicidad: p, periodo: firstPeriodo }));
+                setErrors((prev) => ({ ...prev, periodicidad: "" }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -359,9 +389,9 @@ export default function ObligacionFormModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MESES.map((m) => (
-                  <SelectItem key={m.value} value={String(m.value)}>
-                    {m.label}
+                {getPeriodos(form.periodicidad).map((p) => (
+                  <SelectItem key={p.value} value={String(p.value)}>
+                    {p.label}
                   </SelectItem>
                 ))}
               </SelectContent>

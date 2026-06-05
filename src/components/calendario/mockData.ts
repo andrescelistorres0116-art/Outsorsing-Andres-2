@@ -12,8 +12,9 @@ export type PeriodicidadObligacion =
   | "Mensual"
   | "Bimestral"
   | "Trimestral"
-  | "Anual"
-  | "Semestral";
+  | "Cuatrimestral"
+  | "Semestral"
+  | "Anual";
 
 export interface Obligacion {
   id: string;
