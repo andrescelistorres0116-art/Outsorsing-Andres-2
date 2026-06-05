@@ -69,15 +69,33 @@ export default function UsuariosPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof UserFormData | "general", string>>>({});
 
-  useEffect(() => {
+  function fetchUsers() {
     fetch("/api/app-users")
       .then((r) => r.json())
       .then((data: AppUser[]) => setUsers(data))
       .catch(() => {});
-    try {
-      const stored = localStorage.getItem("empresas-data");
-      if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
-    } catch {}
+  }
+
+  useEffect(() => {
+    fetchUsers();
+    // Load empresas from server first, fall back to localStorage
+    fetch("/api/app-empresas")
+      .then((r) => r.json())
+      .then((data: EmpresaMock[]) => {
+        if (Array.isArray(data) && data.length > 0) setEmpresas(data);
+        else {
+          try {
+            const stored = localStorage.getItem("empresas-data");
+            if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
+          } catch {}
+        }
+      })
+      .catch(() => {
+        try {
+          const stored = localStorage.getItem("empresas-data");
+          if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
+        } catch {}
+      });
   }, []);
 
   const filtered = users.filter(
@@ -157,7 +175,7 @@ export default function UsuariosPage() {
         body: JSON.stringify(updated),
       });
       if (res.ok) {
-        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
+        fetchUsers();
         handleClose();
       }
     } else {
@@ -183,7 +201,7 @@ export default function UsuariosPage() {
         body: JSON.stringify(newUser),
       });
       if (res.ok) {
-        setUsers((prev) => [...prev, newUser]);
+        fetchUsers();
         handleClose();
       }
     }

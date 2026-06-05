@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import AccesoFormModal, { AccesoFormData, TipoAcceso } from "@/components/accesos/AccesoFormModal";
-import { getSession, AppSession } from "@/lib/app-auth";
+import { getSessionFresh, AppSession } from "@/lib/app-auth";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -503,9 +503,9 @@ export default function AccesosPage() {
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
   const [editId, setEditId] = useState<number | null>(null);
 
-  // Load session and empresas on mount
+  // Load session (fresh from server) and empresas on mount
   useEffect(() => {
-    setSession(getSession());
+    getSessionFresh().then(setSession);
     try {
       const stored = localStorage.getItem("empresas-data");
       if (stored) {

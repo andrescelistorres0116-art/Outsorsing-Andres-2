@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmpresaMock } from "@/lib/empresas-mock";
-import { getSession, AppSession } from "@/lib/app-auth";
+import { getSessionFresh, AppSession } from "@/lib/app-auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -191,7 +191,7 @@ export default function NominaPage() {
   const [appSession, setAppSession] = useState<AppSession | null>(null);
 
   useEffect(() => {
-    setAppSession(getSession());
+    getSessionFresh().then(setAppSession);
   }, []);
 
   // Empresas loaded from server so all browsers see the same data

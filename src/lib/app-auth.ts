@@ -135,3 +135,19 @@ export function initials(name: string): string {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
 }
+
+// Fetches the latest empresaIds from the server so modules always reflect
+// admin changes without requiring the user to log out and back in.
+export async function getSessionFresh(): Promise<AppSession | null> {
+  const s = getSession();
+  if (!s) return null;
+  if (s.role === "admin") return s;
+  try {
+    const res = await fetch("/api/app-users");
+    if (!res.ok) return s;
+    const users: AppUser[] = await res.json();
+    const me = users.find((u) => u.id === s.userId);
+    if (me) return { ...s, empresaIds: me.empresaIds };
+  } catch {}
+  return s;
+}

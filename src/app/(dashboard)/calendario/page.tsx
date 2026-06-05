@@ -38,7 +38,7 @@ import {
   EstadoObligacion,
   Obligacion,
 } from "@/components/calendario/mockData";
-import { getSession, AppSession } from "@/lib/app-auth";
+import { getSessionFresh, AppSession } from "@/lib/app-auth";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import VencimientoBadge from "@/components/calendario/VencimientoBadge";
 import CalendarioView from "@/components/calendario/CalendarioView";
@@ -218,7 +218,7 @@ export default function CalendarioPage() {
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
 
   useEffect(() => {
-    setSession(getSession());
+    getSessionFresh().then(setSession);
     try {
       const stored = localStorage.getItem("empresas-data");
       if (stored) {
