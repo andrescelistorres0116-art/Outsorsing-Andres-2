@@ -269,6 +269,18 @@ export default function NominaPage() {
     [empresasData]
   );
 
+  // For the filter dropdown: clients only see their assigned companies
+  const empresasParaFiltro = useMemo(
+    () =>
+      appSession?.role === "cliente"
+        ? empresasConNomina.filter((nombre) => {
+            const emp = empresasData.find((e) => e.razonSocial === nombre);
+            return emp && appSession.empresaIds.includes(emp.id);
+          })
+        : empresasConNomina,
+    [empresasConNomina, empresasData, appSession]
+  );
+
   const filtered = reportes.filter((r) => {
     if (deletedIds.has(r.id)) return false;
     // Client users only see their assigned empresas
@@ -279,9 +291,21 @@ export default function NominaPage() {
     return matchEmpresa && matchPeriodo && matchEstado;
   });
 
-  const pendientes = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "BORRADOR").length;
-  const enviados   = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "ENVIADO").length;
-  const aprobados  = reportes.filter((r) => !deletedIds.has(r.id) && r.estado === "APROBADO").length;
+  const pendientes = reportes.filter((r) =>
+    !deletedIds.has(r.id) &&
+    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    r.estado === "BORRADOR"
+  ).length;
+  const enviados = reportes.filter((r) =>
+    !deletedIds.has(r.id) &&
+    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    r.estado === "ENVIADO"
+  ).length;
+  const aprobados = reportes.filter((r) =>
+    !deletedIds.has(r.id) &&
+    (appSession?.role !== "cliente" || appSession.empresaIds.includes(r.empresaNumId)) &&
+    r.estado === "APROBADO"
+  ).length;
 
   function handleAprobar(id: string) {
     setOverrides((prev) => ({
@@ -437,7 +461,7 @@ export default function NominaPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas las empresas</SelectItem>
-                {empresasConNomina.map((e) => (
+                {empresasParaFiltro.map((e) => (
                   <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
               </SelectContent>
@@ -600,7 +624,7 @@ export default function NominaPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                         </Link>
-                        {r.estado !== "APROBADO" && (
+                        {appSession?.role !== "cliente" && r.estado !== "APROBADO" && (
                           <button
                             onClick={() => handleAprobar(r.id)}
                             className="p-1.5 rounded-md text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
@@ -609,19 +633,23 @@ export default function NominaPage() {
                             <ThumbsUp className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Exportar"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEliminar(r.id)}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Eliminar fila"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {appSession?.role !== "cliente" && (
+                          <>
+                            <button
+                              className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Exportar"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEliminar(r.id)}
+                              className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Eliminar fila"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
