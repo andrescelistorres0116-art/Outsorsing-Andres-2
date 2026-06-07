@@ -57,6 +57,7 @@ interface FormData {
   agenteRetenedor: boolean;
   // Paso 4 — Contable
   softwareContable: string;
+  softwareContableOtro: string;
   tipoNomina: string;
   periodicidadNomina: string;
   // Relación
@@ -90,6 +91,7 @@ const INITIAL_FORM: FormData = {
   tipoContribuyente: "Persona Jurídica",
   agenteRetenedor: false,
   softwareContable: "",
+  softwareContableOtro: "",
   tipoNomina: "",
   periodicidadNomina: "",
   fechaInicioRelacion: "",
@@ -553,43 +555,46 @@ function Step4({
         </p>
       </div>
 
-      <Field label="Software Contable" id="softwareContable" error={errors.softwareContable}>
-        <Select
-          value={data.softwareContable}
-          onValueChange={(v) => onChange("softwareContable", v)}
-        >
-          <SelectTrigger id="softwareContable" className="h-9">
-            <SelectValue placeholder="Seleccionar software" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="siigo_nube">Siigo Nube</SelectItem>
-            <SelectItem value="siigo_windows">Siigo Windows</SelectItem>
-            <SelectItem value="helisa">Helisa</SelectItem>
-            <SelectItem value="world_office">World Office</SelectItem>
-            <SelectItem value="aspel">Aspel COI</SelectItem>
-            <SelectItem value="sap">SAP Business One</SelectItem>
-            <SelectItem value="contapyme">ContaPyme</SelectItem>
-            <SelectItem value="otro">Otro</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+      {/* Software Contable */}
+      <div className={data.softwareContable === "otro" ? "sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" : ""}>
+        <Field label="Software Contable" id="softwareContable" error={errors.softwareContable}>
+          <Select
+            value={data.softwareContable}
+            onValueChange={(v) => {
+              onChange("softwareContable", v);
+              if (v !== "otro") onChange("softwareContableOtro", "");
+            }}
+          >
+            <SelectTrigger id="softwareContable" className="h-9">
+              <SelectValue placeholder="Seleccionar software" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="siigo_nube">Siigo Nube</SelectItem>
+              <SelectItem value="siigo_windows">Siigo Windows</SelectItem>
+              <SelectItem value="helisa">Helisa</SelectItem>
+              <SelectItem value="world_office">World Office</SelectItem>
+              <SelectItem value="aspel">Aspel COI</SelectItem>
+              <SelectItem value="sap">SAP Business One</SelectItem>
+              <SelectItem value="contapyme">ContaPyme</SelectItem>
+              <SelectItem value="otro">Otro</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
 
-      <Field label="Tipo de Nómina" id="tipoNomina" error={errors.tipoNomina}>
-        <Select
-          value={data.tipoNomina}
-          onValueChange={(v) => onChange("tipoNomina", v)}
-        >
-          <SelectTrigger id="tipoNomina" className="h-9">
-            <SelectValue placeholder="Seleccionar tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="electronica_dian">Nómina Electrónica DIAN</SelectItem>
-            <SelectItem value="manual">Nómina Manual</SelectItem>
-            <SelectItem value="no_aplica">No Aplica</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+        {data.softwareContable === "otro" && (
+          <Field label="Nombre del software" id="softwareContableOtro" error={errors.softwareContableOtro}>
+            <Input
+              id="softwareContableOtro"
+              placeholder="Ej: Fenix, Alegra, Monica..."
+              value={data.softwareContableOtro}
+              onChange={(e) => onChange("softwareContableOtro", e.target.value)}
+              autoFocus
+            />
+          </Field>
+        )}
+      </div>
 
+      {/* Periodicidad de Nómina */}
       <Field label="Periodicidad de Nómina" id="periodicidadNomina" error={errors.periodicidadNomina}>
         <Select
           value={data.periodicidadNomina}
@@ -669,7 +674,12 @@ export default function EmpresaFormModal({
       setErrors(stepErrors);
       return;
     }
-    onSave?.(formData);
+    // If "Otro" was selected, persist the typed name instead of the "otro" key
+    const dataToSave =
+      formData.softwareContable === "otro"
+        ? { ...formData, softwareContable: formData.softwareContableOtro.trim() || "otro" }
+        : formData;
+    onSave?.(dataToSave);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);

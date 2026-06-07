@@ -765,7 +765,16 @@ export default function EmpresasPage() {
           actividadEconomica: editingEmpresa.actividadEconomica ?? "",
           tipoContribuyente: editingEmpresa.tipoContribuyente ?? "Persona Jurídica",
           agenteRetenedor: editingEmpresa.agenteRetenedor ?? false,
-          softwareContable: editingEmpresa.softwareContable ?? "",
+          softwareContable: (() => {
+            const sw = editingEmpresa.softwareContable ?? "";
+            const known = ["siigo_nube","siigo_windows","helisa","world_office","aspel","sap","contapyme","otro",""];
+            return known.includes(sw) ? sw : "otro";
+          })(),
+          softwareContableOtro: (() => {
+            const sw = editingEmpresa.softwareContable ?? "";
+            const known = ["siigo_nube","siigo_windows","helisa","world_office","aspel","sap","contapyme","otro",""];
+            return known.includes(sw) ? "" : sw;
+          })(),
           tipoNomina: editingEmpresa.tipoNomina ?? "",
           periodicidadNomina: editingEmpresa.periodicidadNomina ?? "",
         } : undefined}
