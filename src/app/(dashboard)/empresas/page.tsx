@@ -73,6 +73,26 @@ function cleanCalendarioObligaciones(razonSocial: string) {
   } catch {}
 }
 
+// Archive all accesos for a given empresa in the server store
+async function archiveAccesosForEmpresa(razonSocial: string) {
+  try {
+    const res = await fetch("/api/app-accesos");
+    if (!res.ok) return;
+    const accesos: Array<{ empresa: string; archivado?: boolean }> = await res.json();
+    const rn = normName(razonSocial);
+    const updated = accesos.map((a) => {
+      const an = normName(a.empresa);
+      if (an === rn || an.includes(rn) || rn.includes(an)) return { ...a, archivado: true };
+      return a;
+    });
+    await fetch("/api/app-accesos", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+  } catch {}
+}
+
 // ── Components ─────────────────────────────────────────────────────────────────
 
 function EmpresaCard({ empresa }: { empresa: Empresa }) {
@@ -260,6 +280,7 @@ export default function EmpresasPage() {
     setEmpresas((prev) => prev.filter((e) => e.id !== empresa.id));
     setMenuOpenId(null);
     cleanCalendarioObligaciones(empresa.razonSocial);
+    archiveAccesosForEmpresa(empresa.razonSocial);
   }
 
   function handleToggleEstado(empresa: Empresa) {
@@ -270,6 +291,9 @@ export default function EmpresasPage() {
         : e
     ));
     setMenuOpenId(null);
+    if (efectivo === "ACTIVA") {
+      archiveAccesosForEmpresa(empresa.razonSocial);
+    }
   }
 
   const PER_PAGE = 8;
