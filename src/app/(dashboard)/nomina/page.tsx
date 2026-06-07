@@ -37,7 +37,7 @@ import {
 import { EmpresaMock } from "@/lib/empresas-mock";
 import { getSessionFresh, AppSession } from "@/lib/app-auth";
 import { NovedadIngreso } from "@/lib/novedades-store";
-import NovedadIngresoModal, { IngresoFormData } from "@/components/nomina/NovedadIngresoModal";
+import NovedadIngresoModal, { IngresoFormData, EmpresaOption } from "@/components/nomina/NovedadIngresoModal";
 import { UserPlus } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -261,7 +261,7 @@ export default function NominaPage() {
 
   // Novedades de ingreso
   const [novedades, setNovedades] = useState<NovedadIngreso[]>([]);
-  const [novedadModal, setNovedadModal] = useState<{ empresaId: number; empresa: string; mes: number; anio: number } | null>(null);
+  const [novedadModal, setNovedadModal] = useState<{ empresaId?: number; empresa?: string; mes: number; anio: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/app-novedades")
@@ -275,8 +275,6 @@ export default function NominaPage() {
     const novedad: NovedadIngreso = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       tipo: "ingreso",
-      empresaId: novedadModal.empresaId,
-      empresa: novedadModal.empresa,
       mes: novedadModal.mes,
       anio: novedadModal.anio,
       ...data,
@@ -325,6 +323,15 @@ export default function NominaPage() {
         .map((e) => e.razonSocial)
         .sort(),
     [empresasData]
+  );
+
+  // For clients: all activa empresas assigned to them (regardless of nómina config)
+  const empresasAsignadas = useMemo(
+    () =>
+      appSession?.role === "cliente"
+        ? empresasData.filter((e) => isActiva(e) && appSession.empresaIds.includes(e.id))
+        : [],
+    [appSession, empresasData]
   );
 
   const isRestrictedRole = appSession?.role === "cliente" || appSession?.role === "contador";
@@ -423,11 +430,31 @@ export default function NominaPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Novedades de Nómina</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {empresasConNomina.length} empresa{empresasConNomina.length !== 1 ? "s" : ""} con nómina configurada
+              {appSession?.role === "cliente"
+                ? `${empresasAsignadas.length} empresa${empresasAsignadas.length !== 1 ? "s" : ""} asignada${empresasAsignadas.length !== 1 ? "s" : ""}`
+                : `${empresasConNomina.length} empresa${empresasConNomina.length !== 1 ? "s" : ""} con nómina configurada`}
             </p>
           </div>
         </div>
 
+        {/* Right side: client button + month badge/navigator */}
+        <div className="flex items-center gap-3">
+        {appSession?.role === "cliente" && empresasAsignadas.length > 0 && (
+          <Button
+            onClick={() => {
+              if (empresasAsignadas.length === 1) {
+                setNovedadModal({ empresaId: empresasAsignadas[0].id, empresa: empresasAsignadas[0].razonSocial, mes: selectedMes, anio: selectedAnio });
+              } else {
+                setNovedadModal({ mes: selectedMes, anio: selectedAnio });
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            size="sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            Reportar Ingreso
+          </Button>
+        )}
         {/* Month badge (actual) / navigator (historico) */}
         {activeTab === "actual" ? (
           <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2">
@@ -455,6 +482,7 @@ export default function NominaPage() {
             </button>
           </div>
         )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -732,8 +760,19 @@ export default function NominaPage() {
           {filtered.length === 0 && (
             <div className="text-center py-16">
               <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No se encontraron reportes</p>
-              <p className="text-gray-400 text-sm mt-1">Intenta con otros filtros</p>
+              {appSession?.role === "cliente" ? (
+                <>
+                  <p className="text-gray-500 font-medium">No hay reportes de nómina disponibles aún</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Usa el botón <span className="font-semibold text-green-700">Reportar Ingreso</span> para reportar un nuevo empleado.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 font-medium">No se encontraron reportes</p>
+                  <p className="text-gray-400 text-sm mt-1">Intenta con otros filtros</p>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -843,7 +882,13 @@ export default function NominaPage() {
       {novedadModal && (
         <NovedadIngresoModal
           open={!!novedadModal}
-          empresa={novedadModal.empresa}
+          empresa={novedadModal.empresa ?? ""}
+          empresaId={novedadModal.empresaId ?? 0}
+          empresaOptions={
+            !novedadModal.empresa
+              ? (empresasAsignadas.map((e) => ({ id: e.id, name: e.razonSocial })) as EmpresaOption[])
+              : undefined
+          }
           mes={novedadModal.mes}
           anio={novedadModal.anio}
           onClose={() => setNovedadModal(null)}

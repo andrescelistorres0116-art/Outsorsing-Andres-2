@@ -13,6 +13,8 @@ import {
 import { UserPlus } from "lucide-react";
 
 export interface IngresoFormData {
+  empresaId: number;
+  empresa: string;
   nombre: string;
   cedula: string;
   cargo: string;
@@ -22,7 +24,30 @@ export interface IngresoFormData {
   observaciones: string;
 }
 
-const EMPTY: IngresoFormData = {
+export interface EmpresaOption {
+  id: number;
+  name: string;
+}
+
+const MESES = [
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
+];
+
+interface Props {
+  open: boolean;
+  mes: number;
+  anio: number;
+  /** Pre-selected empresa. If omitted, empresaOptions must be provided. */
+  empresa?: string;
+  empresaId?: number;
+  /** Used when the client must choose which empresa to report for. */
+  empresaOptions?: EmpresaOption[];
+  onClose: () => void;
+  onSave: (data: IngresoFormData) => void;
+}
+
+const EMPTY_FIELDS = {
   nombre: "",
   cedula: "",
   cargo: "",
@@ -32,48 +57,48 @@ const EMPTY: IngresoFormData = {
   observaciones: "",
 };
 
-interface Props {
-  open: boolean;
-  empresa: string;
-  mes: number;
-  anio: number;
-  onClose: () => void;
-  onSave: (data: IngresoFormData) => void;
-}
+export default function NovedadIngresoModal({
+  open, mes, anio,
+  empresa: empresaProp = "",
+  empresaId: empresaIdProp = 0,
+  empresaOptions = [],
+  onClose, onSave,
+}: Props) {
+  const [fields, setFields] = useState(EMPTY_FIELDS);
+  const [selId, setSelId] = useState<number>(empresaIdProp);
+  const [errors, setErrors] = useState<Partial<typeof EMPTY_FIELDS & { empresa: string }>>({});
 
-const MESES = [
-  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
-  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
-];
+  const resolvedEmpresa = empresaProp || (empresaOptions.find((e) => e.id === selId)?.name ?? "");
+  const resolvedId = empresaIdProp || selId;
+  const needsEmpresaSelect = !empresaProp && empresaOptions.length > 0;
 
-export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose, onSave }: Props) {
-  const [form, setForm] = useState<IngresoFormData>(EMPTY);
-  const [errors, setErrors] = useState<Partial<IngresoFormData>>({});
-
-  const set = (k: keyof IngresoFormData, v: string) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: keyof typeof EMPTY_FIELDS, v: string) =>
+    setFields((p) => ({ ...p, [k]: v }));
 
   function validate(): boolean {
-    const e: Partial<IngresoFormData> = {};
-    if (!form.nombre.trim()) e.nombre = "Requerido";
-    if (!form.cedula.trim()) e.cedula = "Requerido";
-    if (!form.cargo.trim()) e.cargo = "Requerido";
-    if (!form.salario.trim()) e.salario = "Requerido";
-    if (!form.tipoContrato) e.tipoContrato = "Requerido";
-    if (!form.fechaIngreso) e.fechaIngreso = "Requerido";
+    const e: typeof errors = {};
+    if (needsEmpresaSelect && !resolvedEmpresa) e.empresa = "Seleccione una empresa";
+    if (!fields.nombre.trim()) e.nombre = "Requerido";
+    if (!fields.cedula.trim()) e.cedula = "Requerido";
+    if (!fields.cargo.trim()) e.cargo = "Requerido";
+    if (!fields.salario.trim()) e.salario = "Requerido";
+    if (!fields.tipoContrato) e.tipoContrato = "Requerido";
+    if (!fields.fechaIngreso) e.fechaIngreso = "Requerido";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleSave() {
     if (!validate()) return;
-    onSave(form);
-    setForm(EMPTY);
+    onSave({ empresaId: resolvedId, empresa: resolvedEmpresa, ...fields });
+    setFields(EMPTY_FIELDS);
+    setSelId(empresaIdProp);
     setErrors({});
   }
 
   function handleClose() {
-    setForm(EMPTY);
+    setFields(EMPTY_FIELDS);
+    setSelId(empresaIdProp);
     setErrors({});
     onClose();
   }
@@ -88,12 +113,38 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </div>
             Reportar Ingreso de Empleado
           </DialogTitle>
-          <p className="text-xs text-gray-500 mt-1">
-            {empresa} · {MESES[mes - 1]} {anio}
-          </p>
+          {resolvedEmpresa && (
+            <p className="text-xs text-gray-500 mt-1">
+              {resolvedEmpresa} · {MESES[mes - 1]} {anio}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+
+          {/* Empresa selector (when not pre-selected) */}
+          {needsEmpresaSelect && (
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">
+                Empresa <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={selId ? String(selId) : ""}
+                onValueChange={(v) => setSelId(Number(v))}
+              >
+                <SelectTrigger className={errors.empresa ? "border-red-400" : ""}>
+                  <SelectValue placeholder="Seleccionar empresa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {empresaOptions.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.empresa && <p className="text-xs text-red-500">{errors.empresa}</p>}
+            </div>
+          )}
+
           {/* Nombre */}
           <div className="sm:col-span-2 space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
@@ -101,7 +152,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               placeholder="Ej: María Camila Rodríguez"
-              value={form.nombre}
+              value={fields.nombre}
               onChange={(e) => set("nombre", e.target.value)}
               className={errors.nombre ? "border-red-400" : ""}
             />
@@ -115,7 +166,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               placeholder="Ej: 1012345678"
-              value={form.cedula}
+              value={fields.cedula}
               onChange={(e) => set("cedula", e.target.value)}
               className={errors.cedula ? "border-red-400" : ""}
             />
@@ -129,7 +180,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               placeholder="Ej: Auxiliar Contable"
-              value={form.cargo}
+              value={fields.cargo}
               onChange={(e) => set("cargo", e.target.value)}
               className={errors.cargo ? "border-red-400" : ""}
             />
@@ -143,7 +194,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               placeholder="Ej: 1.500.000"
-              value={form.salario}
+              value={fields.salario}
               onChange={(e) => set("salario", e.target.value)}
               className={errors.salario ? "border-red-400" : ""}
             />
@@ -155,7 +206,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             <Label className="text-sm font-medium text-gray-700">
               Tipo de contrato <span className="text-red-500">*</span>
             </Label>
-            <Select value={form.tipoContrato} onValueChange={(v) => set("tipoContrato", v)}>
+            <Select value={fields.tipoContrato} onValueChange={(v) => set("tipoContrato", v)}>
               <SelectTrigger className={errors.tipoContrato ? "border-red-400" : ""}>
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
@@ -177,7 +228,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               type="date"
-              value={form.fechaIngreso}
+              value={fields.fechaIngreso}
               onChange={(e) => set("fechaIngreso", e.target.value)}
               className={errors.fechaIngreso ? "border-red-400" : ""}
             />
@@ -191,7 +242,7 @@ export default function NovedadIngresoModal({ open, empresa, mes, anio, onClose,
             </Label>
             <Input
               placeholder="Información adicional relevante..."
-              value={form.observaciones}
+              value={fields.observaciones}
               onChange={(e) => set("observaciones", e.target.value)}
             />
           </div>
