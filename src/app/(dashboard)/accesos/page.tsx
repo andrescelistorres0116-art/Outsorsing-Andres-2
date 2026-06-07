@@ -483,11 +483,25 @@ function FiltersBar({
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
+function normAcceso(s: string) {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function matchesActiva(empresa: string, activaSet: Set<string>): boolean {
+  if (activaSet.size === 0) return false;
+  const n = normAcceso(empresa);
+  for (const a of activaSet) {
+    if (n === a || n.includes(a) || a.includes(n)) return true;
+  }
+  return false;
+}
+
 export default function AccesosPage() {
   const [accesos, setAccesos] = useState<Acceso[]>(ACCESOS);
   const [loaded, setLoaded] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
   // Shared filters
   const [searchActive, setSearchActive] = useState("");
@@ -511,28 +525,55 @@ export default function AccesosPage() {
         const res = await fetch("/api/app-empresas");
         if (res.ok) {
           const data: EmpresaMock[] = await res.json();
-          if (data.length > 0) { setEmpresasData(data); return; }
+          if (Array.isArray(data)) {
+            setEmpresasData(data);
+            setEmpresasLoaded(true);
+            return;
+          }
         }
       } catch {}
       try {
         const stored = localStorage.getItem("empresas-data");
         if (stored) {
           const parsed = JSON.parse(stored) as EmpresaMock[];
-          if (parsed.length > 0) setEmpresasData(parsed);
+          if (Array.isArray(parsed)) setEmpresasData(parsed);
         }
       } catch {}
+      setEmpresasLoaded(true);
     }
     loadEmpresas();
   }, []);
 
-  // Load accesos from server on mount
+  // Load accesos from server on mount; fall back to mock if server has nothing
   useEffect(() => {
     fetch("/api/app-accesos")
       .then((r) => r.json())
-      .then((data: Acceso[]) => { if (Array.isArray(data)) setAccesos(data); })
+      .then((data: Acceso[]) => {
+        if (Array.isArray(data) && data.length > 0) setAccesos(data);
+        // If server is empty keep ACCESOS mock (first-time setup)
+      })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
+
+  // Auto-archive accesos whose empresa is INACTIVA or deleted
+  useEffect(() => {
+    if (!loaded || !empresasLoaded) return;
+    if (empresasData.length === 0) return; // no empresas store yet, skip
+    const activaSet = new Set(
+      empresasData.filter((e) => e.estado === "ACTIVA").map((e) => normAcceso(e.razonSocial))
+    );
+    let changed = false;
+    const updated = accesos.map((a) => {
+      if (!a.archivado && !matchesActiva(a.empresa, activaSet)) {
+        changed = true;
+        return { ...a, archivado: true };
+      }
+      return a;
+    });
+    if (changed) setAccesos(updated);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, empresasLoaded]);
 
   // Sync to server on every change
   useEffect(() => {
