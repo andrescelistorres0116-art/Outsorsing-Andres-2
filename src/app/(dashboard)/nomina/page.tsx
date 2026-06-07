@@ -236,6 +236,7 @@ export default function NominaPage() {
 
   const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Load per-month deleted IDs — new key per month so past deletions don't bleed across months
   useEffect(() => {
@@ -644,7 +645,7 @@ export default function NominaPage() {
                               <Download className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleEliminar(r.id)}
+                              onClick={() => setConfirmDeleteId(r.id)}
                               className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                               title="Eliminar fila"
                             >
@@ -669,6 +670,43 @@ export default function NominaPage() {
           )}
         </div>
       </Card>
+
+      {/* Confirmation dialog for delete */}
+      {confirmDeleteId && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            onClick={() => setConfirmDeleteId(null)}
+          />
+          <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">¿Eliminar reporte de nómina?</p>
+                <p className="text-xs text-gray-500 mt-1 leading-snug">
+                  Esta acción eliminará el reporte del período actual. No se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => { handleEliminar(confirmDeleteId); setConfirmDeleteId(null); }}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium text-white transition-colors"
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
