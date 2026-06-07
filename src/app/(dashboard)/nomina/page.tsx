@@ -20,6 +20,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -672,41 +680,34 @@ export default function NominaPage() {
       </Card>
 
       {/* Confirmation dialog for delete */}
-      {confirmDeleteId && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-            onClick={() => setConfirmDeleteId(null)}
-          />
-          <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 p-6">
-            <div className="flex items-start gap-3 mb-4">
+      <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 shrink-0">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">¿Eliminar reporte de nómina?</p>
-                <p className="text-xs text-gray-500 mt-1 leading-snug">
-                  Esta acción eliminará el reporte del período actual. No se puede deshacer.
-                </p>
-              </div>
+              <DialogTitle className="text-base font-semibold text-gray-900">
+                ¿Eliminar reporte de nómina?
+              </DialogTitle>
             </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => { handleEliminar(confirmDeleteId); setConfirmDeleteId(null); }}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium text-white transition-colors"
-              >
-                Sí, eliminar
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+            <DialogDescription className="text-sm text-gray-500 leading-snug">
+              Esta acción eliminará el reporte del período actual. No se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { handleEliminar(confirmDeleteId!); setConfirmDeleteId(null); }}
+            >
+              Sí, eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
