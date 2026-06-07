@@ -281,6 +281,7 @@ export default function EmpresasPage() {
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => { getSessionFresh().then(setSession); }, []);
 
@@ -583,6 +584,7 @@ export default function EmpresasPage() {
                               const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
                               setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
                               setMenuOpenId(empresa.id);
+                              setConfirmingDelete(false);
                             }
                           }}
                           className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -680,10 +682,10 @@ export default function EmpresasPage() {
       {/* Three-dot dropdown — fixed position to escape overflow-x-auto clipping */}
       {menuEmpresa && (
         <>
-          <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
+          <div className="fixed inset-0 z-30" onClick={() => { setMenuOpenId(null); setConfirmingDelete(false); }} />
           <div
             style={{ top: menuPos.top, right: menuPos.right }}
-            className="fixed z-40 w-48 bg-white border border-gray-200 rounded-xl shadow-xl shadow-black/10 py-1 overflow-hidden"
+            className={`fixed z-40 bg-white border border-gray-200 rounded-xl shadow-xl shadow-black/10 py-1 overflow-hidden transition-all ${confirmingDelete ? "w-64" : "w-48"}`}
           >
             <button
               onClick={() => handleToggleEstado(menuEmpresa)}
@@ -698,13 +700,36 @@ export default function EmpresasPage() {
             {session?.role !== "contador" && (
               <>
                 <div className="my-1 border-t border-gray-100" />
-                <button
-                  onClick={() => handleDelete(menuEmpresa)}
-                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Eliminar empresa
-                </button>
+                {confirmingDelete ? (
+                  <div className="px-3.5 py-2.5 space-y-2">
+                    <p className="text-xs font-semibold text-red-700">¿Eliminar empresa?</p>
+                    <p className="text-xs text-gray-500 leading-snug">
+                      Esta acción no se puede deshacer. Se eliminarán también sus obligaciones y accesos.
+                    </p>
+                    <div className="flex gap-2 pt-0.5">
+                      <button
+                        onClick={() => setConfirmingDelete(false)}
+                        className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => { handleDelete(menuEmpresa); setConfirmingDelete(false); }}
+                        className="flex-1 rounded-lg bg-red-600 hover:bg-red-700 px-2 py-1.5 text-xs font-medium text-white transition-colors"
+                      >
+                        Sí, eliminar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Eliminar empresa
+                  </button>
+                )}
               </>
             )}
           </div>
