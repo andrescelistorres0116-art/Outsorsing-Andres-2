@@ -36,6 +36,9 @@ import {
 } from "@/components/ui/select";
 import { EmpresaMock } from "@/lib/empresas-mock";
 import { getSessionFresh, AppSession } from "@/lib/app-auth";
+import { NovedadIngreso } from "@/lib/novedades-store";
+import NovedadIngresoModal, { IngresoFormData } from "@/components/nomina/NovedadIngresoModal";
+import { UserPlus } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -255,6 +258,52 @@ export default function NominaPage() {
       setDeletedIds(new Set());
     }
   }, [selectedMes, selectedAnio]);
+
+  // Novedades de ingreso
+  const [novedades, setNovedades] = useState<NovedadIngreso[]>([]);
+  const [novedadModal, setNovedadModal] = useState<{ empresaId: number; empresa: string; mes: number; anio: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/app-novedades")
+      .then((r) => r.json())
+      .then((data: NovedadIngreso[]) => { if (Array.isArray(data)) setNovedades(data); })
+      .catch(() => {});
+  }, []);
+
+  async function handleSaveNovedad(data: IngresoFormData) {
+    if (!appSession || !novedadModal) return;
+    const novedad: NovedadIngreso = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      tipo: "ingreso",
+      empresaId: novedadModal.empresaId,
+      empresa: novedadModal.empresa,
+      mes: novedadModal.mes,
+      anio: novedadModal.anio,
+      ...data,
+      reportadoPor: appSession.nombre,
+      reportadoPorEmail: appSession.email,
+      fechaReporte: new Date().toISOString().split("T")[0],
+      estado: "pendiente",
+    };
+    const updated = [...novedades, novedad];
+    setNovedades(updated);
+    setNovedadModal(null);
+    await fetch("/api/app-novedades", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(novedad),
+    }).catch(() => {});
+  }
+
+  async function handleProcesarNovedad(id: string) {
+    const updated = novedades.map((n) => n.id === id ? { ...n, estado: "procesado" as const } : n);
+    setNovedades(updated);
+    await fetch("/api/app-novedades", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    }).catch(() => {});
+  }
 
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [periodoFilter, setPeriodoFilter] = useState<"todos" | Periodo>("todos");
@@ -635,6 +684,17 @@ export default function NominaPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                         </Link>
+                        {/* Cliente: reportar ingreso de empleado */}
+                        {appSession?.role === "cliente" && r.estado === "BORRADOR" && (
+                          <button
+                            onClick={() => setNovedadModal({ empresaId: r.empresaNumId, empresa: r.empresa, mes: r.mes, anio: r.anio })}
+                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 transition-colors"
+                            title="Reportar ingreso de empleado"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            Reportar Ingreso
+                          </button>
+                        )}
                         {appSession?.role !== "cliente" && r.estado !== "APROBADO" && (
                           <button
                             onClick={() => handleAprobar(r.id)}
@@ -678,6 +738,118 @@ export default function NominaPage() {
           )}
         </div>
       </Card>
+
+      {/* ── Novedades de Ingreso ─────────────────────────────────────────────── */}
+      {(() => {
+        const visibles = appSession?.role === "cliente"
+          ? novedades.filter((n) => appSession.empresaIds.includes(n.empresaId))
+          : novedades;
+        if (visibles.length === 0 && appSession?.role !== "cliente") return null;
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-green-600" />
+                {appSession?.role === "cliente" ? "Mis Ingresos Reportados" : "Novedades de Ingreso — Clientes"}
+              </h2>
+              {visibles.filter((n) => n.estado === "pendiente").length > 0 && (
+                <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
+                  {visibles.filter((n) => n.estado === "pendiente").length} pendiente{visibles.filter((n) => n.estado === "pendiente").length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50/60">
+                      {appSession?.role !== "cliente" && (
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
+                      )}
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empleado</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cédula</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Salario</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">F. Ingreso</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrato</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                      {appSession?.role !== "cliente" && (
+                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acción</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {visibles.length === 0 ? (
+                      <tr>
+                        <td colSpan={appSession?.role !== "cliente" ? 9 : 8} className="text-center py-10 text-sm text-gray-400">
+                          No hay ingresos reportados todavía
+                        </td>
+                      </tr>
+                    ) : (
+                      visibles.map((n) => {
+                        const CONTRATOS: Record<string, string> = {
+                          indefinido: "Indefinido", fijo: "Término fijo",
+                          obra_labor: "Obra o labor", prestacion: "Prestación", aprendizaje: "Aprendizaje",
+                        };
+                        return (
+                          <tr key={n.id} className="hover:bg-gray-50/40">
+                            {appSession?.role !== "cliente" && (
+                              <td className="px-4 py-3 text-xs font-medium text-gray-700">{n.empresa}</td>
+                            )}
+                            <td className="px-4 py-3 text-xs text-gray-800 font-semibold">{n.nombre}</td>
+                            <td className="px-4 py-3 text-xs font-mono text-gray-500">{n.cedula}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600">{n.cargo}</td>
+                            <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">${n.salario}</td>
+                            <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                              {n.fechaIngreso.split("-").reverse().join("/")}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500">{CONTRATOS[n.tipoContrato] ?? n.tipoContrato}</td>
+                            <td className="px-4 py-3 text-center">
+                              {n.estado === "pendiente" ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                                  <Clock className="w-3 h-3" /> Pendiente
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                                  <CheckCircle2 className="w-3 h-3" /> Procesado
+                                </span>
+                              )}
+                            </td>
+                            {appSession?.role !== "cliente" && (
+                              <td className="px-4 py-3 text-right">
+                                {n.estado === "pendiente" && (
+                                  <button
+                                    onClick={() => handleProcesarNovedad(n.id)}
+                                    className="text-xs font-medium text-green-700 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md px-2.5 py-1 transition-colors"
+                                  >
+                                    Marcar procesado
+                                  </button>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+
+      {/* Modal: reportar ingreso */}
+      {novedadModal && (
+        <NovedadIngresoModal
+          open={!!novedadModal}
+          empresa={novedadModal.empresa}
+          mes={novedadModal.mes}
+          anio={novedadModal.anio}
+          onClose={() => setNovedadModal(null)}
+          onSave={handleSaveNovedad}
+        />
+      )}
 
       {/* Confirmation dialog for delete */}
       <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
