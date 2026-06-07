@@ -264,19 +264,22 @@ export default function DashboardPage() {
     [empresas]
   );
 
-  const inactiveNames = useMemo(
-    () =>
-      empresas.filter((e) => e.estado === "INACTIVA").map((e) => e.razonSocial),
-    [empresas]
+  // Normalized names of ACTIVA empresas — only obligations matching these are shown.
+  // Empty set (store not loaded yet) → no filtering applied.
+  const activaNames = useMemo(
+    () => new Set(activeEmpresas.map((e) => normName(e.razonSocial))),
+    [activeEmpresas]
   );
 
-  // Filter calendar obligations: exclude empresas marked INACTIVA in the store
+  // Only show obligations for empresas that EXIST and are ACTIVA in the store
   const visibleObligaciones = useMemo(
     () =>
-      OBLIGACIONES_MOCK.filter(
-        (o) => !inactiveNames.some((name) => matchesName(o.empresa, name))
-      ),
-    [inactiveNames]
+      activaNames.size === 0
+        ? OBLIGACIONES_MOCK
+        : OBLIGACIONES_MOCK.filter((o) =>
+            [...activaNames].some((name) => matchesName(o.empresa, name))
+          ),
+    [activaNames]
   );
 
   // Pending/overdue obligations sorted by date (top 8)
