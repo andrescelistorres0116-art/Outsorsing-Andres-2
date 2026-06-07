@@ -229,14 +229,39 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     getSessionFresh().then(setSession);
-    try {
-      const stored = localStorage.getItem("empresas-data");
-      if (stored) {
-        const parsed = JSON.parse(stored) as EmpresaMock[];
-        if (parsed.length > 0) setEmpresasData(parsed);
-      }
-    } catch {}
+    // Server is authoritative (same source as empresas module)
+    fetch("/api/app-empresas")
+      .then((r) => r.json())
+      .then((data: EmpresaMock[]) => {
+        if (Array.isArray(data) && data.length > 0) setEmpresasData(data);
+      })
+      .catch(() => {
+        try {
+          const stored = localStorage.getItem("empresas-data");
+          if (stored) {
+            const parsed = JSON.parse(stored) as EmpresaMock[];
+            if (parsed.length > 0) setEmpresasData(parsed);
+          }
+        } catch {}
+      });
   }, []);
+
+  // Normalized names of INACTIVA empresas — used to hide their obligations globally
+  const inactivaNames = useMemo(() => {
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+    return new Set(
+      empresasData.filter((e) => e.estado === "INACTIVA").map((e) => norm(e.razonSocial))
+    );
+  }, [empresasData]);
+
+  function isEmpresaInactiva(nombre: string): boolean {
+    if (inactivaNames.size === 0) return false;
+    const n = nombre.toLowerCase().replace(/\s+/g, " ").trim();
+    for (const inac of inactivaNames) {
+      if (n === inac || n.includes(inac) || inac.includes(n)) return true;
+    }
+    return false;
+  }
 
   // Names of empresas the current user can see (null = all)
   const empresasPermitidas: Set<string> | null = useMemo(() => {
@@ -269,9 +294,11 @@ export default function CalendarioPage() {
     weekEnd.setDate(weekEnd.getDate() + 7);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const visible = empresasPermitidas
-      ? obligaciones.filter((o) => empresasPermitidas.has(o.empresa))
-      : obligaciones;
+    const visible = obligaciones.filter((o) => {
+      if (isEmpresaInactiva(o.empresa)) return false;
+      if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
+      return true;
+    });
 
     const vencidas = visible.filter((o) => o.estado === "VENCIDO").length;
     const estaSemana = visible.filter((o) => {
@@ -294,6 +321,8 @@ export default function CalendarioPage() {
   // Filtered list
   const filtered = useMemo(() => {
     return obligaciones.filter((o) => {
+      // Hide obligations for INACTIVA empresas
+      if (isEmpresaInactiva(o.empresa)) return false;
       // Role-based: only show empresas the user is assigned to
       if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       if (
@@ -570,7 +599,7 @@ export default function CalendarioPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {EMPRESAS.filter((e) => !empresasPermitidas || empresasPermitidas.has(e.nombre)).map((e) => (
+                {EMPRESAS.filter((e) => !isEmpresaInactiva(e.nombre) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
                   <SelectItem key={e.nombre} value={e.nombre}>
                     <div className="flex items-center gap-2">
                       <span
