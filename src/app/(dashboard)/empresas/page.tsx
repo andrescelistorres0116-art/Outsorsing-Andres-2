@@ -219,7 +219,7 @@ const VALUE_TO_REGIMEN: Record<string, string> = {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
-  const [empresas, setEmpresas] = useState<Empresa[]>(EMPRESAS_MOCK);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   // hydrated becomes true after the initial load from server/localStorage.
   // Prevents the save-effect from overwriting real data with EMPRESAS_MOCK
   // on every page mount (SSR hydration race condition).
@@ -228,20 +228,20 @@ export default function EmpresasPage() {
   // Load on mount: server is authoritative, localStorage is fallback
   useEffect(() => {
     async function load() {
-      // 1. Try server store (persists across devices and browser clears)
+      // 1. Try server store (persists across devices and browser clears).
+      //    204 = file never written (first-time), fall through to localStorage.
+      //    200 = file exists, trust the data even if it's [].
       try {
         const res = await fetch("/api/app-empresas");
-        if (res.ok) {
+        if (res.status === 200) {
           const data: Empresa[] = await res.json();
-          if (data.length > 0) {
-            setEmpresas(data);
-            setHydrated(true);
-            return;
-          }
+          setEmpresas(data);
+          setHydrated(true);
+          return;
         }
       } catch {}
 
-      // 2. Fall back to localStorage
+      // 2. Fall back to localStorage (server not yet initialized)
       try {
         const stored = localStorage.getItem("empresas-data");
         if (stored) {
@@ -261,7 +261,8 @@ export default function EmpresasPage() {
         }
       } catch {}
 
-      // 3. No data anywhere → first-time setup, keep EMPRESAS_MOCK and persist it
+      // 3. No data anywhere — first-time setup, keep empty list
+      setEmpresas([]);
       setHydrated(true);
     }
     load();

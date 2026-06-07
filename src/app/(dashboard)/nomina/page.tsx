@@ -210,23 +210,19 @@ export default function NominaPage() {
 
   useEffect(() => {
     fetch("/api/app-empresas")
-      .then((r) => r.json())
-      .then((data: EmpresaMock[]) => {
-        if (data.length > 0) {
-          setEmpresasData(data);
-        } else {
-          // Server store empty (not yet synced) — fall back to localStorage only
-          try {
-            const stored = localStorage.getItem("empresas-data");
-            if (stored) {
-              const parsed = JSON.parse(stored) as EmpresaMock[];
-              if (parsed.length > 0) setEmpresasData(parsed);
-            }
-          } catch {}
+      .then(async (r) => {
+        if (r.status === 200) {
+          const data: EmpresaMock[] = await r.json();
+          setEmpresasData(Array.isArray(data) ? data : []);
+          return;
         }
+        // 204 = server not yet initialized, fall back to localStorage
+        try {
+          const stored = localStorage.getItem("empresas-data");
+          if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
+        } catch {}
       })
       .catch(() => {
-        // Network error — fall back to localStorage
         try {
           const stored = localStorage.getItem("empresas-data");
           if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);

@@ -210,9 +210,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/app-empresas")
-      .then((r) => r.json())
-      .then((data: EmpresaMock[]) => {
-        if (Array.isArray(data)) setEmpresas(data);
+      .then(async (r) => {
+        if (r.status === 200) {
+          const data: EmpresaMock[] = await r.json();
+          if (Array.isArray(data)) setEmpresas(data);
+        }
+        // 204 = not yet initialized, leave empresas as []
       })
       .catch(() => {})
       .finally(() => setEmpresasLoaded(true));

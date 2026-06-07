@@ -246,16 +246,14 @@ export default function CalendarioPage() {
     async function loadEmpresas() {
       try {
         const res = await fetch("/api/app-empresas");
-        if (res.ok) {
+        if (res.status === 200) {
           const data: EmpresaMock[] = await res.json();
-          if (Array.isArray(data)) {
-            setEmpresasData(data);
-            setEmpresasLoaded(true);
-            return;
-          }
+          setEmpresasData(Array.isArray(data) ? data : []);
+          setEmpresasLoaded(true);
+          return;
         }
       } catch {}
-      // Fallback to localStorage
+      // 204 or error → server not yet initialized, fall back to localStorage
       try {
         const stored = localStorage.getItem("empresas-data");
         if (stored) {

@@ -523,15 +523,14 @@ export default function AccesosPage() {
     async function loadEmpresas() {
       try {
         const res = await fetch("/api/app-empresas");
-        if (res.ok) {
+        if (res.status === 200) {
           const data: EmpresaMock[] = await res.json();
-          if (Array.isArray(data)) {
-            setEmpresasData(data);
-            setEmpresasLoaded(true);
-            return;
-          }
+          setEmpresasData(Array.isArray(data) ? data : []);
+          setEmpresasLoaded(true);
+          return;
         }
       } catch {}
+      // 204 or error → server not yet initialized, fall back to localStorage
       try {
         const stored = localStorage.getItem("empresas-data");
         if (stored) {
@@ -544,13 +543,15 @@ export default function AccesosPage() {
     loadEmpresas();
   }, []);
 
-  // Load accesos from server on mount; fall back to mock if server has nothing
+  // Load accesos from server on mount; 204 = not yet initialized, keep empty
   useEffect(() => {
     fetch("/api/app-accesos")
-      .then((r) => r.json())
-      .then((data: Acceso[]) => {
-        if (Array.isArray(data) && data.length > 0) setAccesos(data);
-        // If server is empty keep ACCESOS mock (first-time setup)
+      .then(async (r) => {
+        if (r.status === 200) {
+          const data: Acceso[] = await r.json();
+          if (Array.isArray(data)) setAccesos(data);
+        }
+        // 204 = no accesos file yet, keep initial empty state
       })
       .catch(() => {})
       .finally(() => setLoaded(true));

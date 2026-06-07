@@ -80,15 +80,17 @@ export default function UsuariosPage() {
     fetchUsers();
     // Load empresas from server first, fall back to localStorage
     fetch("/api/app-empresas")
-      .then((r) => r.json())
-      .then((data: EmpresaMock[]) => {
-        if (Array.isArray(data) && data.length > 0) setEmpresas(data);
-        else {
-          try {
-            const stored = localStorage.getItem("empresas-data");
-            if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
-          } catch {}
+      .then(async (r) => {
+        if (r.status === 200) {
+          const data: EmpresaMock[] = await r.json();
+          setEmpresas(Array.isArray(data) ? data : []);
+          return;
         }
+        // 204 = not yet initialized, fall back to localStorage
+        try {
+          const stored = localStorage.getItem("empresas-data");
+          if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
+        } catch {}
       })
       .catch(() => {
         try {
