@@ -506,13 +506,23 @@ export default function AccesosPage() {
   // Load session (fresh from server) and empresas on mount
   useEffect(() => {
     getSessionFresh().then(setSession);
-    try {
-      const stored = localStorage.getItem("empresas-data");
-      if (stored) {
-        const parsed = JSON.parse(stored) as EmpresaMock[];
-        if (parsed.length > 0) setEmpresasData(parsed);
-      }
-    } catch {}
+    async function loadEmpresas() {
+      try {
+        const res = await fetch("/api/app-empresas");
+        if (res.ok) {
+          const data: EmpresaMock[] = await res.json();
+          if (data.length > 0) { setEmpresasData(data); return; }
+        }
+      } catch {}
+      try {
+        const stored = localStorage.getItem("empresas-data");
+        if (stored) {
+          const parsed = JSON.parse(stored) as EmpresaMock[];
+          if (parsed.length > 0) setEmpresasData(parsed);
+        }
+      } catch {}
+    }
+    loadEmpresas();
   }, []);
 
   // Load accesos from server on mount
@@ -551,6 +561,12 @@ export default function AccesosPage() {
   const activeAccesos = visibleAccesos.filter((a) => !a.archivado);
   const archivedAccesos = visibleAccesos.filter((a) => !!a.archivado);
   const empresas = Array.from(new Set(visibleAccesos.map((a) => a.empresa))).sort();
+
+  // Only ACTIVA empresas shown in the create/edit form dropdown
+  const activaEmpresas = empresasData
+    .filter((e) => e.estado === "ACTIVA")
+    .map((e) => e.razonSocial)
+    .sort();
 
   const applyFilters = (list: Acceso[], search: string, empresa: string, tipo: string) =>
     list.filter((a) => {
@@ -753,6 +769,7 @@ export default function AccesosPage() {
       <AccesoFormModal
         open={modalOpen} onClose={() => setModalOpen(false)}
         onSave={handleSave} initialData={editData} mode={editMode}
+        empresas={activaEmpresas}
       />
     </div>
   );

@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
-import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 export type TipoAcceso =
   | "DIAN"
@@ -60,9 +59,8 @@ interface AccesoFormModalProps {
   onSave: (data: AccesoFormData) => void;
   initialData?: Partial<AccesoFormData>;
   mode?: "create" | "edit";
+  empresas: string[];
 }
-
-const EMPRESAS = EMPRESAS_MOCK.map((e) => e.razonSocial).sort();
 
 const TIPOS_ACCESO: { value: TipoAcceso; label: string }[] = [
   { value: "DIAN",              label: "DIAN" },
@@ -122,6 +120,7 @@ export default function AccesoFormModal({
   onSave,
   initialData,
   mode = "create",
+  empresas,
 }: AccesoFormModalProps) {
   const [form, setForm] = useState<AccesoFormData>({
     ...DEFAULT_FORM,
@@ -197,7 +196,7 @@ export default function AccesoFormModal({
                 <SelectValue placeholder="Seleccionar empresa..." />
               </SelectTrigger>
               <SelectContent>
-                {EMPRESAS.map((e) => (
+                {empresas.map((e) => (
                   <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
               </SelectContent>
