@@ -93,6 +93,26 @@ async function archiveAccesosForEmpresa(razonSocial: string) {
   } catch {}
 }
 
+// Unarchive all accesos for a given empresa in the server store
+async function unarchiveAccesosForEmpresa(razonSocial: string) {
+  try {
+    const res = await fetch("/api/app-accesos");
+    if (!res.ok) return;
+    const accesos: Array<{ empresa: string; archivado?: boolean }> = await res.json();
+    const rn = normName(razonSocial);
+    const updated = accesos.map((a) => {
+      const an = normName(a.empresa);
+      if (an === rn || an.includes(rn) || rn.includes(an)) return { ...a, archivado: false };
+      return a;
+    });
+    await fetch("/api/app-accesos", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+  } catch {}
+}
+
 // ── Components ─────────────────────────────────────────────────────────────────
 
 function EmpresaCard({ empresa }: { empresa: Empresa }) {
@@ -293,6 +313,8 @@ export default function EmpresasPage() {
     setMenuOpenId(null);
     if (efectivo === "ACTIVA") {
       archiveAccesosForEmpresa(empresa.razonSocial);
+    } else {
+      unarchiveAccesosForEmpresa(empresa.razonSocial);
     }
   }
 
