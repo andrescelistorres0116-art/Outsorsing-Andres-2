@@ -133,50 +133,7 @@ function getBarColor(value: number) {
   return "#dc2626";
 }
 
-function getActivityDot(tipo: string) {
-  const map: Record<string, string> = {
-    success: "bg-green-500",
-    error: "bg-red-500",
-    warning: "bg-yellow-500",
-    info: "bg-blue-500",
-  };
-  return map[tipo] ?? "bg-gray-400";
-}
 
-// ── Static activity feed (audit log not yet implemented) ──────────────────────
-
-const actividadReciente = [
-  {
-    id: 1,
-    texto: "Declaración IVA radicada — X TOURS SAS",
-    tiempo: "hace 23 min",
-    tipo: "success",
-  },
-  {
-    id: 2,
-    texto: "Nómina reportada — DIAZAR LTDA (mayo 2026)",
-    tiempo: "hace 5 h",
-    tipo: "success",
-  },
-  {
-    id: 3,
-    texto: "Recordatorio enviado — 300 HILOS SAS (ICA vence pronto)",
-    tiempo: "ayer 4:10 pm",
-    tipo: "warning",
-  },
-  {
-    id: 4,
-    texto: "Obligación vencida — Seguridad Social (300 HILOS SAS)",
-    tiempo: "ayer 12:00 pm",
-    tipo: "error",
-  },
-  {
-    id: 5,
-    texto: "Renta 2025 presentada — DIAZAR LTDA",
-    tiempo: "hace 2 días",
-    tipo: "success",
-  },
-];
 
 // ── Stat Card ──────────────────────────────────────────────────────────────────
 
@@ -555,36 +512,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Actividad reciente */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Actividad Reciente</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-0">
-                {actividadReciente.map((a, idx) => (
-                  <div key={a.id} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${getActivityDot(a.tipo)}`}
-                      />
-                      {idx < actividadReciente.length - 1 && (
-                        <div className="w-px flex-1 bg-gray-100 my-1" />
-                      )}
-                    </div>
-                    <div className="pb-4 flex-1 min-w-0">
-                      <p className="text-xs text-gray-700 leading-snug">
-                        {a.texto}
-                      </p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        {a.tiempo}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
