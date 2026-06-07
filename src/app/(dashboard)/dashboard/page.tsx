@@ -206,14 +206,16 @@ function CustomTooltip({
 
 export default function DashboardPage() {
   const [empresas, setEmpresas] = useState<EmpresaMock[]>([]);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
   useEffect(() => {
     fetch("/api/app-empresas")
       .then((r) => r.json())
       .then((data: EmpresaMock[]) => {
-        setEmpresas(Array.isArray(data) && data.length > 0 ? data : EMPRESAS_MOCK);
+        if (Array.isArray(data)) setEmpresas(data);
       })
-      .catch(() => setEmpresas(EMPRESAS_MOCK));
+      .catch(() => {})
+      .finally(() => setEmpresasLoaded(true));
   }, []);
 
   const activeEmpresas = useMemo(
@@ -222,22 +224,20 @@ export default function DashboardPage() {
   );
 
   // Normalized names of ACTIVA empresas — only obligations matching these are shown.
-  // Empty set (store not loaded yet) → no filtering applied.
   const activaNames = useMemo(
     () => new Set(activeEmpresas.map((e) => normName(e.razonSocial))),
     [activeEmpresas]
   );
 
-  // Only show obligations for empresas that EXIST and are ACTIVA in the store
-  const visibleObligaciones = useMemo(
-    () =>
-      activaNames.size === 0
-        ? OBLIGACIONES_MOCK
-        : OBLIGACIONES_MOCK.filter((o) =>
-            [...activaNames].some((name) => matchesName(o.empresa, name))
-          ),
-    [activaNames]
-  );
+  // Only show obligations for ACTIVA empresas in the store.
+  // While loading (empresasLoaded=false) show nothing to avoid flash of mock data.
+  const visibleObligaciones = useMemo(() => {
+    if (!empresasLoaded) return [];
+    if (activaNames.size === 0) return [];
+    return OBLIGACIONES_MOCK.filter((o) =>
+      [...activaNames].some((name) => matchesName(o.empresa, name))
+    );
+  }, [activaNames, empresasLoaded]);
 
   // Pending/overdue obligations sorted by date (top 8)
   const upcoming = useMemo(() => {

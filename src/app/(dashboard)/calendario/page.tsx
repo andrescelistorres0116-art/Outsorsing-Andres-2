@@ -198,9 +198,11 @@ function StatPill({ label, count, color, icon }: StatPillProps) {
 }
 
 // Returns true if the obligation's empresa belongs to the active store.
-// activaNames empty → store not loaded yet → show all (no filter).
-function isInActiveStore(empresa: string, activaNames: Set<string>): boolean {
-  if (activaNames.size === 0) return true;
+// loaded=false → store not fetched yet → show all (loading state).
+// loaded=true, activaNames empty → no active companies → show nothing.
+function isInActiveStore(empresa: string, activaNames: Set<string>, loaded: boolean): boolean {
+  if (!loaded) return true;
+  if (activaNames.size === 0) return false;
   const n = empresa.toLowerCase().replace(/\s+/g, " ").trim();
   for (const a of activaNames) {
     if (n === a || n.includes(a) || a.includes(n)) return true;
@@ -236,25 +238,34 @@ export default function CalendarioPage() {
   }, [obligaciones, hydrated]);
 
   const [session, setSession] = useState<AppSession | null>(null);
-  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
   useEffect(() => {
     getSessionFresh().then(setSession);
-    // Server is authoritative (same source as empresas module)
-    fetch("/api/app-empresas")
-      .then((r) => r.json())
-      .then((data: EmpresaMock[]) => {
-        if (Array.isArray(data) && data.length > 0) setEmpresasData(data);
-      })
-      .catch(() => {
-        try {
-          const stored = localStorage.getItem("empresas-data");
-          if (stored) {
-            const parsed = JSON.parse(stored) as EmpresaMock[];
-            if (parsed.length > 0) setEmpresasData(parsed);
+    async function loadEmpresas() {
+      try {
+        const res = await fetch("/api/app-empresas");
+        if (res.ok) {
+          const data: EmpresaMock[] = await res.json();
+          if (Array.isArray(data)) {
+            setEmpresasData(data);
+            setEmpresasLoaded(true);
+            return;
           }
-        } catch {}
-      });
+        }
+      } catch {}
+      // Fallback to localStorage
+      try {
+        const stored = localStorage.getItem("empresas-data");
+        if (stored) {
+          const parsed = JSON.parse(stored) as EmpresaMock[];
+          if (Array.isArray(parsed)) setEmpresasData(parsed);
+        }
+      } catch {}
+      setEmpresasLoaded(true);
+    }
+    loadEmpresas();
   }, []);
 
   // Normalized names of ACTIVA empresas in the store.
@@ -299,7 +310,7 @@ export default function CalendarioPage() {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     const visible = obligaciones.filter((o) => {
-      if (!isInActiveStore(o.empresa, activaNames)) return false;
+      if (!isInActiveStore(o.empresa, activaNames, empresasLoaded)) return false;
       if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       return true;
     });
@@ -320,13 +331,13 @@ export default function CalendarioPage() {
     ).length;
 
     return { vencidas, estaSemana, esteMes, completadas };
-  }, [obligaciones, empresasPermitidas, activaNames]);
+  }, [obligaciones, empresasPermitidas, activaNames, empresasLoaded]);
 
   // Filtered list
   const filtered = useMemo(() => {
     return obligaciones.filter((o) => {
       // Only show obligations for empresas that exist and are ACTIVA in the store
-      if (!isInActiveStore(o.empresa, activaNames)) return false;
+      if (!isInActiveStore(o.empresa, activaNames, empresasLoaded)) return false;
       // Role-based: only show empresas the user is assigned to
       if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       if (
@@ -361,6 +372,7 @@ export default function CalendarioPage() {
   }, [
     obligaciones,
     activaNames,
+    empresasLoaded,
     empresasPermitidas,
     search,
     filterEmpresa,
@@ -604,7 +616,7 @@ export default function CalendarioPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {EMPRESAS.filter((e) => isInActiveStore(e.nombre, activaNames) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
+                {EMPRESAS.filter((e) => isInActiveStore(e.nombre, activaNames, empresasLoaded) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
                   <SelectItem key={e.nombre} value={e.nombre}>
                     <div className="flex items-center gap-2">
                       <span
