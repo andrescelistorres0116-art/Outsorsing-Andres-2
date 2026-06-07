@@ -171,32 +171,65 @@ const VALUE_TO_REGIMEN: Record<string, string> = {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EmpresasPage() {
-  const [empresas, setEmpresas] = useState<Empresa[]>(() => {
-    if (typeof window === "undefined") return EMPRESAS_MOCK;
-    try {
-      const stored = localStorage.getItem("empresas-data");
-      if (!stored) return EMPRESAS_MOCK;
-      const parsed = JSON.parse(stored) as Empresa[];
-      // Sanitize: assign valid ids to any entry that lost its id due to prior -Infinity JSON bug
-      let maxId = parsed.reduce((m, e) => (typeof e.id === "number" && isFinite(e.id) ? Math.max(m, e.id) : m), 0);
-      return parsed.map((e) =>
-        typeof e.id !== "number" || !isFinite(e.id) ? { ...e, id: ++maxId } : e
-      );
-    } catch {
-      return EMPRESAS_MOCK;
-    }
-  });
+  const [empresas, setEmpresas] = useState<Empresa[]>(EMPRESAS_MOCK);
+  // hydrated becomes true after the initial load from server/localStorage.
+  // Prevents the save-effect from overwriting real data with EMPRESAS_MOCK
+  // on every page mount (SSR hydration race condition).
+  const [hydrated, setHydrated] = useState(false);
 
+  // Load on mount: server is authoritative, localStorage is fallback
   useEffect(() => {
+    async function load() {
+      // 1. Try server store (persists across devices and browser clears)
+      try {
+        const res = await fetch("/api/app-empresas");
+        if (res.ok) {
+          const data: Empresa[] = await res.json();
+          if (data.length > 0) {
+            setEmpresas(data);
+            setHydrated(true);
+            return;
+          }
+        }
+      } catch {}
+
+      // 2. Fall back to localStorage
+      try {
+        const stored = localStorage.getItem("empresas-data");
+        if (stored) {
+          const parsed = JSON.parse(stored) as Empresa[];
+          if (parsed.length > 0) {
+            let maxId = parsed.reduce(
+              (m, e) => (typeof e.id === "number" && isFinite(e.id) ? Math.max(m, e.id) : m),
+              0
+            );
+            const sanitized = parsed.map((e) =>
+              typeof e.id !== "number" || !isFinite(e.id) ? { ...e, id: ++maxId } : e
+            );
+            setEmpresas(sanitized);
+            setHydrated(true);
+            return;
+          }
+        }
+      } catch {}
+
+      // 3. No data anywhere → first-time setup, keep EMPRESAS_MOCK and persist it
+      setHydrated(true);
+    }
+    load();
+  }, []);
+
+  // Persist changes — skip until initial load completes
+  useEffect(() => {
+    if (!hydrated) return;
     const json = JSON.stringify(empresas);
     localStorage.setItem("empresas-data", json);
-    // Sync to server so client browsers can read the current empresa list
     fetch("/api/app-empresas", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: json,
     }).catch(() => {});
-  }, [empresas]);
+  }, [empresas, hydrated]);
   const [session, setSession] = useState<AppSession | null>(null);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
