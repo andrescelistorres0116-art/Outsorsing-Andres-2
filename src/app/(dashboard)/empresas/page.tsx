@@ -54,6 +54,25 @@ function getEstadoEfectivo(empresa: Empresa): "ACTIVA" | "INACTIVA" {
   return empresa.estado;
 }
 
+function normName(s: string) {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+// Remove all calendar obligations for a given empresa razonSocial from localStorage
+function cleanCalendarioObligaciones(razonSocial: string) {
+  try {
+    const stored = localStorage.getItem("calendario-obligaciones");
+    if (!stored) return;
+    const obs: Array<{ empresa: string }> = JSON.parse(stored);
+    const rn = normName(razonSocial);
+    const filtered = obs.filter((o) => {
+      const on = normName(o.empresa);
+      return !on.includes(rn) && !rn.includes(on);
+    });
+    localStorage.setItem("calendario-obligaciones", JSON.stringify(filtered));
+  } catch {}
+}
+
 // ── Components ─────────────────────────────────────────────────────────────────
 
 function EmpresaCard({ empresa }: { empresa: Empresa }) {
@@ -204,9 +223,10 @@ export default function EmpresasPage() {
     setModalOpen(true);
   }
 
-  function handleDelete(id: number) {
-    setEmpresas((prev) => prev.filter((e) => e.id !== id));
+  function handleDelete(empresa: Empresa) {
+    setEmpresas((prev) => prev.filter((e) => e.id !== empresa.id));
     setMenuOpenId(null);
+    cleanCalendarioObligaciones(empresa.razonSocial);
   }
 
   function handleToggleEstado(empresa: Empresa) {
@@ -600,7 +620,7 @@ export default function EmpresasPage() {
               <>
                 <div className="my-1 border-t border-gray-100" />
                 <button
-                  onClick={() => handleDelete(menuEmpresa.id)}
+                  onClick={() => handleDelete(menuEmpresa)}
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

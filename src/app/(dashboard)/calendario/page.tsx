@@ -200,19 +200,29 @@ function StatPill({ label, count, color, icon }: StatPillProps) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function CalendarioPage() {
-  const [obligaciones, setObligaciones] = useState<Obligacion[]>(() => {
-    if (typeof window === "undefined") return OBLIGACIONES_MOCK;
+  const [obligaciones, setObligaciones] = useState<Obligacion[]>(OBLIGACIONES_MOCK);
+  // hydrated: true after the first useEffect reads localStorage.
+  // Prevents the save-effect from overwriting localStorage with OBLIGACIONES_MOCK
+  // before the stored data has been loaded (SSR hydration race condition).
+  const [hydrated, setHydrated] = useState(false);
+
+  // Load from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("calendario-obligaciones");
-      return stored ? (JSON.parse(stored) as Obligacion[]) : OBLIGACIONES_MOCK;
-    } catch {
-      return OBLIGACIONES_MOCK;
-    }
-  });
+      if (stored) {
+        const parsed = JSON.parse(stored) as Obligacion[];
+        if (parsed.length > 0) setObligaciones(parsed);
+      }
+    } catch {}
+    setHydrated(true);
+  }, []);
 
+  // Persist changes — skip the initial render to avoid overwriting saved data
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem("calendario-obligaciones", JSON.stringify(obligaciones));
-  }, [obligaciones]);
+  }, [obligaciones, hydrated]);
 
   const [session, setSession] = useState<AppSession | null>(null);
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
