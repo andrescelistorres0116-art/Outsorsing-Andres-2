@@ -197,6 +197,17 @@ function StatPill({ label, count, color, icon }: StatPillProps) {
   );
 }
 
+// Returns true if the obligation's empresa belongs to the active store.
+// activaNames empty → store not loaded yet → show all (no filter).
+function isInActiveStore(empresa: string, activaNames: Set<string>): boolean {
+  if (activaNames.size === 0) return true;
+  const n = empresa.toLowerCase().replace(/\s+/g, " ").trim();
+  for (const a of activaNames) {
+    if (n === a || n.includes(a) || a.includes(n)) return true;
+  }
+  return false;
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function CalendarioPage() {
@@ -246,22 +257,15 @@ export default function CalendarioPage() {
       });
   }, []);
 
-  // Normalized names of INACTIVA empresas — used to hide their obligations globally
-  const inactivaNames = useMemo(() => {
+  // Normalized names of ACTIVA empresas in the store.
+  // Only obligations whose empresa matches an entry here are shown.
+  // If the store is empty (not loaded yet), the set is empty → no filtering applied.
+  const activaNames = useMemo(() => {
     const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
     return new Set(
-      empresasData.filter((e) => e.estado === "INACTIVA").map((e) => norm(e.razonSocial))
+      empresasData.filter((e) => e.estado === "ACTIVA").map((e) => norm(e.razonSocial))
     );
   }, [empresasData]);
-
-  function isEmpresaInactiva(nombre: string): boolean {
-    if (inactivaNames.size === 0) return false;
-    const n = nombre.toLowerCase().replace(/\s+/g, " ").trim();
-    for (const inac of inactivaNames) {
-      if (n === inac || n.includes(inac) || inac.includes(n)) return true;
-    }
-    return false;
-  }
 
   // Names of empresas the current user can see (null = all)
   const empresasPermitidas: Set<string> | null = useMemo(() => {
@@ -295,7 +299,7 @@ export default function CalendarioPage() {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     const visible = obligaciones.filter((o) => {
-      if (isEmpresaInactiva(o.empresa)) return false;
+      if (!isInActiveStore(o.empresa, activaNames)) return false;
       if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       return true;
     });
@@ -316,13 +320,13 @@ export default function CalendarioPage() {
     ).length;
 
     return { vencidas, estaSemana, esteMes, completadas };
-  }, [obligaciones, empresasPermitidas]);
+  }, [obligaciones, empresasPermitidas, activaNames]);
 
   // Filtered list
   const filtered = useMemo(() => {
     return obligaciones.filter((o) => {
-      // Hide obligations for INACTIVA empresas
-      if (isEmpresaInactiva(o.empresa)) return false;
+      // Only show obligations for empresas that exist and are ACTIVA in the store
+      if (!isInActiveStore(o.empresa, activaNames)) return false;
       // Role-based: only show empresas the user is assigned to
       if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
       if (
@@ -356,6 +360,7 @@ export default function CalendarioPage() {
     });
   }, [
     obligaciones,
+    activaNames,
     empresasPermitidas,
     search,
     filterEmpresa,
@@ -599,7 +604,7 @@ export default function CalendarioPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {EMPRESAS.filter((e) => !isEmpresaInactiva(e.nombre) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
+                {EMPRESAS.filter((e) => isInActiveStore(e.nombre, activaNames) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
                   <SelectItem key={e.nombre} value={e.nombre}>
                     <div className="flex items-center gap-2">
                       <span
