@@ -12,6 +12,7 @@ import {
   User,
   Calculator,
   Search,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +22,12 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
 import {
   Select,
   SelectContent,
@@ -78,6 +81,8 @@ export default function UsuariosPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ApiUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -216,16 +221,19 @@ export default function UsuariosPage() {
     }
   }
 
-  async function handleDelete(user: ApiUser) {
-    if (user.role === "admin") return;
+  async function handleDeleteConfirmed() {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
     const res = await fetch("/api/app-users", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: user.id }),
+      body: JSON.stringify({ id: deleteConfirm.id }),
     });
     if (res.ok) {
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setUsers((prev) => prev.filter((u) => u.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
     }
+    setDeleteLoading(false);
   }
 
   function toggleEmpresa(id: string) {
@@ -381,7 +389,7 @@ export default function UsuariosPage() {
                       </button>
                       {user.role !== "admin" && (
                         <button
-                          onClick={() => handleDelete(user)}
+                          onClick={() => setDeleteConfirm(user)}
                           className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                           title="Eliminar"
                         >
@@ -403,6 +411,33 @@ export default function UsuariosPage() {
           )}
         </div>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <Dialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o && !deleteLoading) setDeleteConfirm(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">Eliminar Usuario</DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                ¿Estás seguro de eliminar a <strong>{deleteConfirm.nombre}</strong> ({deleteConfirm.email})?
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 mt-2">
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleteLoading}>
+                Cancelar
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleDeleteConfirmed}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Eliminando…</> : "Eliminar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={(o) => !o && handleClose()}>
