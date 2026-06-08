@@ -60,10 +60,10 @@ export async function GET() {
         },
       }),
 
-      // Pending payroll reports (BORRADOR or ENVIADO = not yet approved)
+      // Pending payroll reports (BORRADOR or ENVIADA = not yet approved)
       prisma.reporteNomina.count({
         where: {
-          estado: { in: ["BORRADOR", "ENVIADO"] },
+          estado: { in: ["BORRADOR", "ENVIADA"] },
         },
       }),
     ])

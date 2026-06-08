@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { getNominaSession, canAccess, isContador, unauthorized, forbidden } from "@/lib/nomina-auth"
 
 export const dynamic = "force-dynamic"
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       data: {
         empleadoId: empleado.id,
         accion: "CREADO",
-        camposAntes: null,
+        camposAntes: Prisma.DbNull,
         camposDespues: { ...empleado, salarioBase: empleado.salarioBase?.toString() ?? null },
         realizadoPorId: session.userId,
       },
