@@ -11,7 +11,11 @@ async function run() {
     return
   }
 
-  const adapter = new PrismaPg({ connectionString })
+  const isProduction = process.env.NODE_ENV === 'production'
+  const poolConfig = isProduction
+    ? { connectionString, ssl: { rejectUnauthorized: false } }
+    : { connectionString }
+  const adapter = new PrismaPg(poolConfig)
   const prisma = new PrismaClient({ adapter })
 
   try {
