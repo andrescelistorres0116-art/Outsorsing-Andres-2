@@ -566,9 +566,9 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
   const f = (k: string) => form[k] ?? "";
 
   async function handleSubmit() {
-    const required = ["tipoDocumento", "numeroDocumento", "nombre", "fechaIngreso", "tipoContrato", "salarioBase"];
+    const required = ["tipoDocumento", "numeroDocumento", "nombre", "cargo", "fechaIngreso", "tipoContrato", "salarioBase", "eps", "fondoPensiones"];
     const missing = required.filter((k) => !f(k).trim());
-    if (missing.length) { setError("Todos los campos obligatorios deben completarse"); return; }
+    if (missing.length) { setError("Todos los campos son obligatorios"); return; }
 
     setSaving(true); setError("");
 
@@ -663,7 +663,7 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
           <FieldGroup label="Nombre completo *">
             <Input placeholder="Nombres y apellidos" value={f("nombre")} onChange={(e) => set("nombre", e.target.value)} />
           </FieldGroup>
-          <FieldGroup label="Cargo">
+          <FieldGroup label="Cargo *">
             <Input placeholder="Ej: Auxiliar administrativo" value={f("cargo")} onChange={(e) => set("cargo", e.target.value)} />
           </FieldGroup>
           <div className="grid grid-cols-2 gap-3">
@@ -683,10 +683,10 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
             </Select>
           </FieldGroup>
           <div className="grid grid-cols-2 gap-3">
-            <FieldGroup label="EPS">
+            <FieldGroup label="EPS *">
               <Input placeholder="Ej: Sura" value={f("eps")} onChange={(e) => set("eps", e.target.value)} />
             </FieldGroup>
-            <FieldGroup label="Fondo de pensiones">
+            <FieldGroup label="Fondo de pensiones *">
               <Input placeholder="Ej: Protección" value={f("fondoPensiones")} onChange={(e) => set("fondoPensiones", e.target.value)} />
             </FieldGroup>
           </div>
