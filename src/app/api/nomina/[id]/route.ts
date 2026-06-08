@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 
     const novedades = await prisma.novedadNomina.findMany({
       where: { empresaId: reporte.empresaId, mes: reporte.mes, año: reporte.año, periodo: reporte.periodo },
-      include: { empleado: { select: { id: true, cedula: true, nombre: true, ciudad: true, activo: true } } },
+      include: { empleado: { select: { id: true, numeroDocumento: true, nombre: true, ciudad: true, activo: true } } },
       orderBy: [{ empleado: { nombre: "asc" } }, { tipoNovedad: "asc" }],
     })
 
