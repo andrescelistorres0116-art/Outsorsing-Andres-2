@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { UserRole } from "@prisma/client"
 import { NextResponse } from "next/server"
+import { headers } from "next/headers"
 
 export type NominaSession = {
   userId: string
@@ -11,6 +12,23 @@ export type NominaSession = {
 }
 
 export async function getNominaSession(): Promise<NominaSession | null> {
+  // Development-only auth bypass via X-Dev-User-Id and X-Dev-User-Role headers
+  if (process.env.NODE_ENV === "development") {
+    const hdrs = await headers()
+    const devUserId = hdrs.get("x-dev-user-id")
+    const devUserRole = hdrs.get("x-dev-user-role") as UserRole | null
+    if (devUserId && devUserRole && Object.values(UserRole).includes(devUserRole)) {
+      if (devUserRole === UserRole.ADMIN) {
+        return { userId: devUserId, role: devUserRole, empresaIds: [] }
+      }
+      const rows = await prisma.usuarioEmpresa.findMany({
+        where: { userId: devUserId },
+        select: { empresaId: true },
+      })
+      return { userId: devUserId, role: devUserRole, empresaIds: rows.map(r => r.empresaId) }
+    }
+  }
+
   const session = await getServerSession(authOptions)
   if (!session?.user) return null
 
