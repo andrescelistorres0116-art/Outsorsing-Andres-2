@@ -552,9 +552,10 @@ interface IngresoModalProps {
   año: number;
   onClose: () => void;
   onSaved: (empleado: EmpleadoItem) => void;
+  onNovedadSaved: (novedad: NovedadItem) => void;
 }
 
-function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose, onSaved }: IngresoModalProps) {
+function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose, onSaved, onNovedadSaved }: IngresoModalProps) {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -599,7 +600,7 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
     const empleado = await empRes.json();
 
     // 2. Register INGRESO novedad
-    await fetch("/api/nomina/novedades", {
+    const novRes = await fetch("/api/nomina/novedades", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -614,6 +615,10 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
         descripcion: f("observaciones").trim() || null,
       }),
     });
+    if (novRes.ok) {
+      const novedad = await novRes.json();
+      onNovedadSaved(novedad);
+    }
 
     setSaving(false);
     onSaved({
@@ -1227,6 +1232,7 @@ export default function NominaDetallePage() {
         año={reporte.año}
         onClose={() => setIngresoModal(false)}
         onSaved={handleEmpleadoCreado}
+        onNovedadSaved={handleNovedadSaved}
       />
 
       {/* Edit Novedad Modal */}
