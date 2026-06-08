@@ -83,6 +83,7 @@ export default function UsuariosPage() {
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ApiUser | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [tab, setTab] = useState<"activos" | "inactivos">("activos");
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -109,8 +110,9 @@ export default function UsuariosPage() {
 
   const filtered = users.filter(
     (u) =>
-      u.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
+      u.activo === (tab === "activos") &&
+      (u.nombre.toLowerCase().includes(search.toLowerCase()) ||
+       u.email.toLowerCase().includes(search.toLowerCase()))
   );
 
   const totalContadores = users.filter((u) => u.role === "contador").length;
@@ -287,6 +289,31 @@ export default function UsuariosPage() {
         ))}
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {(["activos", "inactivos"] as const).map((t) => {
+          const count = users.filter((u) => u.activo === (t === "activos")).length;
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === t
+                  ? "border-violet-600 text-violet-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {t === "activos" ? "Activos" : "Inactivos"}
+              <span className={`ml-2 text-xs font-semibold rounded-full px-2 py-0.5 ${
+                tab === t ? "bg-violet-100 text-violet-700" : "bg-gray-100 text-gray-500"
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search */}
       <Card>
         <CardContent className="p-4">
@@ -406,7 +433,9 @@ export default function UsuariosPage() {
           {filtered.length === 0 && (
             <div className="text-center py-16">
               <UserCog className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No se encontraron usuarios</p>
+              <p className="text-gray-500 font-medium">
+                {tab === "activos" ? "No hay usuarios activos" : "No hay usuarios inactivos"}
+              </p>
             </div>
           )}
         </div>
