@@ -155,8 +155,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "No se puede eliminar al admin" }, { status: 403 });
     }
 
-    await prisma.user.delete({ where: { id } });
-    return NextResponse.json({ ok: true });
+    try {
+      await prisma.user.delete({ where: { id } });
+      return NextResponse.json({ ok: true, eliminado: true });
+    } catch (e: any) {
+      // FK constraint: user has audit/novedad records — soft delete instead
+      if (e?.code === "P2003" || e?.code === "P2014" || e?.code === "P2002") {
+        await prisma.user.update({ where: { id }, data: { isActive: false } });
+        return NextResponse.json({ ok: true, eliminado: false });
+      }
+      throw e;
+    }
   } catch (err) {
     console.error("[app-users DELETE]", err);
     return NextResponse.json({ error: "Error al eliminar usuario" }, { status: 500 });

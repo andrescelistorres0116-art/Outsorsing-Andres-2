@@ -83,6 +83,7 @@ export default function UsuariosPage() {
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ApiUser | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [tab, setTab] = useState<"activos" | "inactivos">("activos");
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
@@ -226,16 +227,32 @@ export default function UsuariosPage() {
   async function handleDeleteConfirmed() {
     if (!deleteConfirm) return;
     setDeleteLoading(true);
-    const res = await fetch("/api/app-users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteConfirm.id }),
-    });
-    if (res.ok) {
-      setUsers((prev) => prev.filter((u) => u.id !== deleteConfirm.id));
-      setDeleteConfirm(null);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/app-users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteConfirm.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.eliminado) {
+          setUsers((prev) => prev.filter((u) => u.id !== deleteConfirm.id));
+        } else {
+          // FK constraint — soft deleted, move to inactivos
+          setUsers((prev) => prev.map((u) => u.id === deleteConfirm.id ? { ...u, activo: false } : u));
+        }
+        setDeleteConfirm(null);
+        setDeleteError("");
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setDeleteError(body.error ?? "Error al eliminar usuario");
+      }
+    } catch {
+      setDeleteError("Error de conexión");
+    } finally {
+      setDeleteLoading(false);
     }
-    setDeleteLoading(false);
   }
 
   function toggleEmpresa(id: string) {
@@ -443,7 +460,7 @@ export default function UsuariosPage() {
 
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
-        <Dialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o && !deleteLoading) setDeleteConfirm(null); }}>
+        <Dialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o && !deleteLoading) { setDeleteConfirm(null); setDeleteError(""); } }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle className="text-base font-semibold">Eliminar Usuario</DialogTitle>
@@ -452,8 +469,13 @@ export default function UsuariosPage() {
                 Esta acción no se puede deshacer.
               </DialogDescription>
             </DialogHeader>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                {deleteError}
+              </p>
+            )}
             <DialogFooter className="gap-2 mt-2">
-              <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleteLoading}>
+              <Button variant="outline" onClick={() => { setDeleteConfirm(null); setDeleteError(""); }} disabled={deleteLoading}>
                 Cancelar
               </Button>
               <Button
