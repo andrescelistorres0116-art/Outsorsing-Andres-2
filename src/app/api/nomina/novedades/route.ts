@@ -245,8 +245,7 @@ export async function POST(request: NextRequest) {
     // Advance libranza cuota after novedad creation
     if (tipoNovedad === TipoNovedad.LIBRANZA && resolvedLibranzaId) {
       const libranza = await prisma.libranza.findUnique({ where: { id: resolvedLibranzaId } })
-      if (libranza && libranzaId) {
-        // Only advance cuota for pre-existing libranzas (auto-created ones start at cuota 1 already)
+      if (libranza) {
         const nuevaCuota = libranza.cuotaActual + 1
         await prisma.libranza.update({
           where: { id: resolvedLibranzaId },

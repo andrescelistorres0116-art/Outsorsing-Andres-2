@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { PeriodicidadNomina, PeriodoNomina, EstadoReporteNomina } from "@prisma/client"
+import { PeriodicidadNomina, PeriodoNomina, EstadoReporteNomina, TipoNovedad, UserRole } from "@prisma/client"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -92,9 +92,14 @@ export async function generarReportesParaEmpresa(
   const periodos = periodosDePeriodicidad(periodicidad)
   const result: GenerarResult = { creados: 0, omitidos: 0, errores: 0 }
 
+  // Use a system user id for auto-generated novedades: pick any ADMIN user
+  const adminUser = await prisma.user.findFirst({ where: { role: UserRole.ADMIN }, select: { id: true } })
+  const systemUserId = adminUser?.id ?? ""
+
   for (const periodo of periodos) {
     try {
-      await prisma.reporteNomina.create({
+      const dates = periodDates(año, mes, periodo)
+      const reporte = await prisma.reporteNomina.create({
         data: {
           empresaId,
           periodo,
@@ -102,15 +107,105 @@ export async function generarReportesParaEmpresa(
           año,
           estado: EstadoReporteNomina.BORRADOR,
           sinNovedades: false,
-          ...periodDates(año, mes, periodo),
+          ...dates,
         },
       })
       result.creados++
+
+      // Fire-and-forget: auto-generate libranza novedades for newly created report
+      if (systemUserId) {
+        generarNovedadesLibranzaParaReporte(
+          reporte.id, empresaId, mes, año, periodo,
+          dates.fechaInicioPeriodo, dates.fechaFinPeriodo, systemUserId,
+        ).catch(e => console.error("[generar-libranzas] auto-gen error:", e?.message))
+      }
     } catch (e: any) {
       if (e?.code === "P2002") {
         result.omitidos++ // constraint único — ya existe, no es error
       } else {
         console.error(`[generar-nominas] empresa=${empresaId} periodo=${periodo}:`, e?.message)
+        result.errores++
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * Auto-generates LIBRANZA novedades for all active libranzas of active employees
+ * for the given report. Idempotent — skips if novedad already exists for that
+ * libranza in this report. Advances cuotaActual after each creation.
+ */
+export async function generarNovedadesLibranzaParaReporte(
+  reporteId:          string,
+  empresaId:          string,
+  mes:                number,
+  año:                number,
+  periodo:            PeriodoNomina,
+  fechaInicioPeriodo: Date,
+  fechaFinPeriodo:    Date,
+  creadoPorId:        string,
+): Promise<{ creadas: number; omitidas: number; errores: number }> {
+  const result = { creadas: 0, omitidas: 0, errores: 0 }
+
+  // Employees active during the period
+  const empleados = await prisma.empleado.findMany({
+    where: {
+      empresaId,
+      fechaIngreso: { lte: fechaFinPeriodo },
+      OR: [
+        { fechaRetiro: null },
+        { fechaRetiro: { gte: fechaInicioPeriodo } },
+      ],
+    },
+    select: { id: true },
+  })
+
+  for (const emp of empleados) {
+    const libranzas = await prisma.libranza.findMany({
+      where: { empleadoId: emp.id, empresaId, activa: true },
+    })
+
+    for (const lib of libranzas) {
+      // Check idempotency: skip if this libranza already has a novedad in this report
+      const existing = await prisma.novedadNomina.findFirst({
+        where: { reporteId, libranzaId: lib.id },
+      })
+      if (existing) { result.omitidas++; continue }
+
+      try {
+        await prisma.novedadNomina.create({
+          data: {
+            empresaId,
+            empleadoId: emp.id,
+            reporteId,
+            periodo,
+            mes,
+            año,
+            tipoNovedad: TipoNovedad.LIBRANZA,
+            libranzaId: lib.id,
+            valorCuota: lib.valorCuota,
+            numeroCuotas: lib.numeroCuotas,
+            cuotaNumero: lib.cuotaActual,
+            fechaInicioNovedad: fechaInicioPeriodo,
+            creadoPorId,
+          },
+        })
+
+        // Advance cuota and deactivate libranza if fully paid
+        const nuevaCuota = lib.cuotaActual + 1
+        await prisma.libranza.update({
+          where: { id: lib.id },
+          data: {
+            cuotaActual: nuevaCuota,
+            activa: nuevaCuota <= lib.numeroCuotas,
+          },
+        })
+
+        result.creadas++
+      } catch (e: any) {
+        console.error(`[generar-libranzas] reporte=${reporteId} libranza=${lib.id}:`, e?.message)
         result.errores++
       }
     }

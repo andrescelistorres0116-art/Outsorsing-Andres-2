@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getNominaSession, canAccess, isContador, unauthorized, forbidden } from "@/lib/nomina-auth"
-import { EstadoReporteNomina } from "@prisma/client"
+import { EstadoReporteNomina, UserRole } from "@prisma/client"
+import { generarNovedadesLibranzaParaReporte } from "@/lib/generar-nominas"
 
 export const dynamic = "force-dynamic"
 
@@ -31,6 +32,17 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   })
   if (!reporte) return NextResponse.json({ error: "Reporte no encontrado" }, { status: 404 })
   if (!canAccess(session, reporte.empresaId)) return forbidden()
+
+  // Lazy trigger: auto-generate libranza novedades the first time an editable report is opened
+  if (ESTADOS_EDITABLES.includes(reporte.estado) && reporte.fechaInicioPeriodo && reporte.fechaFinPeriodo) {
+    const adminUser = await prisma.user.findFirst({ where: { role: UserRole.ADMIN }, select: { id: true } })
+    if (adminUser) {
+      generarNovedadesLibranzaParaReporte(
+        reporte.id, reporte.empresaId, reporte.mes, reporte.año, reporte.periodo,
+        reporte.fechaInicioPeriodo, reporte.fechaFinPeriodo, adminUser.id,
+      ).catch(e => console.error("[generar-libranzas] lazy trigger error:", e?.message))
+    }
+  }
 
   const serializeNovedad = (n: any) => ({
     ...n,
