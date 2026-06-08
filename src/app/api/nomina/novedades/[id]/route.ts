@@ -132,8 +132,8 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     })
   }
 
-  // Reverse LIBRANZA: roll back cuota advancement
-  if (existing.tipoNovedad === TipoNovedad.LIBRANZA && existing.libranzaId) {
+  // Reverse LIBRANZA / PRESTAMO: roll back cuota advancement
+  if ((existing.tipoNovedad === TipoNovedad.LIBRANZA || existing.tipoNovedad === TipoNovedad.PRESTAMO) && existing.libranzaId) {
     const libranza = await prisma.libranza.findUnique({ where: { id: existing.libranzaId } })
     if (libranza && libranza.cuotaActual > 1) {
       await prisma.libranza.update({

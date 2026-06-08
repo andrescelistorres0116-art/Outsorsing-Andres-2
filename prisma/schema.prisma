@@ -84,11 +84,13 @@ enum TipoNovedad {
   LICENCIA
   VACACIONES
   LIBRANZA
+  PRESTAMO
   EMBARGO
   INGRESO
   RETIRO
   LLEGADA_TARDE
   AUSENCIA
+  DESCUENTO_AUTORIZADO
   OTRA
 }
 
@@ -386,6 +388,7 @@ model Libranza {
   cuotaActual    Int      @default(1)
   fechaInicio    DateTime
   activa         Boolean  @default(true)
+  tipo           String   @default("LIBRANZA")
   observaciones  String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

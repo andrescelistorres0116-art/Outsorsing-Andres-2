@@ -12,6 +12,7 @@ const TIPO_LABEL: Record<string, string> = {
   COMISIONES:            "Comisiones",
   RETIRO:                "Retiro",
   LIBRANZA:              "Libranza",
+  PRESTAMO:              "Préstamo",
   VACACIONES:            "Vacaciones",
   HORAS_EXTRAS:          "Hora extra ordinaria",
   HORAS_EXTRAS_NOCTURNAS:"Hora extra nocturna",
@@ -22,6 +23,7 @@ const TIPO_LABEL: Record<string, string> = {
   LLEGADA_TARDE:         "Llegadas tarde",
   INGRESO:               "Ingreso",
   AUSENCIA:              "Ausencia",
+  DESCUENTO_AUTORIZADO:  "Descuento autorizado por empleado",
   OTRA:                  "Otra novedad",
 }
 

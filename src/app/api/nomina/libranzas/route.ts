@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const empresaId = searchParams.get("empresaId")
   const empleadoId = searchParams.get("empleadoId") || undefined
   const activa = searchParams.get("activa")
+  const tipo = searchParams.get("tipo") || undefined
 
   if (!empresaId) return NextResponse.json({ error: "empresaId es requerido" }, { status: 400 })
   if (!canAccess(session, empresaId)) return forbidden()
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
   const where: any = { empresaId }
   if (empleadoId) where.empleadoId = empleadoId
   if (activa !== null) where.activa = activa !== "false"
+  if (tipo) where.tipo = tipo
 
   const libranzas = await prisma.libranza.findMany({
     where,

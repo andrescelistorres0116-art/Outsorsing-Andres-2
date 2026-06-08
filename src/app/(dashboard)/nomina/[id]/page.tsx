@@ -24,9 +24,10 @@ import { useAppSession } from "@/hooks/useAppSession";
 type EstadoReporte = "BORRADOR" | "ENVIADA" | "REVISADA" | "APROBADA" | "REABIERTA" | "CORREGIDA";
 type PeriodoNomina = "MENSUAL" | "PRIMERA_QUINCENA" | "SEGUNDA_QUINCENA";
 type TipoNovedad =
-  | "BONIFICACIONES" | "COMISIONES" | "RETIRO" | "LIBRANZA" | "VACACIONES"
+  | "BONIFICACIONES" | "COMISIONES" | "RETIRO" | "LIBRANZA" | "PRESTAMO" | "VACACIONES"
   | "HORAS_EXTRAS" | "HORAS_EXTRAS_NOCTURNAS" | "RECARGOS" | "DOMINICALES"
-  | "LICENCIA" | "INCAPACIDAD" | "LLEGADA_TARDE" | "OTRA" | "INGRESO" | "AUSENCIA";
+  | "LICENCIA" | "INCAPACIDAD" | "LLEGADA_TARDE" | "OTRA" | "INGRESO" | "AUSENCIA"
+  | "DESCUENTO_AUTORIZADO";
 
 interface NovedadItem {
   id: string;
@@ -124,6 +125,8 @@ const TIPOS_NOVEDAD: { value: TipoNovedad; label: string }[] = [
   { value: "COMISIONES",            label: "Comisiones" },
   { value: "RETIRO",                label: "Retiro" },
   { value: "LIBRANZA",              label: "Libranza" },
+  { value: "PRESTAMO",              label: "Préstamos" },
+  { value: "DESCUENTO_AUTORIZADO",  label: "Descuento autorizado por empleado" },
   { value: "VACACIONES",            label: "Vacaciones" },
   { value: "HORAS_EXTRAS",          label: "Hora extra ordinaria" },
   { value: "HORAS_EXTRAS_NOCTURNAS", label: "Hora extra nocturna" },
@@ -150,6 +153,8 @@ function novedadChipLabel(n: NovedadItem) {
   if (n.tipoNovedad === "LLEGADA_TARDE") return `${tipo}: ${n.diasAusencia} día(s)`;
   if (n.tipoNovedad === "RETIRO") return `Retiro: ${n.fechaFinNovedad ? n.fechaFinNovedad.split("T")[0] : ""}`;
   if (n.tipoNovedad === "LIBRANZA") return `Libranza: $${Number(n.valorCuota ?? 0).toLocaleString("es-CO")}`;
+  if (n.tipoNovedad === "PRESTAMO") return `Préstamo: $${Number(n.valorCuota ?? 0).toLocaleString("es-CO")}`;
+  if (n.tipoNovedad === "DESCUENTO_AUTORIZADO") return `Descuento: $${Number(n.valor ?? 0).toLocaleString("es-CO")}${n.descripcion ? ` — ${n.descripcion.slice(0, 25)}${(n.descripcion.length ?? 0) > 25 ? "…" : ""}` : ""}`;
   if (n.tipoNovedad === "VACACIONES") return `Vacaciones: ${n.fechaInicioNovedad?.split("T")[0]} → ${n.fechaFinNovedad?.split("T")[0]}`;
   if (n.tipoNovedad === "LICENCIA") return `Luto: ${n.fechaInicioNovedad?.split("T")[0]} → ${n.fechaFinNovedad?.split("T")[0]}`;
   if (n.tipoNovedad === "INCAPACIDAD") return `Incap.: ${n.fechaInicioNovedad?.split("T")[0]} → ${n.fechaFinNovedad?.split("T")[0]}`;
@@ -213,11 +218,11 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
     }
   }, [open, editNovedad?.id]);
 
-  // Load libranzas when LIBRANZA type is selected
+  // Load libranzas when LIBRANZA or PRESTAMO type is selected
   useEffect(() => {
-    if (tipo !== "LIBRANZA") return;
+    if (tipo !== "LIBRANZA" && tipo !== "PRESTAMO") return;
     setLoadingLibranzas(true);
-    fetch(`/api/nomina/libranzas?empresaId=${empresaId}&empleadoId=${empleadoId}&activa=true`)
+    fetch(`/api/nomina/libranzas?empresaId=${empresaId}&empleadoId=${empleadoId}&activa=true&tipo=${tipo}`)
       .then((r) => r.json())
       .then((d) => {
         const list: LibranzaExistente[] = d.libranzas ?? [];
@@ -254,11 +259,18 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
         case "LLEGADA_TARDE":
           patch.diasAusencia = Number(form.diasAusencia); patch.descripcion = form.descripcion || null; break;
         case "LIBRANZA":
+        case "PRESTAMO":
           if (!form.valorCuota || Number(form.valorCuota) <= 0) { setSaving(false); setError("Valor cuota debe ser mayor que cero"); return; }
           if (!form.cuotaNumero || Number(form.cuotaNumero) <= 0) { setSaving(false); setError("Cuota # es requerida"); return; }
           patch.valorCuota = Number(form.valorCuota);
           patch.numeroCuotas = form.numeroCuotas ? parseInt(form.numeroCuotas) : undefined;
           patch.cuotaNumero = parseInt(form.cuotaNumero);
+          break;
+        case "DESCUENTO_AUTORIZADO":
+          if (!form.valor || Number(form.valor) <= 0) { setSaving(false); setError("Valor debe ser mayor que cero"); return; }
+          if (!form.descripcion?.trim()) { setSaving(false); setError("La observación es obligatoria"); return; }
+          patch.valor = form.valor;
+          patch.descripcion = form.descripcion;
           break;
         default:
           patch.descripcion = form.descripcion || null;
@@ -311,12 +323,13 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
         payload.descripcion = form.descripcion || null;
         break;
       case "LIBRANZA":
+      case "PRESTAMO":
         if (libranzaOpcion === "existente" && form.libranzaId) {
           payload.libranzaId = form.libranzaId;
           const lib = libranzas.find((l) => l.id === form.libranzaId);
           if (lib) payload.valorCuota = lib.valorCuota;
         } else {
-          if (!form.entidad?.trim()) { setSaving(false); setError("Entidad es requerida"); return; }
+          if (!form.entidad?.trim()) { setSaving(false); setError("Entidad / nombre del préstamo es requerido"); return; }
           if (!form.valorCuota || Number(form.valorCuota) <= 0) { setSaving(false); setError("Valor cuota debe ser mayor que cero"); return; }
           if (!form.numeroCuotas || Number(form.numeroCuotas) <= 0) { setSaving(false); setError("Total cuotas debe ser mayor que cero"); return; }
           if (!form.cuotaActual || Number(form.cuotaActual) <= 0) { setSaving(false); setError("Cuota actual # es requerida"); return; }
@@ -326,6 +339,12 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
           payload.cuotaActual = form.cuotaActual;
           payload.fechaInicioNovedad = periodStart;
         }
+        break;
+      case "DESCUENTO_AUTORIZADO":
+        if (!form.valor || Number(form.valor) <= 0) { setSaving(false); setError("Valor debe ser mayor que cero"); return; }
+        if (!form.descripcion?.trim()) { setSaving(false); setError("La observación es obligatoria"); return; }
+        payload.valor = form.valor;
+        payload.descripcion = form.descripcion;
         break;
       case "OTRA":
         payload.descripcion = form.descripcion;
@@ -419,6 +438,8 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
           </>
         );
       case "LIBRANZA":
+      case "PRESTAMO": {
+        const isPrestamo = tipo === "PRESTAMO";
         if (editNovedad) {
           return (
             <div className="grid grid-cols-3 gap-3">
@@ -434,25 +455,25 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
             </div>
           );
         }
-        if (loadingLibranzas) return <p className="text-sm text-gray-400">Cargando libranzas...</p>;
+        if (loadingLibranzas) return <p className="text-sm text-gray-400">{isPrestamo ? "Cargando préstamos..." : "Cargando libranzas..."}</p>;
         return (
           <div className="space-y-4">
             {libranzas.length > 0 && (
               <div className="flex gap-3">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="radio" checked={libranzaOpcion === "existente"} onChange={() => setLibranzaOpcion("existente")} />
-                  Libranza existente
+                  {isPrestamo ? "Préstamo existente" : "Libranza existente"}
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="radio" checked={libranzaOpcion === "nueva"} onChange={() => setLibranzaOpcion("nueva")} />
-                  Nueva libranza
+                  {isPrestamo ? "Nuevo préstamo" : "Nueva libranza"}
                 </label>
               </div>
             )}
             {libranzaOpcion === "existente" && libranzas.length > 0 ? (
-              <FieldGroup label="Seleccionar libranza">
+              <FieldGroup label={isPrestamo ? "Seleccionar préstamo" : "Seleccionar libranza"}>
                 <Select value={f("libranzaId")} onValueChange={(v) => set("libranzaId", v)}>
-                  <SelectTrigger><SelectValue placeholder="Elige una libranza..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={isPrestamo ? "Elige un préstamo..." : "Elige una libranza..."} /></SelectTrigger>
                   <SelectContent>
                     {libranzas.map((l) => (
                       <SelectItem key={l.id} value={l.id}>
@@ -464,8 +485,8 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
               </FieldGroup>
             ) : (
               <>
-                <FieldGroup label="Entidad (banco o cooperativa) *">
-                  <Input placeholder="Ej: Bancolombia" value={f("entidad")} onChange={(e) => set("entidad", e.target.value)} />
+                <FieldGroup label={isPrestamo ? "Nombre / entidad del préstamo *" : "Entidad (banco o cooperativa) *"}>
+                  <Input placeholder={isPrestamo ? "Ej: Préstamo empresa" : "Ej: Bancolombia"} value={f("entidad")} onChange={(e) => set("entidad", e.target.value)} />
                 </FieldGroup>
                 <div className="grid grid-cols-3 gap-3">
                   <FieldGroup label="Valor cuota ($) *">
@@ -481,6 +502,18 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
               </>
             )}
           </div>
+        );
+      }
+      case "DESCUENTO_AUTORIZADO":
+        return (
+          <>
+            <FieldGroup label="Valor a descontar ($) *">
+              <Input type="number" min="1" placeholder="Ej: 150000" value={f("valor")} onChange={(e) => set("valor", e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Observación (obligatoria) *">
+              <Textarea rows={3} placeholder="Describa el motivo del descuento autorizado por el empleado..." value={f("descripcion")} onChange={(e) => set("descripcion", e.target.value)} />
+            </FieldGroup>
+          </>
         );
       case "OTRA":
         return (

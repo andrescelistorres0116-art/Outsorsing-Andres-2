@@ -175,6 +175,7 @@ export async function generarNovedadesLibranzaParaReporte(
       if (existing) { result.omitidas++; continue }
 
       try {
+        const tipoNovedad = lib.tipo === "PRESTAMO" ? TipoNovedad.PRESTAMO : TipoNovedad.LIBRANZA
         await prisma.novedadNomina.create({
           data: {
             empresaId,
@@ -183,7 +184,7 @@ export async function generarNovedadesLibranzaParaReporte(
             periodo,
             mes,
             año,
-            tipoNovedad: TipoNovedad.LIBRANZA,
+            tipoNovedad,
             libranzaId: lib.id,
             valorCuota: lib.valorCuota,
             numeroCuotas: lib.numeroCuotas,

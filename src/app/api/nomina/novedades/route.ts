@@ -34,10 +34,15 @@ function validateNovedad(tipo: TipoNovedad, body: any): string[] {
       if (!has("fechaFinNovedad")) errors.push("fechaFinNovedad es requerida")
       break
     case TipoNovedad.LIBRANZA:
+    case TipoNovedad.PRESTAMO:
       // Allow either existing libranzaId or inline creation via entidad field
       if (!has("libranzaId") && !has("entidad")) {
         errors.push("Se requiere una libranza existente o los datos para crear una nueva (entidad)")
       }
+      break
+    case TipoNovedad.DESCUENTO_AUTORIZADO:
+      if (!has("valor") || num("valor") <= 0) errors.push("valor debe ser mayor que cero")
+      if (!has("descripcion")) errors.push("La observación es obligatoria para descuentos autorizados")
       break
     case TipoNovedad.INGRESO:
       if (!has("fechaInicioNovedad")) errors.push("fechaInicioNovedad (fecha de ingreso) es requerida")
@@ -161,9 +166,10 @@ export async function POST(request: NextRequest) {
   const typeErrors = validateNovedad(tipoNovedad as TipoNovedad, body)
   if (typeErrors.length) return NextResponse.json({ error: "Validación fallida", details: typeErrors }, { status: 400 })
 
-  // Libranza handling — auto-create if client provides inline data, or validate existing libranzaId
+  // Libranza / Préstamo handling — auto-create if client provides inline data, or validate existing libranzaId
   let resolvedLibranzaId: string | null = libranzaId || null
-  if (tipoNovedad === TipoNovedad.LIBRANZA) {
+  const isLibranzaTipo = tipoNovedad === TipoNovedad.LIBRANZA || tipoNovedad === TipoNovedad.PRESTAMO
+  if (isLibranzaTipo) {
     if (libranzaId) {
       // Explicit libranza reference: validate it
       const libranza = await prisma.libranza.findUnique({ where: { id: libranzaId } })
@@ -173,7 +179,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Inline registration: auto-create the Libranza record transparently
       const { entidad, valorCuota: vc, numeroCuotas: nc, fechaInicioNovedad: fini } = body
-      if (!entidad?.trim()) return NextResponse.json({ error: "entidad es requerida para registrar una libranza" }, { status: 400 })
+      if (!entidad?.trim()) return NextResponse.json({ error: "entidad es requerida" }, { status: 400 })
       if (!vc || Number(vc) <= 0) return NextResponse.json({ error: "valorCuota debe ser mayor que cero" }, { status: 400 })
       if (!nc || Number(nc) <= 0) return NextResponse.json({ error: "numeroCuotas debe ser mayor que cero" }, { status: 400 })
       const nuevaLibranza = await prisma.libranza.create({
@@ -187,6 +193,7 @@ export async function POST(request: NextRequest) {
           cuotaActual: body.cuotaActual ? parseInt(body.cuotaActual) : 1,
           fechaInicio: fini ? new Date(fini) : new Date(),
           activa: true,
+          tipo: tipoNovedad,
         },
       })
       resolvedLibranzaId = nuevaLibranza.id
@@ -242,8 +249,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Advance libranza cuota after novedad creation
-    if (tipoNovedad === TipoNovedad.LIBRANZA && resolvedLibranzaId) {
+    // Advance libranza/prestamo cuota after novedad creation
+    if (isLibranzaTipo && resolvedLibranzaId) {
       const libranza = await prisma.libranza.findUnique({ where: { id: resolvedLibranzaId } })
       if (libranza) {
         const nuevaCuota = libranza.cuotaActual + 1
