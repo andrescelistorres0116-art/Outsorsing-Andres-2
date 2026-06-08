@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { Prisma, EstadoReporteNomina, TipoNovedad } from "@prisma/client"
-import { getNominaSession, canAccess, isContador, unauthorized, forbidden } from "@/lib/nomina-auth"
+import { EstadoReporteNomina, TipoNovedad } from "@prisma/client"
+import { getNominaSession, canAccess, unauthorized, forbidden } from "@/lib/nomina-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -65,12 +65,28 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   delete body.id
 
   const updateData: any = {}
-  const fields = ["valor", "tarifaHora", "porcentaje", "horas", "diasAusencia", "valorCuota", "cuotaNumero", "numeroCuotas", "descripcion", "adjunto"]
-  for (const f of fields) if (body[f] !== undefined) updateData[f] = body[f]
+  if (body.valor !== undefined) updateData.valor = body.valor != null ? body.valor : null
+  if (body.horas !== undefined) updateData.horas = body.horas != null ? body.horas : null
+  if (body.tarifaHora !== undefined) updateData.tarifaHora = body.tarifaHora != null ? body.tarifaHora : null
+  if (body.porcentaje !== undefined) updateData.porcentaje = body.porcentaje != null ? body.porcentaje : null
+  if (body.diasAusencia !== undefined) updateData.diasAusencia = body.diasAusencia != null ? Number(body.diasAusencia) : null
+  if (body.valorCuota !== undefined) updateData.valorCuota = body.valorCuota != null ? Number(body.valorCuota) : null
+  if (body.cuotaNumero !== undefined) updateData.cuotaNumero = body.cuotaNumero != null ? parseInt(body.cuotaNumero) : null
+  if (body.numeroCuotas !== undefined) updateData.numeroCuotas = body.numeroCuotas != null ? parseInt(body.numeroCuotas) : null
+  if (body.descripcion !== undefined) updateData.descripcion = body.descripcion?.trim() || null
+  if (body.adjunto !== undefined) updateData.adjunto = body.adjunto?.trim() || null
   if (body.fechaInicioNovedad !== undefined) updateData.fechaInicioNovedad = body.fechaInicioNovedad ? new Date(body.fechaInicioNovedad) : null
   if (body.fechaFinNovedad !== undefined) updateData.fechaFinNovedad = body.fechaFinNovedad ? new Date(body.fechaFinNovedad) : null
 
   const updated = await prisma.novedadNomina.update({ where: { id }, data: updateData })
+
+  // Sync RETIRO date change to employee record
+  if (existing.tipoNovedad === TipoNovedad.RETIRO && body.fechaFinNovedad) {
+    await prisma.empleado.update({
+      where: { id: existing.empleadoId },
+      data: { fechaRetiro: new Date(body.fechaFinNovedad) },
+    })
+  }
 
   await prisma.auditoriaNovedad.create({
     data: {
@@ -95,7 +111,6 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await getNominaSession()
   if (!session) return unauthorized()
-  if (!isContador(session)) return forbidden("Solo contadores y administradores pueden eliminar novedades")
 
   const { id } = await context.params
   const existing = await prisma.novedadNomina.findUnique({ where: { id } })
@@ -109,17 +124,15 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     }
   }
 
-  await prisma.auditoriaNovedad.create({
-    data: {
-      novedadNominaId: id,
-      accion: "ELIMINADO",
-      camposAntes: { tipoNovedad: existing.tipoNovedad, valor: existing.valor?.toString() ?? null, horas: existing.horas?.toString() ?? null },
-      camposDespues: Prisma.DbNull,
-      realizadoPorId: session.userId,
-    },
-  })
+  // Reverse RETIRO: reactivate employee
+  if (existing.tipoNovedad === TipoNovedad.RETIRO) {
+    await prisma.empleado.update({
+      where: { id: existing.empleadoId },
+      data: { activo: true, fechaRetiro: null },
+    })
+  }
 
-  // If this was a libranza novedad, reverse the cuota advancement
+  // Reverse LIBRANZA: roll back cuota advancement
   if (existing.tipoNovedad === TipoNovedad.LIBRANZA && existing.libranzaId) {
     const libranza = await prisma.libranza.findUnique({ where: { id: existing.libranzaId } })
     if (libranza && libranza.cuotaActual > 1) {

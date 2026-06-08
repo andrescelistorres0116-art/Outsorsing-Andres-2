@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, CheckCircle2, Users, Plus, UserPlus, AlertCircle,
-  FileText, Send, Eye, Undo2, RefreshCw, X, Loader2, Calendar,
+  FileText, Send, Eye, Undo2, RefreshCw, X, Loader2, Calendar, Pencil, Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ type PeriodoNomina = "MENSUAL" | "PRIMERA_QUINCENA" | "SEGUNDA_QUINCENA";
 type TipoNovedad =
   | "BONIFICACIONES" | "COMISIONES" | "RETIRO" | "LIBRANZA" | "VACACIONES"
   | "HORAS_EXTRAS" | "HORAS_EXTRAS_NOCTURNAS" | "RECARGOS" | "DOMINICALES"
-  | "LICENCIA" | "INCAPACIDAD" | "LLEGADA_TARDE" | "OTRA";
+  | "LICENCIA" | "INCAPACIDAD" | "LLEGADA_TARDE" | "OTRA" | "INGRESO" | "AUSENCIA";
 
 interface NovedadItem {
   id: string;
@@ -40,6 +40,8 @@ interface NovedadItem {
   descripcion?: string | null;
   valorCuota?: string | null;
   libranzaId?: string | null;
+  cuotaNumero?: number | null;
+  numeroCuotas?: number | null;
 }
 
 interface EmpleadoItem {
@@ -178,9 +180,11 @@ interface AddNovedadModalProps {
   periodEnd: string;
   onClose: () => void;
   onSaved: (novedad: NovedadItem) => void;
+  editNovedad?: NovedadItem;
+  onUpdated?: (novedad: NovedadItem) => void;
 }
 
-function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaId, periodo, mes, año, periodStart, periodEnd, onClose, onSaved }: AddNovedadModalProps) {
+function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaId, periodo, mes, año, periodStart, periodEnd, onClose, onSaved, editNovedad, onUpdated }: AddNovedadModalProps) {
   const [tipo, setTipo] = useState<TipoNovedad | "">("");
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -189,10 +193,24 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
   const [libranzaOpcion, setLibranzaOpcion] = useState<"existente" | "nueva">("existente");
   const [loadingLibranzas, setLoadingLibranzas] = useState(false);
 
-  // Reset on close
+  // Initialize / reset on open
   useEffect(() => {
-    if (!open) { setTipo(""); setForm({}); setError(""); setLibranzas([]); }
-  }, [open]);
+    if (!open) { setTipo(""); setForm({}); setError(""); setLibranzas([]); return; }
+    if (editNovedad) {
+      setTipo(editNovedad.tipoNovedad);
+      const init: Record<string, string> = {};
+      if (editNovedad.valor) init.valor = editNovedad.valor;
+      if (editNovedad.horas) init.horas = editNovedad.horas;
+      if (editNovedad.diasAusencia != null) init.diasAusencia = String(editNovedad.diasAusencia);
+      if (editNovedad.fechaInicioNovedad) init.fechaInicioNovedad = editNovedad.fechaInicioNovedad.split("T")[0];
+      if (editNovedad.fechaFinNovedad) init.fechaFinNovedad = editNovedad.fechaFinNovedad.split("T")[0];
+      if (editNovedad.descripcion) init.descripcion = editNovedad.descripcion;
+      if (editNovedad.valorCuota) init.valorCuota = editNovedad.valorCuota;
+      if (editNovedad.cuotaNumero != null) init.cuotaNumero = String(editNovedad.cuotaNumero);
+      if (editNovedad.numeroCuotas != null) init.numeroCuotas = String(editNovedad.numeroCuotas);
+      setForm(init);
+    }
+  }, [open, editNovedad?.id]);
 
   // Load libranzas when LIBRANZA type is selected
   useEffect(() => {
@@ -215,6 +233,53 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
     if (!tipo) { setError("Selecciona un tipo de novedad"); return; }
     setSaving(true); setError("");
 
+    // ── EDIT MODE (PATCH) ────────────────────────────────────────────────────
+    if (editNovedad) {
+      const patch: Record<string, any> = {};
+      switch (tipo) {
+        case "BONIFICACIONES": case "COMISIONES":
+          patch.valor = form.valor; patch.descripcion = form.descripcion || null; break;
+        case "HORAS_EXTRAS": case "HORAS_EXTRAS_NOCTURNAS": case "RECARGOS": case "DOMINICALES":
+          patch.horas = form.horas; patch.descripcion = form.descripcion || null; break;
+        case "RETIRO":
+          patch.fechaFinNovedad = form.fechaFinNovedad; break;
+        case "INGRESO":
+          patch.fechaInicioNovedad = form.fechaInicioNovedad; break;
+        case "VACACIONES": case "LICENCIA": case "INCAPACIDAD":
+          patch.fechaInicioNovedad = form.fechaInicioNovedad;
+          patch.fechaFinNovedad = form.fechaFinNovedad;
+          patch.descripcion = form.descripcion || null;
+          break;
+        case "LLEGADA_TARDE":
+          patch.diasAusencia = Number(form.diasAusencia); patch.descripcion = form.descripcion || null; break;
+        case "LIBRANZA":
+          if (!form.valorCuota || Number(form.valorCuota) <= 0) { setSaving(false); setError("Valor cuota debe ser mayor que cero"); return; }
+          if (!form.cuotaNumero || Number(form.cuotaNumero) <= 0) { setSaving(false); setError("Cuota # es requerida"); return; }
+          patch.valorCuota = Number(form.valorCuota);
+          patch.numeroCuotas = form.numeroCuotas ? parseInt(form.numeroCuotas) : undefined;
+          patch.cuotaNumero = parseInt(form.cuotaNumero);
+          break;
+        default:
+          patch.descripcion = form.descripcion || null;
+      }
+      const res = await fetch(`/api/nomina/novedades/${editNovedad.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      setSaving(false);
+      if (res.ok) {
+        const data = await res.json();
+        onUpdated?.({ ...editNovedad, ...data });
+        onClose();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setError(err.details?.join(", ") ?? err.error ?? "Error al guardar");
+      }
+      return;
+    }
+
+    // ── CREATE MODE (POST) ───────────────────────────────────────────────────
     const payload: Record<string, any> = {
       empresaId, empleadoId, reporteId,
       periodo, mes, año, tipoNovedad: tipo,
@@ -343,6 +408,21 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
           </>
         );
       case "LIBRANZA":
+        if (editNovedad) {
+          return (
+            <div className="grid grid-cols-3 gap-3">
+              <FieldGroup label="Valor cuota ($) *">
+                <Input type="number" min="1" value={f("valorCuota")} onChange={(e) => set("valorCuota", e.target.value)} />
+              </FieldGroup>
+              <FieldGroup label="Total cuotas *">
+                <Input type="number" min="1" value={f("numeroCuotas")} onChange={(e) => set("numeroCuotas", e.target.value)} />
+              </FieldGroup>
+              <FieldGroup label="Cuota # *">
+                <Input type="number" min="1" value={f("cuotaNumero")} onChange={(e) => set("cuotaNumero", e.target.value)} />
+              </FieldGroup>
+            </div>
+          );
+        }
         if (loadingLibranzas) return <p className="text-sm text-gray-400">Cargando libranzas...</p>;
         return (
           <div className="space-y-4">
@@ -406,20 +486,26 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Agregar Novedad</DialogTitle>
+          <DialogTitle className="text-base font-semibold">{editNovedad ? "Editar Novedad" : "Agregar Novedad"}</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">{empleadoNombre}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           <FieldGroup label="Tipo de novedad">
-            <Select value={tipo} onValueChange={(v) => { setTipo(v as TipoNovedad); setForm({}); setError(""); }}>
-              <SelectTrigger><SelectValue placeholder="Selecciona un tipo..." /></SelectTrigger>
-              <SelectContent>
-                {TIPOS_NOVEDAD.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {editNovedad ? (
+              <div className="px-3 py-2 rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-700">
+                {tipoLabel(editNovedad.tipoNovedad)}
+              </div>
+            ) : (
+              <Select value={tipo} onValueChange={(v) => { setTipo(v as TipoNovedad); setForm({}); setError(""); }}>
+                <SelectTrigger><SelectValue placeholder="Selecciona un tipo..." /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_NOVEDAD.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </FieldGroup>
 
           {tipo && renderFields()}
@@ -436,7 +522,7 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
             onClick={handleSubmit}
             disabled={saving || !tipo}
           >
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Guardando…</> : "Guardar Novedad"}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Guardando…</> : editNovedad ? "Guardar Cambios" : "Guardar Novedad"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -639,6 +725,9 @@ export default function NominaDetallePage() {
 
   // Modal state
   const [novedadModal, setNovedadModal] = useState<{ empleadoId: string; nombre: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ novedad: NovedadItem; nombre: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ novedad: NovedadItem; nombre: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [ingresoModal, setIngresoModal] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
   const [finalError, setFinalError] = useState("");
@@ -716,6 +805,28 @@ export default function NominaDetallePage() {
 
   function handleEmpleadoCreado(empleado: EmpleadoItem) {
     setEmpleados((prev) => [...prev, empleado]);
+  }
+
+  function handleNovedadUpdated(novedad: NovedadItem) {
+    setNovedadesPorEmpleado((prev) => ({
+      ...prev,
+      [novedad.empleadoId]: (prev[novedad.empleadoId] ?? []).map((n) => n.id === novedad.id ? novedad : n),
+    }));
+  }
+
+  async function handleDeleteConfirmed() {
+    if (!deleteModal) return;
+    setDeleteLoading(true);
+    const res = await fetch(`/api/nomina/novedades/${deleteModal.novedad.id}`, { method: "DELETE" });
+    if (res.ok) {
+      const { novedad } = deleteModal;
+      setNovedadesPorEmpleado((prev) => ({
+        ...prev,
+        [novedad.empleadoId]: (prev[novedad.empleadoId] ?? []).filter((n) => n.id !== novedad.id),
+      }));
+      setDeleteModal(null);
+    }
+    setDeleteLoading(false);
   }
 
   if (loading) {
@@ -922,9 +1033,27 @@ export default function NominaDetallePage() {
                         {novs.map((n) => (
                           <span
                             key={n.id}
-                            className="inline-flex items-center text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-2.5 py-0.5"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-2.5 py-0.5"
                           >
                             {novedadChipLabel(n)}
+                            {isEditable && (
+                              <>
+                                <button
+                                  title="Editar"
+                                  onClick={() => setEditModal({ novedad: n, nombre: emp.nombre })}
+                                  className="ml-0.5 text-indigo-400 hover:text-indigo-700 transition-colors"
+                                >
+                                  <Pencil className="w-2.5 h-2.5" />
+                                </button>
+                                <button
+                                  title="Eliminar"
+                                  onClick={() => setDeleteModal({ novedad: n, nombre: emp.nombre })}
+                                  className="text-red-400 hover:text-red-600 transition-colors"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              </>
+                            )}
                           </span>
                         ))}
                       </div>
@@ -966,6 +1095,53 @@ export default function NominaDetallePage() {
         onClose={() => setIngresoModal(false)}
         onSaved={handleEmpleadoCreado}
       />
+
+      {/* Edit Novedad Modal */}
+      {editModal && periodDates && (
+        <AddNovedadModal
+          open={!!editModal}
+          empleadoId={editModal.novedad.empleadoId}
+          empleadoNombre={editModal.nombre}
+          reporteId={id}
+          empresaId={reporte.empresaId}
+          periodo={reporte.periodo}
+          mes={reporte.mes}
+          año={reporte.año}
+          periodStart={periodDates.start}
+          periodEnd={periodDates.end}
+          onClose={() => setEditModal(null)}
+          onSaved={() => {}}
+          editNovedad={editModal.novedad}
+          onUpdated={(n) => { handleNovedadUpdated(n); setEditModal(null); }}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteModal && (
+        <Dialog open={!!deleteModal} onOpenChange={(o) => { if (!o && !deleteLoading) setDeleteModal(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">Eliminar Novedad</DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                ¿Eliminar <strong>{novedadChipLabel(deleteModal.novedad)}</strong> de{" "}
+                <strong>{deleteModal.nombre}</strong>? Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 mt-2">
+              <Button variant="outline" onClick={() => setDeleteModal(null)} disabled={deleteLoading}>
+                Cancelar
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleDeleteConfirmed}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Eliminando…</> : "Eliminar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
