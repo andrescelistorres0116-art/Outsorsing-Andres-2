@@ -728,6 +728,7 @@ export default function NominaDetallePage() {
   const [editModal, setEditModal] = useState<{ novedad: NovedadItem; nombre: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ novedad: NovedadItem; nombre: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [confirmAprobar, setConfirmAprobar] = useState(false);
   const [ingresoModal, setIngresoModal] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
   const [finalError, setFinalError] = useState("");
@@ -918,11 +919,13 @@ export default function NominaDetallePage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => transicionarEstado(estadoDestino)}
+              onClick={() => isCliente ? setConfirmAprobar(true) : transicionarEstado(estadoDestino)}
               disabled={finalLoading}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {finalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : btnFinalizarLabel}
+              {finalLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : isCliente ? "APROBAR NOVEDADES DE NÓMINA" : btnFinalizarLabel}
             </Button>
           </div>
         </div>
@@ -1123,6 +1126,34 @@ export default function NominaDetallePage() {
           onUpdated={(n) => { handleNovedadUpdated(n); setEditModal(null); }}
         />
       )}
+
+      {/* Confirm Aprobar Novedades Dialog (client only) */}
+      <Dialog open={confirmAprobar} onOpenChange={(o) => { if (!o && !finalLoading) setConfirmAprobar(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">Aprobar novedades de nómina</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              ¿Está seguro de aprobar estas novedades? Una vez enviadas, el contador de Outsoursing Andrés
+              las revisará y no podrá realizar cambios hasta que el reporte sea reabierto.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setConfirmAprobar(false)} disabled={finalLoading}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={finalLoading}
+              onClick={async () => {
+                setConfirmAprobar(false);
+                await transicionarEstado(estadoDestino);
+              }}
+            >
+              {finalLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Enviando…</> : "Sí, aprobar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       {deleteModal && (
