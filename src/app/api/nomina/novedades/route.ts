@@ -17,14 +17,9 @@ function validateNovedad(tipo: TipoNovedad, body: any): string[] {
     case TipoNovedad.HORAS_EXTRAS:
     case TipoNovedad.HORAS_EXTRAS_NOCTURNAS:
     case TipoNovedad.DOMINICALES:
-      if (!has("horas") || num("horas") <= 0) errors.push("horas debe ser mayor que cero")
-      if (!has("valor") && !has("tarifaHora")) errors.push("Se requiere valor o tarifaHora para horas extras")
-      if (has("valor") && num("valor") <= 0) errors.push("valor debe ser mayor que cero")
-      if (has("tarifaHora") && num("tarifaHora") <= 0) errors.push("tarifaHora debe ser mayor que cero")
-      break
     case TipoNovedad.RECARGOS:
+      // UI captures hours only; monetary calculation happens externally
       if (!has("horas") || num("horas") <= 0) errors.push("horas debe ser mayor que cero")
-      if (!has("porcentaje") || num("porcentaje") <= 0) errors.push("porcentaje debe ser mayor que cero")
       break
     case TipoNovedad.BONIFICACIONES:
     case TipoNovedad.COMISIONES:
@@ -33,16 +28,16 @@ function validateNovedad(tipo: TipoNovedad, body: any): string[] {
       break
     case TipoNovedad.INCAPACIDAD:
     case TipoNovedad.VACACIONES:
-      if (!has("diasAusencia") || num("diasAusencia") <= 0) errors.push("diasAusencia debe ser mayor que cero")
+    case TipoNovedad.LICENCIA:
+      // UI captures date range; diasAusencia is optional (calculated externally)
       if (!has("fechaInicioNovedad")) errors.push("fechaInicioNovedad es requerida")
       if (!has("fechaFinNovedad")) errors.push("fechaFinNovedad es requerida")
       break
-    case TipoNovedad.LICENCIA:
-      if (!has("diasAusencia") || num("diasAusencia") <= 0) errors.push("diasAusencia debe ser mayor que cero")
-      if (!has("fechaInicioNovedad")) errors.push("fechaInicioNovedad es requerida")
-      break
     case TipoNovedad.LIBRANZA:
-      if (!has("libranzaId")) errors.push("libranzaId es requerido para novedades de libranza")
+      // Allow either existing libranzaId or inline creation via entidad field
+      if (!has("libranzaId") && !has("entidad")) {
+        errors.push("Se requiere una libranza existente o los datos para crear una nueva (entidad)")
+      }
       break
     case TipoNovedad.INGRESO:
       if (!has("fechaInicioNovedad")) errors.push("fechaInicioNovedad (fecha de ingreso) es requerida")
@@ -51,7 +46,11 @@ function validateNovedad(tipo: TipoNovedad, body: any): string[] {
       if (!has("fechaFinNovedad")) errors.push("fechaFinNovedad (fecha de retiro) es requerida")
       break
     case TipoNovedad.LLEGADA_TARDE:
-      if (!has("horas") || num("horas") <= 0) errors.push("horas debe ser mayor que cero")
+      // UI captures days count via diasAusencia
+      if (!has("diasAusencia") || num("diasAusencia") <= 0) errors.push("diasAusencia debe ser mayor que cero")
+      break
+    case TipoNovedad.OTRA:
+      if (!has("descripcion")) errors.push("La observación es obligatoria para otras novedades")
       break
     case TipoNovedad.AUSENCIA:
       if ((!has("diasAusencia") || num("diasAusencia") <= 0) && (!has("horas") || num("horas") <= 0)) {
