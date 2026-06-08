@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { EmpresaMock } from "@/lib/empresas-mock"
 import { PeriodicidadNomina } from "@prisma/client"
+import { generarReportesParaEmpresa, mesActual } from "@/lib/generar-nominas"
 
 export const dynamic = "force-dynamic"
 
@@ -97,13 +98,21 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Array expected" }, { status: 400 })
     }
 
+    const { mes, año } = mesActual()
+
     for (const empresa of list) {
       if (!empresa.nit) continue
-      await prisma.empresa.upsert({
+      const saved = await prisma.empresa.upsert({
         where: { nit: empresa.nit },
         create: { nit: empresa.nit, ...toPrismaData(empresa) },
         update: toPrismaData(empresa),
       })
+
+      // Si la empresa está activa y tiene periodicidad, generar reportes del mes actual
+      if (saved.periodicidadNomina && saved.estado === "ACTIVA") {
+        generarReportesParaEmpresa(saved.id, saved.periodicidadNomina, mes, año)
+          .catch((e) => console.error("[app-empresas PUT] Error al generar reportes:", e?.message))
+      }
     }
 
     return NextResponse.json({ ok: true })

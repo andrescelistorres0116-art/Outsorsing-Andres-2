@@ -1,8 +1,87 @@
 // Runs at app startup. Uses upsert so it's safe to run on every restart.
-// Always ensures the default users exist with the correct passwords.
+// Always ensures the default users exist and generates nomina reports for
+// the current month for all active companies.
 const { PrismaClient } = require('@prisma/client')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const bcrypt = require('bcryptjs')
+
+// ── Helpers (mirrors src/lib/generar-nominas.ts in CommonJS) ─────────────────
+
+function lastDayOfMonth(year, month) {
+  return new Date(year, month, 0).getDate() // month is 1-based
+}
+
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+function periodDates(año, mes, periodo) {
+  const last = lastDayOfMonth(año, mes)
+  const m = pad(mes)
+  if (periodo === 'PRIMERA_QUINCENA') {
+    return {
+      fechaInicioPeriodo: new Date(`${año}-${m}-01`),
+      fechaFinPeriodo:    new Date(`${año}-${m}-15`),
+    }
+  }
+  if (periodo === 'SEGUNDA_QUINCENA') {
+    return {
+      fechaInicioPeriodo: new Date(`${año}-${m}-16`),
+      fechaFinPeriodo:    new Date(`${año}-${m}-${pad(last)}`),
+    }
+  }
+  return {
+    fechaInicioPeriodo: new Date(`${año}-${m}-01`),
+    fechaFinPeriodo:    new Date(`${año}-${m}-${pad(last)}`),
+  }
+}
+
+function periodosDePeriodicidad(periodicidad) {
+  return periodicidad === 'QUINCENAL'
+    ? ['PRIMERA_QUINCENA', 'SEGUNDA_QUINCENA']
+    : ['MENSUAL']
+}
+
+async function generarReportesActuales(prisma) {
+  const now = new Date()
+  const mes = now.getMonth() + 1 // 1-based
+  const año = now.getFullYear()
+
+  const empresas = await prisma.empresa.findMany({
+    where: { estado: 'ACTIVA', periodicidadNomina: { not: null } },
+    select: { id: true, periodicidadNomina: true },
+  })
+
+  let creados = 0
+  let omitidos = 0
+
+  for (const empresa of empresas) {
+    if (!empresa.periodicidadNomina) continue
+    for (const periodo of periodosDePeriodicidad(empresa.periodicidadNomina)) {
+      try {
+        await prisma.reporteNomina.create({
+          data: {
+            empresaId: empresa.id,
+            periodo,
+            mes,
+            año,
+            estado: 'BORRADOR',
+            sinNovedades: false,
+            ...periodDates(año, mes, periodo),
+          },
+        })
+        creados++
+      } catch (e) {
+        if (e?.code === 'P2002') omitidos++ // ya existe — OK
+        else console.error(`[init] Error al crear reporte empresa=${empresa.id}:`, e?.message)
+      }
+    }
+  }
+
+  console.log(`[init] Reportes ${mes}/${año}: ${creados} creados, ${omitidos} ya existían`)
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 async function run() {
   const connectionString = process.env.DATABASE_URL
@@ -19,6 +98,7 @@ async function run() {
   const prisma = new PrismaClient({ adapter })
 
   try {
+    // ── 1. Usuarios por defecto ───────────────────────────────────────────────
     console.log('[init] Ensuring default users exist with correct passwords...')
 
     const adminHash  = await bcrypt.hash('Admin123!',  10)
@@ -40,6 +120,10 @@ async function run() {
     }
 
     console.log('[init] Default users ready')
+
+    // ── 2. Reportes del mes actual ────────────────────────────────────────────
+    await generarReportesActuales(prisma)
+
   } catch (err) {
     console.error('[init] Seed error:', err.message)
   } finally {

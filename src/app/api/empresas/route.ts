@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { generarReportesParaEmpresa, mesActual } from "@/lib/generar-nominas"
+import { PeriodicidadNomina } from "@prisma/client"
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,6 +59,14 @@ export async function POST(request: NextRequest) {
     }
 
     const empresa = await prisma.empresa.create({ data })
+
+    // Si la empresa tiene periodicidad configurada, generar reportes del mes actual
+    if (empresa.periodicidadNomina && empresa.estado === "ACTIVA") {
+      const { mes, año } = mesActual()
+      generarReportesParaEmpresa(empresa.id, empresa.periodicidadNomina as PeriodicidadNomina, mes, año)
+        .catch((e) => console.error("[empresas POST] Error al generar reportes:", e?.message))
+    }
+
     return NextResponse.json(empresa, { status: 201 })
   } catch (error: any) {
     console.error("Error creating empresa:", error)

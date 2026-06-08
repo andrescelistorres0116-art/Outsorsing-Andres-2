@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getNominaSession, canAccess, isContador, unauthorized, forbidden } from "@/lib/nomina-auth"
 import { EstadoReporteNomina, PeriodicidadNomina, PeriodoNomina } from "@prisma/client"
+import { generarReportesMes, mesActual } from "@/lib/generar-nominas"
 
 export const dynamic = "force-dynamic"
 
@@ -28,6 +29,18 @@ export async function GET(request: NextRequest) {
   if (estado) where.estado = estado
   if (mes !== undefined) where.mes = mes
   if (año !== undefined) where.año = año
+
+  // Generación lazy: si se consulta el mes actual, asegurar que existan los
+  // reportes de todas las empresas activas. Cubre el inicio de cada mes sin
+  // necesitar un cron externo. Fire-and-forget para no bloquear la respuesta.
+  const actual = mesActual()
+  const esMesActual = (mes === undefined || mes === actual.mes) &&
+                      (año === undefined || año === actual.año)
+  if (esMesActual) {
+    generarReportesMes(actual.mes, actual.año).catch(
+      (e) => console.error("[reportes GET] Error en generación lazy:", e?.message)
+    )
+  }
 
   const [reportes, total] = await Promise.all([
     prisma.reporteNomina.findMany({
