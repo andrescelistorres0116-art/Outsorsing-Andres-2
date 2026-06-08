@@ -247,9 +247,14 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
           const lib = libranzas.find((l) => l.id === form.libranzaId);
           if (lib) payload.valorCuota = lib.valorCuota;
         } else {
+          if (!form.entidad?.trim()) { setSaving(false); setError("Entidad es requerida"); return; }
+          if (!form.valorCuota || Number(form.valorCuota) <= 0) { setSaving(false); setError("Valor cuota debe ser mayor que cero"); return; }
+          if (!form.numeroCuotas || Number(form.numeroCuotas) <= 0) { setSaving(false); setError("Total cuotas debe ser mayor que cero"); return; }
+          if (!form.cuotaActual || Number(form.cuotaActual) <= 0) { setSaving(false); setError("Cuota actual # es requerida"); return; }
           payload.entidad = form.entidad;
           payload.valorCuota = form.valorCuota;
           payload.numeroCuotas = form.numeroCuotas;
+          payload.cuotaActual = form.cuotaActual;
           payload.fechaInicioNovedad = periodStart;
         }
         break;
@@ -368,15 +373,18 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
               </FieldGroup>
             ) : (
               <>
-                <FieldGroup label="Entidad (banco o cooperativa)">
+                <FieldGroup label="Entidad (banco o cooperativa) *">
                   <Input placeholder="Ej: Bancolombia" value={f("entidad")} onChange={(e) => set("entidad", e.target.value)} />
                 </FieldGroup>
-                <div className="grid grid-cols-2 gap-3">
-                  <FieldGroup label="Valor cuota ($)">
+                <div className="grid grid-cols-3 gap-3">
+                  <FieldGroup label="Valor cuota ($) *">
                     <Input type="number" min="1" placeholder="Ej: 250000" value={f("valorCuota")} onChange={(e) => set("valorCuota", e.target.value)} />
                   </FieldGroup>
-                  <FieldGroup label="Total cuotas">
+                  <FieldGroup label="Total cuotas *">
                     <Input type="number" min="1" placeholder="Ej: 24" value={f("numeroCuotas")} onChange={(e) => set("numeroCuotas", e.target.value)} />
+                  </FieldGroup>
+                  <FieldGroup label="Cuota actual # *">
+                    <Input type="number" min="1" placeholder="Ej: 3" value={f("cuotaActual")} onChange={(e) => set("cuotaActual", e.target.value)} />
                   </FieldGroup>
                 </div>
               </>
