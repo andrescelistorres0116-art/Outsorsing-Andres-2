@@ -47,7 +47,7 @@ type Periodo = "1-15" | "16-30" | "mensual";
 
 interface ReporteNomina {
   id: string;
-  empresaNumId: number;
+  empresaNumId: string;
   empresaSlug: string;
   empresa: string;
   periodicidadNomina: "quincenal" | "mensual";
@@ -253,7 +253,7 @@ export default function NominaPage() {
 
   // Novedades de ingreso
   const [novedades, setNovedades] = useState<NovedadIngreso[]>([]);
-  const [novedadModal, setNovedadModal] = useState<{ empresaId?: number; empresa?: string; mes: number; anio: number } | null>(null);
+  const [novedadModal, setNovedadModal] = useState<{ empresaId?: string; empresa?: string; mes: number; anio: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/app-novedades")
@@ -875,7 +875,7 @@ export default function NominaPage() {
         <NovedadIngresoModal
           open={!!novedadModal}
           empresa={novedadModal.empresa ?? ""}
-          empresaId={novedadModal.empresaId ?? 0}
+          empresaId={novedadModal.empresaId ?? ""}
           empresaOptions={
             !novedadModal.empresa
               ? (empresasAsignadas.map((e) => ({ id: e.id, name: e.razonSocial })) as EmpresaOption[])

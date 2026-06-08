@@ -3,7 +3,7 @@ import { readStore, writeStore } from "@/lib/persist";
 export interface NovedadIngreso {
   id: string;
   tipo: "ingreso";
-  empresaId: number;
+  empresaId: string;
   empresa: string;
   mes: number;
   anio: number;

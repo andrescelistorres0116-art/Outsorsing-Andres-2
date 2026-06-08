@@ -13,7 +13,7 @@ import {
 import { UserPlus } from "lucide-react";
 
 export interface IngresoFormData {
-  empresaId: number;
+  empresaId: string;
   empresa: string;
   nombre: string;
   cedula: string;
@@ -25,7 +25,7 @@ export interface IngresoFormData {
 }
 
 export interface EmpresaOption {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -40,7 +40,7 @@ interface Props {
   anio: number;
   /** Pre-selected empresa. If omitted, empresaOptions must be provided. */
   empresa?: string;
-  empresaId?: number;
+  empresaId?: string;
   /** Used when the client must choose which empresa to report for. */
   empresaOptions?: EmpresaOption[];
   onClose: () => void;
@@ -60,12 +60,12 @@ const EMPTY_FIELDS = {
 export default function NovedadIngresoModal({
   open, mes, anio,
   empresa: empresaProp = "",
-  empresaId: empresaIdProp = 0,
+  empresaId: empresaIdProp = "",
   empresaOptions = [],
   onClose, onSave,
 }: Props) {
   const [fields, setFields] = useState(EMPTY_FIELDS);
-  const [selId, setSelId] = useState<number>(empresaIdProp);
+  const [selId, setSelId] = useState<string>(empresaIdProp);
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FIELDS & { empresa: string }>>({});
 
   const resolvedEmpresa = empresaProp || (empresaOptions.find((e) => e.id === selId)?.name ?? "");
@@ -129,8 +129,8 @@ export default function NovedadIngresoModal({
                 Empresa <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={selId ? String(selId) : ""}
-                onValueChange={(v) => setSelId(Number(v))}
+                value={selId ?? ""}
+                onValueChange={(v) => setSelId(v)}
               >
                 <SelectTrigger className={errors.empresa ? "border-red-400" : ""}>
                   <SelectValue placeholder="Seleccionar empresa..." />

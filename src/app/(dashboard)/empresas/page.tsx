@@ -247,14 +247,7 @@ export default function EmpresasPage() {
         if (stored) {
           const parsed = JSON.parse(stored) as Empresa[];
           if (parsed.length > 0) {
-            let maxId = parsed.reduce(
-              (m, e) => (typeof e.id === "number" && isFinite(e.id) ? Math.max(m, e.id) : m),
-              0
-            );
-            const sanitized = parsed.map((e) =>
-              typeof e.id !== "number" || !isFinite(e.id) ? { ...e, id: ++maxId } : e
-            );
-            setEmpresas(sanitized);
+            setEmpresas(parsed);
             setHydrated(true);
             return;
           }
@@ -288,7 +281,7 @@ export default function EmpresasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalKey, setModalKey] = useState(0);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [deletingEmpresa, setDeletingEmpresa] = useState<Empresa | null>(null);
 
@@ -306,7 +299,12 @@ export default function EmpresasPage() {
     setModalOpen(true);
   }
 
-  function handleDelete(empresa: Empresa) {
+  async function handleDelete(empresa: Empresa) {
+    fetch("/api/app-empresas", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: empresa.id, nit: empresa.nit }),
+    }).catch(console.error)
     setEmpresas((prev) => prev.filter((e) => e.id !== empresa.id));
     setMenuOpenId(null);
     cleanCalendarioObligaciones(empresa.razonSocial);
@@ -797,7 +795,7 @@ export default function EmpresasPage() {
               } : e
             ));
           } else {
-            const newId = empresas.length > 0 ? Math.max(...empresas.map((e) => e.id)) + 1 : 1;
+            const newId = `new-${Date.now()}`;
             setEmpresas((prev) => [...prev, {
               id: newId,
               razonSocial: data.razonSocial,

@@ -1,7 +1,7 @@
 // Shared empresa mock data — imported by both empresas page and accesos modal
 
 export interface EmpresaMock {
-  id: number;
+  id: string;
   razonSocial: string;
   nit: string;
   ciudad: string;
@@ -30,7 +30,7 @@ export interface EmpresaMock {
 
 export const EMPRESAS_MOCK: EmpresaMock[] = [
   {
-    id: 1,
+    id: "1",
     razonSocial: "X TOURS SAS",
     nit: "901234567-8",
     ciudad: "Bogotá",
@@ -45,7 +45,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 2,
+    id: "2",
     razonSocial: "DIAZAR LTDA",
     nit: "800123456-1",
     ciudad: "Bogotá",
@@ -60,7 +60,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 3,
+    id: "3",
     razonSocial: "300 HILOS SAS",
     nit: "890765432-5",
     ciudad: "Medellín",
@@ -75,7 +75,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 4,
+    id: "4",
     razonSocial: "TEXTILES DEL NORTE SAS",
     nit: "900876543-2",
     ciudad: "Barranquilla",
@@ -90,7 +90,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 5,
+    id: "5",
     razonSocial: "INVERSIONES CASTILLO SAS",
     nit: "800345678-9",
     ciudad: "Bogotá",
@@ -105,7 +105,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "mensual",
   },
   {
-    id: 6,
+    id: "6",
     razonSocial: "COMERCIAL TORRES LTDA",
     nit: "830567890-4",
     ciudad: "Cali",
@@ -120,7 +120,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 7,
+    id: "7",
     razonSocial: "LOGÍSTICA ANDINA SAS",
     nit: "901567890-6",
     ciudad: "Bucaramanga",
@@ -135,7 +135,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 8,
+    id: "8",
     razonSocial: "CONSTRUCTORA CIMA SAS",
     nit: "900234567-3",
     ciudad: "Medellín",
@@ -150,7 +150,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "quincenal",
   },
   {
-    id: 9,
+    id: "9",
     razonSocial: "INMOBILIARIA DEL PACÍFICO SAS",
     nit: "901876543-2",
     ciudad: "Cali",
@@ -165,7 +165,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "mensual",
   },
   {
-    id: 10,
+    id: "10",
     razonSocial: "CONSULTORES DIGITALES LTDA",
     nit: "900456789-0",
     ciudad: "Bogotá",
@@ -180,7 +180,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "mensual",
   },
   {
-    id: 11,
+    id: "11",
     razonSocial: "SERVILOGÍSTICA EXPRESS SAS",
     nit: "890234567-1",
     ciudad: "Barranquilla",
@@ -196,7 +196,7 @@ export const EMPRESAS_MOCK: EmpresaMock[] = [
     periodicidadNomina: "no_aplica",
   },
   {
-    id: 12,
+    id: "12",
     razonSocial: "AGROPECUARIA SAN PABLO SAS",
     nit: "800678901-7",
     ciudad: "Villavicencio",

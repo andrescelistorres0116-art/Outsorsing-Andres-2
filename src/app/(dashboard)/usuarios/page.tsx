@@ -94,10 +94,10 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     fetchUsers();
-    fetch("/api/empresas?limit=200")
+    fetch("/api/app-empresas")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data.empresas)) setEmpresas(data.empresas);
+        if (Array.isArray(data)) setEmpresas(data);
       })
       .catch(() => {});
   }, []);

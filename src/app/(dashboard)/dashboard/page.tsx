@@ -316,7 +316,7 @@ export default function DashboardPage() {
 
   // Empresas recientes: last 3 active by id (most recently added)
   const empresasRecientes = useMemo(
-    () => [...activeEmpresas].sort((a, b) => b.id - a.id).slice(0, 3),
+    () => [...activeEmpresas].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 3),
     [activeEmpresas]
   );
 
