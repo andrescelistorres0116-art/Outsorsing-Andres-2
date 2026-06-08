@@ -14,12 +14,13 @@ type Transicion = {
 }
 
 const TRANSICIONES_COMPLETO: Transicion[] = [
-  { desde: [EstadoReporteNomina.BORRADOR], hacia: EstadoReporteNomina.ENVIADA, updateData: (id, ts) => ({ enviadoPorId: id, fechaEnvio: ts }) },
+  // Client approves directly → APROBADA (contador only needs to download Excel)
+  { desde: [EstadoReporteNomina.BORRADOR], hacia: EstadoReporteNomina.APROBADA, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
+  { desde: [EstadoReporteNomina.APROBADA], hacia: EstadoReporteNomina.REABIERTA, soloAdmin: true, updateData: (id, _ts) => ({ cerradoPorId: id }) },
+  { desde: [EstadoReporteNomina.REABIERTA, EstadoReporteNomina.CORREGIDA], hacia: EstadoReporteNomina.APROBADA, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
+  // Keep legacy ENVIADA/REVISADA transitions for reports already in those states
   { desde: [EstadoReporteNomina.ENVIADA], hacia: EstadoReporteNomina.REVISADA, soloContador: true, updateData: (id, ts) => ({ revisadoPorId: id, fechaRevision: ts }) },
   { desde: [EstadoReporteNomina.REVISADA], hacia: EstadoReporteNomina.APROBADA, soloContador: true, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
-  { desde: [EstadoReporteNomina.APROBADA], hacia: EstadoReporteNomina.REABIERTA, soloAdmin: true, updateData: (id, _ts) => ({ cerradoPorId: id }) },
-  { desde: [EstadoReporteNomina.REABIERTA], hacia: EstadoReporteNomina.CORREGIDA, updateData: () => ({}) },
-  { desde: [EstadoReporteNomina.CORREGIDA], hacia: EstadoReporteNomina.APROBADA, soloContador: true, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
 ]
 
 const TRANSICIONES_SIMPLE: Transicion[] = [
