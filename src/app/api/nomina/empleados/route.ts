@@ -18,8 +18,22 @@ export async function GET(request: NextRequest) {
   if (!empresaId) return NextResponse.json({ error: "empresaId requerido" }, { status: 400 })
   if (!canAccess(session, empresaId)) return forbidden()
 
+  const fechaIni = searchParams.get("fechaIni") || undefined
+  const fechaFin = searchParams.get("fechaFin") || undefined
+
   const where: any = { empresaId }
   if (activo !== null) where.activo = activo !== "false"
+
+  // Filter employees who were active during the given period
+  if (fechaIni || fechaFin) {
+    const periodEnd = fechaFin ? new Date(fechaFin) : undefined
+    const periodStart = fechaIni ? new Date(fechaIni) : undefined
+    if (periodStart) where.fechaIngreso = { lte: periodEnd ?? new Date() }
+    where.OR = [
+      { fechaRetiro: null },
+      { fechaRetiro: { gte: periodStart ?? new Date(0) } },
+    ]
+  }
 
   const [empleados, total] = await Promise.all([
     prisma.empleado.findMany({
@@ -40,7 +54,7 @@ export async function POST(request: NextRequest) {
   if (!isContador(session)) return forbidden("Solo contadores y administradores pueden registrar empleados")
 
   const body = await request.json()
-  const { empresaId, numeroDocumento, nombre, tipoDocumento, cargo, salarioBase, tipoContrato, ciudad, fechaIngreso, observaciones } = body
+  const { empresaId, numeroDocumento, nombre, tipoDocumento, cargo, salarioBase, tipoContrato, ciudad, eps, fondoPensiones, fechaIngreso, observaciones } = body
 
   const errors: string[] = []
   if (!empresaId) errors.push("empresaId es requerido")
@@ -66,6 +80,8 @@ export async function POST(request: NextRequest) {
         salarioBase: salarioBase != null ? salarioBase : null,
         tipoContrato: tipoContrato?.trim() || null,
         ciudad: ciudad?.trim() || null,
+        eps: eps?.trim() || null,
+        fondoPensiones: fondoPensiones?.trim() || null,
         fechaIngreso: fechaIngreso ? new Date(fechaIngreso) : null,
         observaciones: observaciones?.trim() || null,
       },

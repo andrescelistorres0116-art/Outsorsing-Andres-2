@@ -15,6 +15,8 @@ function validateNovedad(tipo: TipoNovedad, body: any): string[] {
 
   switch (tipo) {
     case TipoNovedad.HORAS_EXTRAS:
+    case TipoNovedad.HORAS_EXTRAS_NOCTURNAS:
+    case TipoNovedad.DOMINICALES:
       if (!has("horas") || num("horas") <= 0) errors.push("horas debe ser mayor que cero")
       if (!has("valor") && !has("tarifaHora")) errors.push("Se requiere valor o tarifaHora para horas extras")
       if (has("valor") && num("valor") <= 0) errors.push("valor debe ser mayor que cero")
@@ -162,12 +164,47 @@ export async function POST(request: NextRequest) {
   const typeErrors = validateNovedad(tipoNovedad as TipoNovedad, body)
   if (typeErrors.length) return NextResponse.json({ error: "Validación fallida", details: typeErrors }, { status: 400 })
 
-  // Libranza validation
-  if (tipoNovedad === TipoNovedad.LIBRANZA && libranzaId) {
-    const libranza = await prisma.libranza.findUnique({ where: { id: libranzaId } })
-    if (!libranza) return NextResponse.json({ error: "Libranza no encontrada" }, { status: 404 })
-    if (!libranza.activa) return NextResponse.json({ error: "La libranza ya está pagada o inactiva" }, { status: 409 })
-    if (libranza.empleadoId !== empleadoId) return NextResponse.json({ error: "La libranza no pertenece a este empleado" }, { status: 400 })
+  // Libranza handling — auto-create if client provides inline data, or validate existing libranzaId
+  let resolvedLibranzaId: string | null = libranzaId || null
+  if (tipoNovedad === TipoNovedad.LIBRANZA) {
+    if (libranzaId) {
+      // Explicit libranza reference: validate it
+      const libranza = await prisma.libranza.findUnique({ where: { id: libranzaId } })
+      if (!libranza) return NextResponse.json({ error: "Libranza no encontrada" }, { status: 404 })
+      if (!libranza.activa) return NextResponse.json({ error: "La libranza ya está pagada o inactiva" }, { status: 409 })
+      if (libranza.empleadoId !== empleadoId) return NextResponse.json({ error: "La libranza no pertenece a este empleado" }, { status: 400 })
+    } else {
+      // Inline registration: auto-create the Libranza record transparently
+      const { entidad, valorCuota: vc, numeroCuotas: nc, fechaInicioNovedad: fini } = body
+      if (!entidad?.trim()) return NextResponse.json({ error: "entidad es requerida para registrar una libranza" }, { status: 400 })
+      if (!vc || Number(vc) <= 0) return NextResponse.json({ error: "valorCuota debe ser mayor que cero" }, { status: 400 })
+      if (!nc || Number(nc) <= 0) return NextResponse.json({ error: "numeroCuotas debe ser mayor que cero" }, { status: 400 })
+      const nuevaLibranza = await prisma.libranza.create({
+        data: {
+          empleadoId,
+          empresaId,
+          entidad: entidad.trim(),
+          numeroPrestamo: body.numeroPrestamo?.trim() || null,
+          valorCuota: vc,
+          numeroCuotas: parseInt(nc),
+          cuotaActual: 1,
+          fechaInicio: fini ? new Date(fini) : new Date(),
+          activa: true,
+        },
+      })
+      resolvedLibranzaId = nuevaLibranza.id
+    }
+  }
+
+  // Validate retiro date within report period
+  if (tipoNovedad === TipoNovedad.RETIRO && reporteId && body.fechaFinNovedad) {
+    const reporte = await prisma.reporteNomina.findUnique({ where: { id: reporteId } })
+    if (reporte?.fechaInicioPeriodo && reporte?.fechaFinPeriodo) {
+      const retiroDate = new Date(body.fechaFinNovedad)
+      if (retiroDate < reporte.fechaInicioPeriodo || retiroDate > reporte.fechaFinPeriodo) {
+        return NextResponse.json({ error: "La fecha de retiro debe estar dentro del período del reporte" }, { status: 400 })
+      }
+    }
   }
 
   try {
@@ -185,7 +222,7 @@ export async function POST(request: NextRequest) {
         porcentaje: body.porcentaje != null ? body.porcentaje : null,
         horas: body.horas != null ? body.horas : null,
         diasAusencia: body.diasAusencia ?? null,
-        libranzaId: body.libranzaId || null,
+        libranzaId: resolvedLibranzaId,
         numeroCuotas: body.numeroCuotas ?? null,
         valorCuota: body.valorCuota != null ? body.valorCuota : null,
         cuotaNumero: body.cuotaNumero ?? null,
@@ -197,13 +234,25 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // If libranza, advance cuota
-    if (tipoNovedad === TipoNovedad.LIBRANZA && libranzaId) {
-      const libranza = await prisma.libranza.findUnique({ where: { id: libranzaId } })
-      if (libranza) {
+    // Auto-deactivate employee on RETIRO
+    if (tipoNovedad === TipoNovedad.RETIRO) {
+      await prisma.empleado.update({
+        where: { id: empleadoId },
+        data: {
+          activo: false,
+          fechaRetiro: body.fechaFinNovedad ? new Date(body.fechaFinNovedad) : new Date(),
+        },
+      })
+    }
+
+    // Advance libranza cuota after novedad creation
+    if (tipoNovedad === TipoNovedad.LIBRANZA && resolvedLibranzaId) {
+      const libranza = await prisma.libranza.findUnique({ where: { id: resolvedLibranzaId } })
+      if (libranza && libranzaId) {
+        // Only advance cuota for pre-existing libranzas (auto-created ones start at cuota 1 already)
         const nuevaCuota = libranza.cuotaActual + 1
         await prisma.libranza.update({
-          where: { id: libranzaId },
+          where: { id: resolvedLibranzaId },
           data: {
             cuotaActual: nuevaCuota,
             activa: nuevaCuota <= libranza.numeroCuotas,
@@ -224,6 +273,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ...novedad,
+      libranzaId: resolvedLibranzaId,
       valor: novedad.valor?.toString() ?? null,
       tarifaHora: novedad.tarifaHora?.toString() ?? null,
       porcentaje: novedad.porcentaje?.toString() ?? null,

@@ -75,6 +75,8 @@ enum ModoFlujoNomina {
 
 enum TipoNovedad {
   HORAS_EXTRAS
+  HORAS_EXTRAS_NOCTURNAS
+  DOMINICALES
   RECARGOS
   BONIFICACIONES
   COMISIONES
@@ -291,6 +293,8 @@ model Empleado {
   salarioBase     Decimal?  @db.Decimal(18, 2)
   tipoContrato    String?
   ciudad          String?
+  eps             String?
+  fondoPensiones  String?
   fechaIngreso    DateTime?
   fechaRetiro     DateTime?
   observaciones   String?

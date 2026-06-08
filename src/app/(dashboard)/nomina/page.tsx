@@ -9,12 +9,13 @@ import {
   Send,
   Eye,
   Download,
-  ThumbsUp,
   AlertCircle,
   FileText,
   ChevronLeft,
   ChevronRight,
-  Trash2,
+  Plus,
+  RefreshCw,
+  Undo2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,197 +35,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmpresaMock } from "@/lib/empresas-mock";
 import { useAppSession } from "@/hooks/useAppSession";
-import { NovedadIngreso } from "@/lib/novedades-store";
-import NovedadIngresoModal, { IngresoFormData, EmpresaOption } from "@/components/nomina/NovedadIngresoModal";
-import { UserPlus } from "lucide-react";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types aligned with Prisma enums ───────────────────────────────────────────
 
-type EstadoNomina = "BORRADOR" | "ENVIADO" | "REVISADO" | "APROBADO";
-type Periodo = "1-15" | "16-30" | "mensual";
+type EstadoReporte = "BORRADOR" | "ENVIADA" | "REVISADA" | "APROBADA" | "REABIERTA" | "CORREGIDA";
+type PeriodoNomina = "MENSUAL" | "PRIMERA_QUINCENA" | "SEGUNDA_QUINCENA";
 
-interface ReporteNomina {
+interface ReporteItem {
   id: string;
-  empresaNumId: string;
-  empresaSlug: string;
-  empresa: string;
-  periodicidadNomina: "quincenal" | "mensual";
-  periodo: Periodo;
+  empresaId: string;
+  empresa: { id: string; razonSocial: string; nit: string; nombreComercial?: string | null };
+  periodo: PeriodoNomina;
   mes: number;
-  anio: number;
-  estado: EstadoNomina;
-  totalEmpleados: number;
+  año: number;
+  estado: EstadoReporte;
   sinNovedades: boolean;
-  enviadoPor?: string;
-  fechaEnvio?: string;
+  enviadoPor: { id: string; name: string } | null;
+  aprobadoPor: { id: string; name: string } | null;
+  fechaEnvio: string | null;
+  fechaAprobacion: string | null;
+  _count?: { novedades: number };
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+interface EmpresaOpcion {
+  id: string;
+  razonSocial: string;
+  estado: string;
+  periodicidadNomina?: string | null;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
-
-function rowId(empresa: string, periodo: Periodo, mes: number, anio: number): string {
-  return `${toSlug(empresa)}|${periodo}|${mes}|${anio}`;
-}
-
-function isActiva(emp: EmpresaMock): boolean {
-  if (emp.fechaFinRelacion) {
-    const today = new Date().toISOString().split("T")[0];
-    if (emp.fechaFinRelacion <= today) return false;
-  }
-  return emp.estado === "ACTIVA";
-}
-
-// Generate expected rows for a given month from empresa configuration
-function generarFilas(empresas: EmpresaMock[], mes: number, anio: number): ReporteNomina[] {
-  const rows: ReporteNomina[] = [];
-
-  empresas
-    .filter(
-      (emp) =>
-        isActiva(emp) &&
-        emp.periodicidadNomina &&
-        emp.periodicidadNomina !== "no_aplica"
-    )
-    .forEach((emp) => {
-      const base = {
-        empresaNumId: emp.id,
-        empresaSlug: toSlug(emp.razonSocial),
-        empresa: emp.razonSocial,
-        mes,
-        anio,
-        estado: "BORRADOR" as EstadoNomina,
-        totalEmpleados: 0,
-        sinNovedades: false,
-      };
-
-      if (emp.periodicidadNomina === "quincenal") {
-        rows.push({
-          ...base,
-          id: rowId(emp.razonSocial, "1-15", mes, anio),
-          periodicidadNomina: "quincenal",
-          periodo: "1-15",
-        });
-        rows.push({
-          ...base,
-          id: rowId(emp.razonSocial, "16-30", mes, anio),
-          periodicidadNomina: "quincenal",
-          periodo: "16-30",
-        });
-      } else {
-        rows.push({
-          ...base,
-          id: rowId(emp.razonSocial, "mensual", mes, anio),
-          periodicidadNomina: "mensual",
-          periodo: "mensual",
-        });
-      }
-    });
-
-  return rows;
-}
-
-// ── Initial seeded data (pre-existing states for Jun/May 2026) ─────────────────
-
-type Override = Partial<Omit<ReporteNomina, "id">>;
-
-const INITIAL_OVERRIDES: Record<string, Override> = {
-  // Junio 2026 — 1ra quincena
-  [rowId("300 HILOS SAS", "1-15", 6, 2026)]: { estado: "ENVIADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-06-02" },
-  [rowId("X TOURS SAS", "1-15", 6, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-06-01" },
-  [rowId("DIAZAR LTDA", "1-15", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 5 },
-  [rowId("TEXTILES DEL NORTE SAS", "1-15", 6, 2026)]: { estado: "REVISADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-06-02" },
-  [rowId("COMERCIAL TORRES LTDA", "1-15", 6, 2026)]: { estado: "ENVIADO", totalEmpleados: 7, sinNovedades: true, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-06-03" },
-  [rowId("LOGÍSTICA ANDINA SAS", "1-15", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 20 },
-  [rowId("CONSTRUCTORA CIMA SAS", "1-15", 6, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-06-01" },
-  // Junio 2026 — mensual
-  [rowId("INVERSIONES CASTILLO SAS", "mensual", 6, 2026)]: { estado: "BORRADOR", totalEmpleados: 12 },
-  // Mayo 2026 — 2da quincena
-  [rowId("300 HILOS SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-05-18" },
-  [rowId("X TOURS SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-05-17" },
-  [rowId("DIAZAR LTDA", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 5, enviadoPor: "Cliente - Diazar", fechaEnvio: "2026-05-19" },
-  [rowId("TEXTILES DEL NORTE SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-05-18" },
-  [rowId("INVERSIONES CASTILLO SAS", "mensual", 5, 2026)]: { estado: "ENVIADO", totalEmpleados: 12, enviadoPor: "Cliente - Castillo", fechaEnvio: "2026-05-20" },
-  [rowId("COMERCIAL TORRES LTDA", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 7, sinNovedades: true, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-05-17" },
-  [rowId("LOGÍSTICA ANDINA SAS", "16-30", 5, 2026)]: { estado: "REVISADO", totalEmpleados: 20, enviadoPor: "Cliente - L. Andina", fechaEnvio: "2026-05-20" },
-  [rowId("CONSTRUCTORA CIMA SAS", "16-30", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-05-18" },
-  // Mayo 2026 — 1ra quincena
-  [rowId("300 HILOS SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 10, enviadoPor: "Cliente - 300 Hilos", fechaEnvio: "2026-05-05" },
-  [rowId("X TOURS SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 8, sinNovedades: true, enviadoPor: "Cliente - X Tours", fechaEnvio: "2026-05-04" },
-  [rowId("DIAZAR LTDA", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 5, enviadoPor: "Cliente - Diazar", fechaEnvio: "2026-05-06" },
-  [rowId("TEXTILES DEL NORTE SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 15, enviadoPor: "Cliente - Textiles Norte", fechaEnvio: "2026-05-05" },
-  [rowId("COMERCIAL TORRES LTDA", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 7, enviadoPor: "Cliente - C. Torres", fechaEnvio: "2026-05-04" },
-  [rowId("LOGÍSTICA ANDINA SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 20, enviadoPor: "Cliente - L. Andina", fechaEnvio: "2026-05-06" },
-  [rowId("CONSTRUCTORA CIMA SAS", "1-15", 5, 2026)]: { estado: "APROBADO", totalEmpleados: 25, enviadoPor: "Cliente - C. Cima", fechaEnvio: "2026-05-05" },
-};
-
-// ── Estado config ──────────────────────────────────────────────────────────────
-
 const ESTADO_CONFIG: Record<
-  EstadoNomina,
+  EstadoReporte,
   { label: string; variant: "secondary" | "warning" | "info" | "success"; Icon: React.ElementType }
 > = {
-  BORRADOR: { label: "Borrador", variant: "secondary", Icon: FileText },
-  ENVIADO:  { label: "Enviado",  variant: "warning",   Icon: Send },
-  REVISADO: { label: "Revisado", variant: "info",      Icon: Eye },
-  APROBADO: { label: "Aprobado", variant: "success",   Icon: CheckCircle2 },
+  BORRADOR:  { label: "Borrador",  variant: "secondary", Icon: FileText },
+  ENVIADA:   { label: "Enviada",   variant: "warning",   Icon: Send },
+  REVISADA:  { label: "Revisada",  variant: "info",      Icon: Eye },
+  APROBADA:  { label: "Aprobada",  variant: "success",   Icon: CheckCircle2 },
+  REABIERTA: { label: "Reabierta", variant: "warning",   Icon: Undo2 },
+  CORREGIDA: { label: "Corregida", variant: "info",      Icon: RefreshCw },
 };
 
-function formatDate(dateStr: string) {
-  const [y, m, d] = dateStr.split("-");
-  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  return `${d} ${months[parseInt(m) - 1]} ${y}`;
+function periodoLabel(p: PeriodoNomina) {
+  if (p === "PRIMERA_QUINCENA") return "1ra Quincena";
+  if (p === "SEGUNDA_QUINCENA") return "2da Quincena";
+  return "Mensual";
 }
 
-function periodoLabel(p: Periodo) {
-  if (p === "1-15")    return "1ra Quincena";
-  if (p === "16-30")   return "2da Quincena";
-  return "Mensual";
+function formatDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NominaPage() {
   const { appSession } = useAppSession();
-
-  // Empresas loaded from server so all browsers see the same data
-  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
-
-  useEffect(() => {
-    fetch("/api/app-empresas")
-      .then(async (r) => {
-        if (r.status === 200) {
-          const data: EmpresaMock[] = await r.json();
-          setEmpresasData(Array.isArray(data) ? data : []);
-          return;
-        }
-        // 204 = server not yet initialized, fall back to localStorage
-        try {
-          const stored = localStorage.getItem("empresas-data");
-          if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
-        } catch {}
-      })
-      .catch(() => {
-        try {
-          const stored = localStorage.getItem("empresas-data");
-          if (stored) setEmpresasData(JSON.parse(stored) as EmpresaMock[]);
-        } catch {}
-      });
-  }, []);
 
   const TODAY_MES = new Date().getMonth() + 1;
   const TODAY_ANIO = new Date().getFullYear();
@@ -233,169 +109,103 @@ export default function NominaPage() {
   const [histMes, setHistMes] = useState(TODAY_MES === 1 ? 12 : TODAY_MES - 1);
   const [histAnio, setHistAnio] = useState(TODAY_MES === 1 ? TODAY_ANIO - 1 : TODAY_ANIO);
 
-  // Active month: always today's month for "actual" tab, navigator for "historico"
   const selectedMes = activeTab === "actual" ? TODAY_MES : histMes;
   const selectedAnio = activeTab === "actual" ? TODAY_ANIO : histAnio;
 
-  const [overrides, setOverrides] = useState<Record<string, Override>>(INITIAL_OVERRIDES);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [reportes, setReportes] = useState<ReporteItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [empresas, setEmpresas] = useState<EmpresaOpcion[]>([]);
 
-  // Load per-month deleted IDs — new key per month so past deletions don't bleed across months
+  const [empresaFilter, setEmpresaFilter] = useState("todas");
+  const [periodoFilter, setPeriodoFilter] = useState<"todos" | PeriodoNomina>("todos");
+  const [estadoFilter, setEstadoFilter] = useState<"todos" | EstadoReporte>("todos");
+
+  // Create-report modal state (admin/contador only)
+  const [showCrear, setShowCrear] = useState(false);
+  const [crearEmpresaId, setCrearEmpresaId] = useState("");
+  const [crearPeriodo, setCrearPeriodo] = useState<PeriodoNomina>("MENSUAL");
+  const [crearError, setCrearError] = useState("");
+  const [crearLoading, setCrearLoading] = useState(false);
+
+  // Load reportes when month changes
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`nomina-deleted-${selectedMes}-${selectedAnio}`);
-      setDeletedIds(stored ? new Set(JSON.parse(stored) as string[]) : new Set());
-    } catch {
-      setDeletedIds(new Set());
-    }
+    setLoading(true);
+    fetch(`/api/nomina/reportes?mes=${selectedMes}&año=${selectedAnio}&limit=100`)
+      .then((r) => r.json())
+      .then((data) => setReportes(Array.isArray(data.reportes) ? data.reportes : []))
+      .catch(() => setReportes([]))
+      .finally(() => setLoading(false));
   }, [selectedMes, selectedAnio]);
 
-  // Novedades de ingreso
-  const [novedades, setNovedades] = useState<NovedadIngreso[]>([]);
-  const [novedadModal, setNovedadModal] = useState<{ empresaId?: string; empresa?: string; mes: number; anio: number } | null>(null);
-
+  // Load empresas for filter/create dropdowns
   useEffect(() => {
-    fetch("/api/app-novedades")
+    fetch("/api/app-empresas")
       .then((r) => r.json())
-      .then((data: NovedadIngreso[]) => { if (Array.isArray(data)) setNovedades(data); })
+      .then((data) => setEmpresas(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
-  async function handleSaveNovedad(data: IngresoFormData) {
-    if (!appSession || !novedadModal) return;
-    const novedad: NovedadIngreso = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      tipo: "ingreso",
-      mes: novedadModal.mes,
-      anio: novedadModal.anio,
-      ...data,
-      reportadoPor: appSession.nombre,
-      reportadoPorEmail: appSession.email,
-      fechaReporte: new Date().toISOString().split("T")[0],
-      estado: "pendiente",
-    };
-    const updated = [...novedades, novedad];
-    setNovedades(updated);
-    setNovedadModal(null);
-    await fetch("/api/app-novedades", {
+  const empresasActivas = empresas.filter((e) => e.estado === "ACTIVA");
+
+  // Rows visible to current user
+  const filtered = useMemo(() => {
+    return reportes.filter((r) => {
+      if (appSession?.role === "cliente" && !appSession.empresaIds.includes(r.empresaId)) return false;
+      if (empresaFilter !== "todas" && r.empresaId !== empresaFilter) return false;
+      if (periodoFilter !== "todos" && r.periodo !== periodoFilter) return false;
+      if (estadoFilter !== "todos" && r.estado !== estadoFilter) return false;
+      return true;
+    });
+  }, [reportes, appSession, empresaFilter, periodoFilter, estadoFilter]);
+
+  const visibleReportes = useMemo(() => {
+    if (appSession?.role !== "cliente") return reportes;
+    return reportes.filter((r) => appSession.empresaIds.includes(r.empresaId));
+  }, [reportes, appSession]);
+
+  const pendientes = visibleReportes.filter((r) => r.estado === "BORRADOR" || r.estado === "REABIERTA").length;
+  const aprobados = visibleReportes.filter((r) => r.estado === "APROBADA").length;
+
+  async function reloadReportes() {
+    const data = await fetch(`/api/nomina/reportes?mes=${selectedMes}&año=${selectedAnio}&limit=100`).then((r) => r.json());
+    setReportes(data.reportes ?? []);
+  }
+
+  async function handleCrearReporte() {
+    if (!crearEmpresaId) { setCrearError("Selecciona una empresa"); return; }
+    setCrearLoading(true);
+    setCrearError("");
+    const res = await fetch("/api/nomina/reportes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(novedad),
-    }).catch(() => {});
-  }
-
-  async function handleProcesarNovedad(id: string) {
-    const updated = novedades.map((n) => n.id === id ? { ...n, estado: "procesado" as const } : n);
-    setNovedades(updated);
-    await fetch("/api/app-novedades", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    }).catch(() => {});
-  }
-
-  const [empresaFilter, setEmpresaFilter] = useState("todas");
-  const [periodoFilter, setPeriodoFilter] = useState<"todos" | Periodo>("todos");
-  const [estadoFilter, setEstadoFilter] = useState<"todos" | EstadoNomina>("todos");
-
-  // Generate base rows for selected month and merge with overrides
-  const reportes = useMemo<ReporteNomina[]>(() => {
-    return generarFilas(empresasData, selectedMes, selectedAnio).map((row) => ({
-      ...row,
-      ...(overrides[row.id] ?? {}),
-    }));
-  }, [empresasData, selectedMes, selectedAnio, overrides]);
-
-  // Empresa list from active companies with nómina configured
-  const empresasConNomina = useMemo(
-    () =>
-      empresasData
-        .filter((e) => isActiva(e) && e.periodicidadNomina && e.periodicidadNomina !== "no_aplica")
-        .map((e) => e.razonSocial)
-        .sort(),
-    [empresasData]
-  );
-
-  // For clients: all activa empresas assigned to them (regardless of nómina config)
-  const empresasAsignadas = useMemo(
-    () =>
-      appSession?.role === "cliente"
-        ? empresasData.filter((e) => isActiva(e) && appSession.empresaIds.includes(String(e.id)))
-        : [],
-    [appSession, empresasData]
-  );
-
-  const isRestrictedRole = appSession?.role === "cliente" || appSession?.role === "contador";
-
-  // For the filter dropdown: clients and contadores only see their assigned companies
-  const empresasParaFiltro = useMemo(
-    () =>
-      isRestrictedRole && appSession
-        ? empresasConNomina.filter((nombre) => {
-            const emp = empresasData.find((e) => e.razonSocial === nombre);
-            return emp && appSession.empresaIds.includes(String(emp.id));
-          })
-        : empresasConNomina,
-    [empresasConNomina, empresasData, appSession, isRestrictedRole]
-  );
-
-  const filtered = reportes.filter((r) => {
-    if (deletedIds.has(r.id)) return false;
-    // Clients and contadores only see their assigned empresas
-    if (isRestrictedRole && appSession && !appSession.empresaIds.includes(String(r.empresaNumId))) return false;
-    const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
-    const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
-    const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;
-    return matchEmpresa && matchPeriodo && matchEstado;
-  });
-
-  const pendientes = reportes.filter((r) =>
-    !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
-    r.estado === "BORRADOR"
-  ).length;
-  const enviados = reportes.filter((r) =>
-    !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
-    r.estado === "ENVIADO"
-  ).length;
-  const aprobados = reportes.filter((r) =>
-    !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
-    r.estado === "APROBADO"
-  ).length;
-
-  function handleAprobar(id: string) {
-    setOverrides((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        estado: "APROBADO",
-        fechaEnvio: new Date().toISOString().split("T")[0],
-      },
-    }));
-  }
-
-  function handleEliminar(id: string) {
-    setDeletedIds((prev) => {
-      const next = new Set([...prev, id]);
-      try {
-        localStorage.setItem(
-          `nomina-deleted-${selectedMes}-${selectedAnio}`,
-          JSON.stringify([...next])
-        );
-      } catch {}
-      return next;
+      body: JSON.stringify({ empresaId: crearEmpresaId, periodo: crearPeriodo, mes: selectedMes, año: selectedAnio }),
     });
+    setCrearLoading(false);
+    if (res.ok) {
+      setShowCrear(false);
+      setCrearEmpresaId("");
+      await reloadReportes();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setCrearError(err.error ?? "Error al crear reporte");
+    }
   }
+
+  // Derive available periodos for selected empresa (based on periodicidadNomina)
+  const crearPeriodosDisponibles = useMemo<PeriodoNomina[]>(() => {
+    const emp = empresasActivas.find((e) => e.id === crearEmpresaId);
+    if (!emp) return ["MENSUAL", "PRIMERA_QUINCENA", "SEGUNDA_QUINCENA"];
+    if (emp.periodicidadNomina === "QUINCENAL" || emp.periodicidadNomina === "quincenal") {
+      return ["PRIMERA_QUINCENA", "SEGUNDA_QUINCENA"];
+    }
+    return ["MENSUAL"];
+  }, [crearEmpresaId, empresasActivas]);
 
   function goHistMes(delta: number) {
     let newMes = histMes + delta;
     let newAnio = histAnio;
     if (newMes < 1)  { newMes = 12; newAnio--; }
     if (newMes > 12) { newMes = 1;  newAnio++; }
-    // Block navigation into current or future months
     if (newAnio > TODAY_ANIO || (newAnio === TODAY_ANIO && newMes >= TODAY_MES)) return;
     setHistMes(newMes);
     setHistAnio(newAnio);
@@ -411,6 +221,16 @@ export default function NominaPage() {
     setEstadoFilter("todos");
   }
 
+  // Build empresa options for filter, limited to what the user can access
+  const empresasParaFiltro = useMemo(() => {
+    const idsEnReportes = new Set(reportes.map((r) => r.empresaId));
+    return reportes
+      .filter((r) => idsEnReportes.has(r.empresaId))
+      .map((r) => ({ id: r.empresaId, nombre: r.empresa.razonSocial }))
+      .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [reportes]);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -422,58 +242,51 @@ export default function NominaPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Novedades de Nómina</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {appSession?.role === "cliente"
-                ? `${empresasAsignadas.length} empresa${empresasAsignadas.length !== 1 ? "s" : ""} asignada${empresasAsignadas.length !== 1 ? "s" : ""}`
-                : `${empresasConNomina.length} empresa${empresasConNomina.length !== 1 ? "s" : ""} con nómina configurada`}
+              {filtered.length} reporte{filtered.length !== 1 ? "s" : ""} — {MESES[selectedMes - 1]} {selectedAnio}
             </p>
           </div>
         </div>
 
-        {/* Right side: client button + month badge/navigator */}
         <div className="flex items-center gap-3">
-        {appSession?.role === "cliente" && empresasAsignadas.length > 0 && (
-          <Button
-            onClick={() => {
-              if (empresasAsignadas.length === 1) {
-                setNovedadModal({ empresaId: empresasAsignadas[0].id, empresa: empresasAsignadas[0].razonSocial, mes: selectedMes, anio: selectedAnio });
-              } else {
-                setNovedadModal({ mes: selectedMes, anio: selectedAnio });
-              }
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2"
-            size="sm"
-          >
-            <UserPlus className="w-4 h-4" />
-            Reportar Ingreso
-          </Button>
-        )}
-        {/* Month badge (actual) / navigator (historico) */}
-        {activeTab === "actual" ? (
-          <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2">
-            <span className="text-sm font-semibold text-indigo-700">
-              {MESES[TODAY_MES - 1]} {TODAY_ANIO}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
-            <button
-              onClick={() => goHistMes(-1)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+          {/* Admin/Contador: create new report */}
+          {appSession?.role !== "cliente" && (
+            <Button
+              onClick={() => { setShowCrear(true); setCrearError(""); setCrearEmpresaId(""); setCrearPeriodo("MENSUAL"); }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+              size="sm"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-semibold text-gray-900 min-w-[130px] text-center">
-              {MESES[histMes - 1]} {histAnio}
-            </span>
-            <button
-              onClick={() => goHistMes(1)}
-              disabled={histAnio > TODAY_ANIO || (histAnio === TODAY_ANIO && histMes >= TODAY_MES - 1)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500 disabled:text-gray-200 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+              <Plus className="w-4 h-4" />
+              Crear Reporte
+            </Button>
+          )}
+
+          {/* Month badge (actual) / navigator (historico) */}
+          {activeTab === "actual" ? (
+            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2">
+              <span className="text-sm font-semibold text-indigo-700">
+                {MESES[TODAY_MES - 1]} {TODAY_ANIO}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+              <button
+                onClick={() => goHistMes(-1)}
+                className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-semibold text-gray-900 min-w-[130px] text-center">
+                {MESES[histMes - 1]} {histAnio}
+              </span>
+              <button
+                onClick={() => goHistMes(1)}
+                disabled={histAnio > TODAY_ANIO || (histAnio === TODAY_ANIO && histMes >= TODAY_MES - 1)}
+                className="p-1 rounded-md hover:bg-gray-100 transition-colors text-gray-500 disabled:text-gray-200 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -489,7 +302,7 @@ export default function NominaPage() {
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            {tab === "actual" ? "Novedades Mes Actual" : "Histórico"}
+            {tab === "actual" ? "Mes Actual" : "Histórico"}
           </button>
         ))}
       </div>
@@ -513,8 +326,10 @@ export default function NominaPage() {
               <Send className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-xs font-medium text-blue-700">Enviados</p>
-              <p className="text-2xl font-bold text-blue-800">{enviados}</p>
+              <p className="text-xs font-medium text-blue-700">En Proceso</p>
+              <p className="text-2xl font-bold text-blue-800">
+                {visibleReportes.filter((r) => r.estado === "ENVIADA" || r.estado === "REVISADA" || r.estado === "CORREGIDA").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -542,39 +357,41 @@ export default function NominaPage() {
               <SelectContent>
                 <SelectItem value="todas">Todas las empresas</SelectItem>
                 {empresasParaFiltro.map((e) => (
-                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                  <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Select
               value={periodoFilter}
-              onValueChange={(v) => setPeriodoFilter(v as "todos" | Periodo)}
+              onValueChange={(v) => setPeriodoFilter(v as "todos" | PeriodoNomina)}
             >
-              <SelectTrigger className="w-44 h-9 text-sm">
+              <SelectTrigger className="w-48 h-9 text-sm">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los períodos</SelectItem>
-                <SelectItem value="1-15">1ra Quincena (1–15)</SelectItem>
-                <SelectItem value="16-30">2da Quincena (16–30)</SelectItem>
-                <SelectItem value="mensual">Mensual</SelectItem>
+                <SelectItem value="PRIMERA_QUINCENA">1ra Quincena</SelectItem>
+                <SelectItem value="SEGUNDA_QUINCENA">2da Quincena</SelectItem>
+                <SelectItem value="MENSUAL">Mensual</SelectItem>
               </SelectContent>
             </Select>
 
             <Select
               value={estadoFilter}
-              onValueChange={(v) => setEstadoFilter(v as "todos" | EstadoNomina)}
+              onValueChange={(v) => setEstadoFilter(v as "todos" | EstadoReporte)}
             >
               <SelectTrigger className="w-36 h-9 text-sm">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="BORRADOR">Borrador</SelectItem>
-                <SelectItem value="ENVIADO">Enviado</SelectItem>
-                <SelectItem value="REVISADO">Revisado</SelectItem>
-                <SelectItem value="APROBADO">Aprobado</SelectItem>
+                <SelectItem value="ENVIADA">Enviada</SelectItem>
+                <SelectItem value="REVISADA">Revisada</SelectItem>
+                <SelectItem value="APROBADA">Aprobada</SelectItem>
+                <SelectItem value="REABIERTA">Reabierta</SelectItem>
+                <SelectItem value="CORREGIDA">Corregida</SelectItem>
               </SelectContent>
             </Select>
 
@@ -587,13 +404,13 @@ export default function NominaPage() {
         </CardContent>
       </Card>
 
-      {/* Pending Alert */}
+      {/* Pending alert */}
       {pendientes > 0 && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <p className="text-sm text-amber-700">
             Hay <span className="font-bold">{pendientes}</span> reporte
-            {pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} de envío en{" "}
+            {pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} en{" "}
             <span className="font-bold">{MESES[selectedMes - 1]} {selectedAnio}</span>.
           </p>
         </div>
@@ -605,314 +422,174 @@ export default function NominaPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Empresa
-                </th>
-                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Período
-                </th>
-                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Mes / Año
-                </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Empleados
-                </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Sin Novedades
-                </th>
-                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Enviado Por
-                </th>
-                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Fecha Envío
-                </th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Período</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mes / Año</th>
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sin Novedades</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aprobado Por</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha Aprobación</th>
+                <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((r, idx) => {
-                const estadoCfg = ESTADO_CONFIG[r.estado];
-                const EstadoIcon = estadoCfg.Icon;
-                return (
-                  <tr
-                    key={r.id}
-                    className={`hover:bg-indigo-50/30 transition-colors ${
-                      idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
-                    }`}
-                  >
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 shrink-0">
-                          <Users className="w-4 h-4 text-indigo-600" />
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-16 text-sm text-gray-400">
+                    Cargando reportes...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-16">
+                    <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                    {appSession?.role === "cliente" ? (
+                      <>
+                        <p className="text-gray-500 font-medium">No hay reportes disponibles para este período</p>
+                        <p className="text-gray-400 text-sm mt-1">El contador aún no ha creado los reportes de este mes.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 font-medium">No hay reportes para este período</p>
+                        <p className="text-gray-400 text-sm mt-1">
+                          Usa <span className="font-semibold text-indigo-600">Crear Reporte</span> para agregar uno.
+                        </p>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((r, idx) => {
+                  const cfg = ESTADO_CONFIG[r.estado];
+                  const Icon = cfg.Icon;
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`hover:bg-indigo-50/30 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"}`}
+                    >
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 shrink-0">
+                            <Users className="w-4 h-4 text-indigo-600" />
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-900 text-sm block">
+                              {r.empresa.nombreComercial ?? r.empresa.razonSocial}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">{r.empresa.nit}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-semibold text-gray-900 text-sm block">
-                            {r.empresa}
-                          </span>
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                            {r.periodicidadNomina === "quincenal" ? "Quincenal" : "Mensual"}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2.5 py-0.5">
-                        {periodoLabel(r.periodo)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-600">
-                      {MESES[r.mes - 1]} {r.anio}
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <Badge variant={estadoCfg.variant} className="gap-1 text-xs">
-                        <EstadoIcon className="w-3 h-3" />
-                        {estadoCfg.label}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="text-sm font-semibold text-gray-700">
-                        {r.totalEmpleados > 0 ? r.totalEmpleados : <span className="text-gray-300">—</span>}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      {r.sinNovedades ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
-                      ) : (
-                        <span className="text-gray-300 text-lg leading-none">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-gray-600">
-                      {r.enviadoPor ?? <span className="text-gray-400 italic">Pendiente</span>}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-gray-600">
-                      {r.fechaEnvio ? formatDate(r.fechaEnvio) : <span className="text-gray-400 italic">—</span>}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/nomina/${r.empresaSlug}/${r.periodo}?mes=${r.mes}&anio=${r.anio}&empresa=${encodeURIComponent(r.empresa)}`}
-                        >
-                          <button
-                            className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Ver / Editar"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </Link>
-                        {/* Cliente: reportar ingreso de empleado */}
-                        {appSession?.role === "cliente" && r.estado === "BORRADOR" && (
-                          <button
-                            onClick={() => setNovedadModal({ empresaId: r.empresaNumId, empresa: r.empresa, mes: r.mes, anio: r.anio })}
-                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 transition-colors"
-                            title="Reportar ingreso de empleado"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            Reportar Ingreso
-                          </button>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2.5 py-0.5">
+                          {periodoLabel(r.periodo)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600">
+                        {MESES[r.mes - 1]} {r.año}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <Badge variant={cfg.variant} className="gap-1 text-xs">
+                          <Icon className="w-3 h-3" />
+                          {cfg.label}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        {r.sinNovedades ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
+                        ) : (
+                          <span className="text-gray-300 text-lg leading-none">—</span>
                         )}
-                        {appSession?.role !== "cliente" && r.estado !== "APROBADO" && (
-                          <button
-                            onClick={() => handleAprobar(r.id)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                            title="Aprobar"
-                          >
-                            <ThumbsUp className="w-4 h-4" />
-                          </button>
-                        )}
-                        {appSession?.role !== "cliente" && (
-                          <>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-gray-600">
+                        {r.aprobadoPor?.name ?? <span className="text-gray-400 italic">Pendiente</span>}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-gray-600">
+                        {formatDate(r.fechaAprobacion) ?? <span className="text-gray-400 italic">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/nomina/${r.id}`}>
+                            <button
+                              className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              title="Ver / Editar"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </Link>
+                          {appSession?.role !== "cliente" && (
                             <button
                               className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                               title="Exportar"
                             >
                               <Download className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(r.id)}
-                              className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Eliminar fila"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-
-          {filtered.length === 0 && (
-            <div className="text-center py-16">
-              <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              {appSession?.role === "cliente" ? (
-                <>
-                  <p className="text-gray-500 font-medium">No hay reportes de nómina disponibles aún</p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Usa el botón <span className="font-semibold text-green-700">Reportar Ingreso</span> para reportar un nuevo empleado.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-500 font-medium">No se encontraron reportes</p>
-                  <p className="text-gray-400 text-sm mt-1">Intenta con otros filtros</p>
-                </>
-              )}
-            </div>
-          )}
         </div>
       </Card>
 
-      {/* ── Novedades de Ingreso ─────────────────────────────────────────────── */}
-      {(() => {
-        const visibles = appSession?.role === "cliente"
-          ? novedades.filter((n) => appSession.empresaIds.includes(String(n.empresaId)))
-          : novedades;
-        if (visibles.length === 0 && appSession?.role !== "cliente") return null;
-        return (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-green-600" />
-                {appSession?.role === "cliente" ? "Mis Ingresos Reportados" : "Novedades de Ingreso — Clientes"}
-              </h2>
-              {visibles.filter((n) => n.estado === "pendiente").length > 0 && (
-                <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
-                  {visibles.filter((n) => n.estado === "pendiente").length} pendiente{visibles.filter((n) => n.estado === "pendiente").length !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/60">
-                      {appSession?.role !== "cliente" && (
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
-                      )}
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empleado</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cédula</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Salario</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">F. Ingreso</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrato</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                      {appSession?.role !== "cliente" && (
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acción</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {visibles.length === 0 ? (
-                      <tr>
-                        <td colSpan={appSession?.role !== "cliente" ? 9 : 8} className="text-center py-10 text-sm text-gray-400">
-                          No hay ingresos reportados todavía
-                        </td>
-                      </tr>
-                    ) : (
-                      visibles.map((n) => {
-                        const CONTRATOS: Record<string, string> = {
-                          indefinido: "Indefinido", fijo: "Término fijo",
-                          obra_labor: "Obra o labor", prestacion: "Prestación", aprendizaje: "Aprendizaje",
-                        };
-                        return (
-                          <tr key={n.id} className="hover:bg-gray-50/40">
-                            {appSession?.role !== "cliente" && (
-                              <td className="px-4 py-3 text-xs font-medium text-gray-700">{n.empresa}</td>
-                            )}
-                            <td className="px-4 py-3 text-xs text-gray-800 font-semibold">{n.nombre}</td>
-                            <td className="px-4 py-3 text-xs font-mono text-gray-500">{n.cedula}</td>
-                            <td className="px-4 py-3 text-xs text-gray-600">{n.cargo}</td>
-                            <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">${n.salario}</td>
-                            <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                              {n.fechaIngreso.split("-").reverse().join("/")}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-500">{CONTRATOS[n.tipoContrato] ?? n.tipoContrato}</td>
-                            <td className="px-4 py-3 text-center">
-                              {n.estado === "pendiente" ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                                  <Clock className="w-3 h-3" /> Pendiente
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
-                                  <CheckCircle2 className="w-3 h-3" /> Procesado
-                                </span>
-                              )}
-                            </td>
-                            {appSession?.role !== "cliente" && (
-                              <td className="px-4 py-3 text-right">
-                                {n.estado === "pendiente" && (
-                                  <button
-                                    onClick={() => handleProcesarNovedad(n.id)}
-                                    className="text-xs font-medium text-green-700 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md px-2.5 py-1 transition-colors"
-                                  >
-                                    Marcar procesado
-                                  </button>
-                                )}
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
-        );
-      })()}
-
-      {/* Modal: reportar ingreso */}
-      {novedadModal && (
-        <NovedadIngresoModal
-          open={!!novedadModal}
-          empresa={novedadModal.empresa ?? ""}
-          empresaId={novedadModal.empresaId ?? ""}
-          empresaOptions={
-            !novedadModal.empresa
-              ? (empresasAsignadas.map((e) => ({ id: e.id, name: e.razonSocial })) as EmpresaOption[])
-              : undefined
-          }
-          mes={novedadModal.mes}
-          anio={novedadModal.anio}
-          onClose={() => setNovedadModal(null)}
-          onSave={handleSaveNovedad}
-        />
-      )}
-
-      {/* Confirmation dialog for delete */}
-      <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+      {/* Crear Reporte Modal */}
+      <Dialog open={showCrear} onOpenChange={(o) => { if (!o) setShowCrear(false); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 shrink-0">
-                <Trash2 className="w-5 h-5 text-red-600" />
-              </div>
-              <DialogTitle className="text-base font-semibold text-gray-900">
-                ¿Eliminar reporte de nómina?
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-sm text-gray-500 leading-snug">
-              Esta acción eliminará el reporte del período actual. No se puede deshacer.
+            <DialogTitle className="text-base font-semibold text-gray-900">Crear Reporte de Nómina</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              {MESES[selectedMes - 1]} {selectedAnio}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
-              Cancelar
-            </Button>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700">Empresa</label>
+              <Select value={crearEmpresaId} onValueChange={(v) => { setCrearEmpresaId(v); setCrearPeriodo("MENSUAL"); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecciona una empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {empresasActivas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.razonSocial}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700">Período</label>
+              <Select value={crearPeriodo} onValueChange={(v) => setCrearPeriodo(v as PeriodoNomina)}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {crearPeriodosDisponibles.map((p) => (
+                    <SelectItem key={p} value={p}>{periodoLabel(p)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {crearError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                {crearError}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowCrear(false)}>Cancelar</Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => { handleEliminar(confirmDeleteId!); setConfirmDeleteId(null); }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleCrearReporte}
+              disabled={crearLoading || !crearEmpresaId}
             >
-              Sí, eliminar
+              {crearLoading ? "Creando..." : "Crear Reporte"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -23,9 +23,12 @@ const TRANSICIONES_COMPLETO: Transicion[] = [
 ]
 
 const TRANSICIONES_SIMPLE: Transicion[] = [
-  { desde: [EstadoReporteNomina.BORRADOR], hacia: EstadoReporteNomina.APROBADA, soloContador: true, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
+  // Client (or contador/admin) finalizes: BORRADOR → APROBADA
+  { desde: [EstadoReporteNomina.BORRADOR], hacia: EstadoReporteNomina.APROBADA, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
+  // Only admin can reopen an approved report
   { desde: [EstadoReporteNomina.APROBADA], hacia: EstadoReporteNomina.REABIERTA, soloAdmin: true, updateData: (id, _ts) => ({ cerradoPorId: id }) },
-  { desde: [EstadoReporteNomina.REABIERTA, EstadoReporteNomina.CORREGIDA], hacia: EstadoReporteNomina.APROBADA, soloContador: true, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
+  // Client (or contador/admin) re-approves after reopening or correction
+  { desde: [EstadoReporteNomina.REABIERTA, EstadoReporteNomina.CORREGIDA], hacia: EstadoReporteNomina.APROBADA, updateData: (id, ts) => ({ aprobadoPorId: id, fechaAprobacion: ts }) },
 ]
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
