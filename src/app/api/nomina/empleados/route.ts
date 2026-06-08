@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
   if (!numeroDocumento?.trim()) errors.push("numeroDocumento es requerido")
   if (!nombre?.trim() || nombre.trim().length < 2) errors.push("nombre debe tener al menos 2 caracteres")
   if (salarioBase !== undefined && salarioBase !== null && Number(salarioBase) <= 0) errors.push("salarioBase debe ser mayor que cero")
-  if (fechaIngreso && new Date(fechaIngreso) > new Date()) errors.push("fechaIngreso no puede ser una fecha futura")
   if (errors.length) return NextResponse.json({ error: "Validación fallida", details: errors }, { status: 400 })
 
   if (!canAccess(session, empresaId)) return forbidden()
