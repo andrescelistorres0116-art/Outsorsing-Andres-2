@@ -28,7 +28,6 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await getNominaSession()
   if (!session) return unauthorized()
-  if (!isContador(session)) return forbidden("Solo contadores y administradores pueden modificar empleados")
 
   const { id } = await context.params
   const existing = await prisma.empleado.findUnique({ where: { id } })

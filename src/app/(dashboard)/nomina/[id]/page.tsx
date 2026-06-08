@@ -119,19 +119,20 @@ const ESTADO_CONFIG: Record<EstadoReporte, { label: string; variant: "secondary"
 };
 
 const TIPOS_NOVEDAD: { value: TipoNovedad; label: string }[] = [
-  { value: "BONIFICACIONES",       label: "Bonificación ocasional" },
-  { value: "COMISIONES",           label: "Comisiones" },
-  { value: "RETIRO",               label: "Retiro" },
-  { value: "LIBRANZA",             label: "Libranza" },
-  { value: "VACACIONES",           label: "Vacaciones" },
-  { value: "HORAS_EXTRAS",         label: "Hora extra ordinaria" },
+  { value: "INGRESO",               label: "Ingreso de empleado" },
+  { value: "BONIFICACIONES",        label: "Bonificación ocasional" },
+  { value: "COMISIONES",            label: "Comisiones" },
+  { value: "RETIRO",                label: "Retiro" },
+  { value: "LIBRANZA",              label: "Libranza" },
+  { value: "VACACIONES",            label: "Vacaciones" },
+  { value: "HORAS_EXTRAS",          label: "Hora extra ordinaria" },
   { value: "HORAS_EXTRAS_NOCTURNAS", label: "Hora extra nocturna" },
-  { value: "RECARGOS",             label: "Recargo nocturno" },
-  { value: "DOMINICALES",          label: "Dominicales" },
-  { value: "LICENCIA",             label: "Licencia de luto" },
-  { value: "INCAPACIDAD",          label: "Incapacidad" },
-  { value: "LLEGADA_TARDE",        label: "Llegadas tarde" },
-  { value: "OTRA",                 label: "Otras novedades" },
+  { value: "RECARGOS",              label: "Recargo nocturno" },
+  { value: "DOMINICALES",           label: "Dominicales" },
+  { value: "LICENCIA",              label: "Licencia de luto" },
+  { value: "INCAPACIDAD",           label: "Incapacidad" },
+  { value: "LLEGADA_TARDE",         label: "Llegadas tarde" },
+  { value: "OTRA",                  label: "Otras novedades" },
 ];
 
 function tipoLabel(t: TipoNovedad) {
@@ -286,6 +287,9 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
     };
 
     switch (tipo) {
+      case "INGRESO":
+        payload.fechaInicioNovedad = form.fechaInicioNovedad || periodStart;
+        break;
       case "BONIFICACIONES": case "COMISIONES":
         payload.valor = form.valor;
         payload.descripcion = form.descripcion || null;
@@ -349,6 +353,13 @@ function AddNovedadModal({ open, empleadoId, empleadoNombre, reporteId, empresaI
 
   function renderFields() {
     switch (tipo) {
+      case "INGRESO":
+        return (
+          <FieldGroup label="Fecha de ingreso">
+            <Input type="date" value={f("fechaInicioNovedad")} onChange={(e) => set("fechaInicioNovedad", e.target.value)} />
+            <p className="text-xs text-gray-400 mt-1">Registra la fecha de ingreso del empleado en este período</p>
+          </FieldGroup>
+        );
       case "BONIFICACIONES": case "COMISIONES":
         return (
           <>
@@ -698,6 +709,97 @@ function IngresoModal({ open, reporteId, empresaId, periodo, mes, año, onClose,
   );
 }
 
+// ── Edit Empleado Modal ───────────────────────────────────────────────────────
+
+interface EditEmpleadoModalProps {
+  open: boolean;
+  empleado: EmpleadoItem;
+  onClose: () => void;
+  onSaved: (emp: EmpleadoItem) => void;
+}
+
+function EditEmpleadoModal({ open, empleado, onClose, onSaved }: EditEmpleadoModalProps) {
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        nombre: empleado.nombre ?? "",
+        tipoDocumento: empleado.tipoDocumento ?? "CC",
+        numeroDocumento: empleado.numeroDocumento ?? "",
+        cargo: empleado.cargo ?? "",
+        salarioBase: empleado.salarioBase ?? "",
+        fechaIngreso: empleado.fechaIngreso ? empleado.fechaIngreso.split("T")[0] : "",
+      });
+      setError("");
+    }
+  }, [open, empleado.id]);
+
+  function set(field: string, value: string) { setForm((p) => ({ ...p, [field]: value })); }
+  const f = (k: string) => form[k] ?? "";
+
+  async function handleSave() {
+    if (!f("nombre").trim()) { setError("El nombre es obligatorio"); return; }
+    setSaving(true); setError("");
+    const res = await fetch(`/api/nomina/empleados/${empleado.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: f("nombre").trim(),
+        tipoDocumento: f("tipoDocumento") || null,
+        cargo: f("cargo").trim() || null,
+        salarioBase: f("salarioBase") || null,
+        fechaIngreso: f("fechaIngreso") || null,
+      }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      const data = await res.json();
+      onSaved({ ...empleado, ...data, salarioBase: data.salarioBase ?? empleado.salarioBase });
+      onClose();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setError(err.details?.join(", ") ?? err.error ?? "Error al guardar");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold">Editar Empleado</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">{empleado.nombre}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <FieldGroup label="Nombre completo *">
+            <Input value={f("nombre")} onChange={(e) => set("nombre", e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Cargo">
+            <Input placeholder="Ej: Auxiliar administrativo" value={f("cargo")} onChange={(e) => set("cargo", e.target.value)} />
+          </FieldGroup>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldGroup label="Fecha de ingreso">
+              <Input type="date" value={f("fechaIngreso")} onChange={(e) => set("fechaIngreso", e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Salario básico ($)">
+              <Input type="number" min="1" value={f("salarioBase")} onChange={(e) => set("salarioBase", e.target.value)} />
+            </FieldGroup>
+          </div>
+          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={saving}>
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Guardando…</> : "Guardar Cambios"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Field Group helper ────────────────────────────────────────────────────────
 
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
@@ -729,6 +831,7 @@ export default function NominaDetallePage() {
   const [deleteModal, setDeleteModal] = useState<{ novedad: NovedadItem; nombre: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [confirmAprobar, setConfirmAprobar] = useState(false);
+  const [editEmpleadoModal, setEditEmpleadoModal] = useState<EmpleadoItem | null>(null);
   const [ingresoModal, setIngresoModal] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
   const [finalError, setFinalError] = useState("");
@@ -808,6 +911,10 @@ export default function NominaDetallePage() {
 
   function handleEmpleadoCreado(empleado: EmpleadoItem) {
     setEmpleados((prev) => [...prev, empleado]);
+  }
+
+  function handleEmpleadoActualizado(emp: EmpleadoItem) {
+    setEmpleados((prev) => prev.map((e) => e.id === emp.id ? emp : e));
   }
 
   function handleNovedadUpdated(novedad: NovedadItem) {
@@ -1019,15 +1126,26 @@ export default function NominaDetallePage() {
                       {/* Novedades + action */}
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         {isEditable && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1.5 text-xs"
-                            onClick={() => setNovedadModal({ empleadoId: emp.id, nombre: emp.nombre })}
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Agregar Novedad
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-gray-500 border-gray-200 hover:bg-gray-50 gap-1 text-xs px-2"
+                              title="Editar datos del empleado"
+                              onClick={() => setEditEmpleadoModal(emp)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1.5 text-xs"
+                              onClick={() => setNovedadModal({ empleadoId: emp.id, nombre: emp.nombre })}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Agregar Novedad
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1086,6 +1204,16 @@ export default function NominaDetallePage() {
           periodEnd={periodDates.end}
           onClose={() => setNovedadModal(null)}
           onSaved={handleNovedadSaved}
+        />
+      )}
+
+      {/* Edit Empleado Modal */}
+      {editEmpleadoModal && (
+        <EditEmpleadoModal
+          open={!!editEmpleadoModal}
+          empleado={editEmpleadoModal}
+          onClose={() => setEditEmpleadoModal(null)}
+          onSaved={(emp) => { handleEmpleadoActualizado(emp); setEditEmpleadoModal(null); }}
         />
       )}
 
