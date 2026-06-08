@@ -33,7 +33,7 @@ export async function getNominaSession(): Promise<NominaSession | null> {
   if (!session?.user) return null
 
   const userId = (session.user as any).id as string
-  const role = (session.user as any).role as UserRole
+  const role = (session.user as any).prismaRole as UserRole
 
   if (role === UserRole.ADMIN) {
     return { userId, role, empresaIds: [] }
