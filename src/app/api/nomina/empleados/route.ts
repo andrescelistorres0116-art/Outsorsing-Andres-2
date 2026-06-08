@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { getNominaSession, canAccess, isContador, unauthorized, forbidden } from "@/lib/nomina-auth"
+import { getNominaSession, canAccess, unauthorized, forbidden } from "@/lib/nomina-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -51,8 +51,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getNominaSession()
   if (!session) return unauthorized()
-  if (!isContador(session)) return forbidden("Solo contadores y administradores pueden registrar empleados")
-
   const body = await request.json()
   const { empresaId, numeroDocumento, nombre, tipoDocumento, cargo, salarioBase, tipoContrato, ciudad, eps, fondoPensiones, fechaIngreso, observaciones } = body
 
