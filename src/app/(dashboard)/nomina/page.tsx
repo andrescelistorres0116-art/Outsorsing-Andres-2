@@ -519,8 +519,20 @@ export default function NominaPage() {
                           </Link>
                           {appSession?.role !== "cliente" && (
                             <button
+                              onClick={async () => {
+                                const res = await fetch(`/api/nomina/reportes/${r.id}/export`);
+                                if (!res.ok) return;
+                                const blob = await res.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1]
+                                  ?? `Nomina_${r.id}.xlsx`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
                               className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                              title="Exportar"
+                              title="Exportar a Excel"
                             >
                               <Download className="w-4 h-4" />
                             </button>
