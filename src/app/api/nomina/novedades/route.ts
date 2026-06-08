@@ -145,9 +145,7 @@ export async function POST(request: NextRequest) {
   // Check empleado activo
   const empleado = await prisma.empleado.findUnique({ where: { id: empleadoId } })
   if (!empleado) return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 })
-  if (!empleado.activo && tipoNovedad !== TipoNovedad.RETIRO) {
-    return NextResponse.json({ error: "Solo se pueden registrar novedades de RETIRO para empleados inactivos" }, { status: 409 })
-  }
+
   if (empleado.empresaId !== empresaId) return NextResponse.json({ error: "El empleado no pertenece a esta empresa" }, { status: 400 })
 
   // Check reporte state if linked

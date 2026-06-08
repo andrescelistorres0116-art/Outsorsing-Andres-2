@@ -894,7 +894,7 @@ export default function NominaDetallePage() {
 
                       {/* Novedades + action */}
                       <div className="flex flex-col items-end gap-2 shrink-0">
-                        {isEditable && !tieneRetiro && (
+                        {isEditable && (
                           <Button
                             size="sm"
                             variant="outline"
