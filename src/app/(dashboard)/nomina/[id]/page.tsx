@@ -764,6 +764,15 @@ export default function NominaDetallePage() {
   const isEditable = reporte?.estado === "BORRADOR" || reporte?.estado === "REABIERTA";
   const isCliente = appSession?.role === "cliente";
   const isContador = appSession?.role === "contador" || appSession?.role === "admin";
+  const modoCompleto = reporte?.empresa.modoFlujoNomina === "COMPLETO";
+
+  // In COMPLETO mode: BORRADOR→ENVIADA, REABIERTA→CORREGIDA. In SIMPLE: always →APROBADA
+  const estadoDestino = modoCompleto
+    ? (reporte?.estado === "REABIERTA" ? "CORREGIDA" : "ENVIADA")
+    : "APROBADA";
+  const btnFinalizarLabel = modoCompleto
+    ? (reporte?.estado === "REABIERTA" ? "ENVIAR CORRECCIÓN" : "ENVIAR NÓMINA")
+    : "FINALIZAR NÓMINA";
 
   const periodDates = reporte
     ? getPeriodDates(reporte.mes, reporte.año, reporte.periodo, reporte.fechaInicioPeriodo, reporte.fechaFinPeriodo)
@@ -787,13 +796,12 @@ export default function NominaDetallePage() {
 
   async function handleNoHayNovedades() {
     setFinalLoading(true); setFinalError("");
-    // Mark sinNovedades then approve
     await fetch(`/api/nomina/reportes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sinNovedades: true }),
     });
-    await transicionarEstado("APROBADA");
+    await transicionarEstado(estadoDestino);
   }
 
   function handleNovedadSaved(novedad: NovedadItem) {
@@ -910,11 +918,11 @@ export default function NominaDetallePage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => transicionarEstado("APROBADA")}
+              onClick={() => transicionarEstado(estadoDestino)}
               disabled={finalLoading}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {finalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "FINALIZAR NÓMINA"}
+              {finalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : btnFinalizarLabel}
             </Button>
           </div>
         </div>

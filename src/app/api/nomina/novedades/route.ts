@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
         tarifaHora: body.tarifaHora != null ? body.tarifaHora : null,
         porcentaje: body.porcentaje != null ? body.porcentaje : null,
         horas: body.horas != null ? body.horas : null,
-        diasAusencia: body.diasAusencia ?? null,
+        diasAusencia: body.diasAusencia != null ? parseInt(body.diasAusencia) : null,
         libranzaId: resolvedLibranzaId,
         numeroCuotas: body.numeroCuotas != null ? parseInt(body.numeroCuotas) : null,
         valorCuota: body.valorCuota != null ? Number(body.valorCuota) : null,
