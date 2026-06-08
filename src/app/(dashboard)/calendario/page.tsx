@@ -38,7 +38,7 @@ import {
   EstadoObligacion,
   Obligacion,
 } from "@/components/calendario/mockData";
-import { getSessionFresh, AppSession } from "@/lib/app-auth";
+import { useAppSession } from "@/hooks/useAppSession";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import VencimientoBadge from "@/components/calendario/VencimientoBadge";
 import CalendarioView from "@/components/calendario/CalendarioView";
@@ -237,12 +237,11 @@ export default function CalendarioPage() {
     localStorage.setItem("calendario-obligaciones", JSON.stringify(obligaciones));
   }, [obligaciones, hydrated]);
 
-  const [session, setSession] = useState<AppSession | null>(null);
+  const { appSession: session } = useAppSession();
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
   const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
   useEffect(() => {
-    getSessionFresh().then(setSession);
     async function loadEmpresas() {
       try {
         const res = await fetch("/api/app-empresas");
@@ -281,7 +280,7 @@ export default function CalendarioPage() {
     if (!session || session.role === "admin") return null;
     return new Set(
       empresasData
-        .filter((e) => session.empresaIds.includes(e.id))
+        .filter((e) => session.empresaIds.includes(String(e.id)))
         .map((e) => e.razonSocial)
     );
   }, [session, empresasData]);

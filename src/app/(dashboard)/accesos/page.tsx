@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import AccesoFormModal, { AccesoFormData, TipoAcceso } from "@/components/accesos/AccesoFormModal";
-import { getSessionFresh, AppSession } from "@/lib/app-auth";
+import { useAppSession } from "@/hooks/useAppSession";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -497,9 +497,9 @@ function matchesActiva(empresa: string, activaSet: Set<string>): boolean {
 }
 
 export default function AccesosPage() {
+  const { appSession: session } = useAppSession();
   const [accesos, setAccesos] = useState<Acceso[]>(ACCESOS);
   const [loaded, setLoaded] = useState(false);
-  const [session, setSession] = useState<AppSession | null>(null);
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
   const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
@@ -517,9 +517,8 @@ export default function AccesosPage() {
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
   const [editId, setEditId] = useState<number | null>(null);
 
-  // Load session (fresh from server) and empresas on mount
+  // Load empresas on mount; session comes from useAppSession hook
   useEffect(() => {
-    getSessionFresh().then(setSession);
     async function loadEmpresas() {
       try {
         const res = await fetch("/api/app-empresas");
@@ -586,12 +585,14 @@ export default function AccesosPage() {
     }).catch(() => {});
   }, [accesos, loaded]);
 
-  // For non-admin roles: only show accesos of assigned empresas
+  // For non-admin roles: only show accesos of assigned empresas.
+  // NOTE: empresaIds are Prisma CUIDs (string); file-based empresa IDs are numeric.
+  // Until full data migration to Prisma, non-admin users will see no accesos.
   const empresasPermitidas: Set<string> | null =
     session && session.role !== "admin"
       ? new Set(
           empresasData
-            .filter((e) => session.empresaIds.includes(e.id))
+            .filter((e) => session.empresaIds.includes(String(e.id)))
             .map((e) => e.razonSocial)
         )
       : null;

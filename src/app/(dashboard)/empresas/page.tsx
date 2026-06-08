@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import EmpresaFormModal from "@/components/empresas/EmpresaFormModal";
 import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
-import { getSessionFresh, AppSession } from "@/lib/app-auth";
+import { useAppSession } from "@/hooks/useAppSession";
 
 // Empresa is EmpresaMock — single source of truth in @/lib/empresas-mock
 type Empresa = EmpresaMock;
@@ -279,7 +279,7 @@ export default function EmpresasPage() {
       body: json,
     }).catch(() => {});
   }, [empresas, hydrated]);
-  const [session, setSession] = useState<AppSession | null>(null);
+  const { appSession: session } = useAppSession();
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("todos");
@@ -292,7 +292,7 @@ export default function EmpresasPage() {
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [deletingEmpresa, setDeletingEmpresa] = useState<Empresa | null>(null);
 
-  useEffect(() => { getSessionFresh().then(setSession); }, []);
+  // session now comes from useAppSession hook above
 
   function openCreate() {
     setEditingEmpresa(null);
@@ -330,10 +330,12 @@ export default function EmpresasPage() {
 
   const PER_PAGE = 8;
 
-  // For non-admin roles: restrict to assigned empresaIds
+  // For non-admin roles: restrict to assigned empresaIds.
+  // NOTE: empresaIds are Prisma CUIDs (string); file-based empresa IDs are numeric.
+  // Until full data migration to Prisma, non-admin users will see no empresas.
   const visibleEmpresas =
     session && session.role !== "admin"
-      ? empresas.filter((e) => session.empresaIds.includes(e.id))
+      ? empresas.filter((e) => session.empresaIds.includes(String(e.id)))
       : empresas;
 
   const filtered = visibleEmpresas.filter((e) => {

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { tryLogin, setAppSession } from "@/lib/app-auth";
+import { signIn, getSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Building2, Eye, EyeOff, Lock, Mail, TrendingUp } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -18,18 +20,31 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const user = await tryLogin(email, password);
-      if (!user) {
-        setError("Correo o contraseña incorrectos.");
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Correo electrónico o contraseña incorrectos");
         setIsLoading(false);
-      } else {
-        setAppSession(user);
-        window.location.href =
-          user.role === "cliente" ? "/nomina" :
-          user.role === "contador" ? "/empresas" :
-          "/dashboard";
-        // keep isLoading true while navigating so button stays disabled
+        return;
       }
+
+      // Get the session to determine role-based redirect
+      const session = await getSession();
+      const role = (session?.user as any)?.role;
+
+      if (role === "cliente") {
+        router.push("/nomina");
+      } else if (role === "contador") {
+        router.push("/empresas");
+      } else {
+        router.push("/dashboard");
+      }
+      router.refresh();
+      // keep isLoading true while navigating so button stays disabled
     } catch {
       setError("Ocurrió un error inesperado. Intente nuevamente.");
       setIsLoading(false);

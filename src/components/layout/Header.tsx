@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSessionFresh, clearSession, initials, AppSession } from "@/lib/app-auth";
+import { useAppSession } from "@/hooks/useAppSession";
+import { initials } from "@/lib/app-auth";
 import {
   Bell,
   ChevronDown,
@@ -32,9 +33,9 @@ function saveReadIds(ids: Set<string>) {
 
 export default function Header() {
   const router = useRouter();
+  const { appSession, signOut } = useAppSession();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [session, setSession] = useState<AppSession | null>(null);
   const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -42,9 +43,6 @@ export default function Header() {
   useEffect(() => {
     // Load readIds from localStorage (persists across navigation)
     setReadIds(loadReadIds());
-
-    // Fetch session (fresh from server for updated empresaIds)
-    getSessionFresh().then(setSession);
 
     // Fetch all notifications
     fetch("/api/app-notifications")
@@ -63,12 +61,12 @@ export default function Header() {
 
   // Filter notifications to only show empresas assigned to this user
   const notifications = useMemo(() => {
-    if (!session || session.role === "admin") return allNotifications;
+    if (!appSession || appSession.role === "admin") return allNotifications;
     if (empresasData.length === 0) return [];
 
     const allowedNames = new Set(
       empresasData
-        .filter((e) => session.empresaIds.includes(e.id))
+        .filter((e) => appSession.empresaIds.includes(String(e.id)))
         .map((e) => e.razonSocial)
     );
 
@@ -78,19 +76,18 @@ export default function Header() {
       if (!match) return true;
       return allowedNames.has(match[1].trim());
     });
-  }, [allNotifications, session, empresasData]);
+  }, [allNotifications, appSession, empresasData]);
 
-  const userName = session?.nombre ?? "Admin";
-  const userEmail = session?.email ?? "";
+  const userName = appSession?.nombre ?? "Admin";
+  const userEmail = appSession?.email ?? "";
   const userRole =
-    session?.role === "admin" ? "Administrador" :
-    session?.role === "contador" ? "Contador" :
+    appSession?.role === "admin" ? "Administrador" :
+    appSession?.role === "contador" ? "Contador" :
     "Cliente";
-  const userInitials = session ? initials(session.nombre) : "?";
+  const userInitials = appSession ? initials(appSession.nombre) : "?";
 
   function handleLogout() {
-    clearSession();
-    router.push("/login");
+    signOut();
   }
 
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;

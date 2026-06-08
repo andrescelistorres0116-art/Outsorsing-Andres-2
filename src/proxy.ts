@@ -1,26 +1,43 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
+import { NextRequest, NextResponse } from "next/server"
 
-const SESSION_KEY = "app-session"
+const PUBLIC_PATHS = ["/login", "/api/auth"]
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Always allow: login page, auth API, static assets
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/")
-  ) {
+  // Allow public paths
+  if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
-  // Protect all other routes by checking our session cookie
-  const hasSession = request.cookies.has(SESSION_KEY)
+  // Allow static files
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+    return NextResponse.next()
+  }
 
-  if (!hasSession) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+
+  if (!token) {
     const loginUrl = new URL("/login", request.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Role-based route protection
+  const role = token.role as string
+
+  // Protect admin-only routes
+  if (pathname.startsWith("/configuracion") && role !== "admin") {
+    return NextResponse.redirect(new URL("/", request.url))
+  }
+
+  // Clients can only access /nomina
+  if (role === "cliente" && !pathname.startsWith("/nomina") && !pathname.startsWith("/api")) {
+    return NextResponse.redirect(new URL("/nomina", request.url))
   }
 
   return NextResponse.next()
@@ -28,6 +45,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 }

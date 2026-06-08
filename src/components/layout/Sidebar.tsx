@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -15,8 +15,9 @@ import {
   ChevronRight,
   UserCog,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { getSession, clearSession, initials, AppSession } from "@/lib/app-auth";
+import { useState } from "react";
+import { useAppSession } from "@/hooks/useAppSession";
+import { initials } from "@/lib/app-auth";
 
 const ADMIN_NAV = [
   { label: "Dashboard",           href: "/dashboard",   icon: LayoutDashboard },
@@ -44,28 +45,22 @@ const CLIENT_NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { appSession, signOut } = useAppSession();
   const [collapsed, setCollapsed] = useState(false);
-  const [session, setSession] = useState<AppSession | null>(null);
 
-  useEffect(() => {
-    setSession(getSession());
-  }, []);
-
-  const role = session?.role ?? "cliente";
+  const role = appSession?.role ?? "cliente";
   const navItems =
     role === "admin" ? ADMIN_NAV :
     role === "contador" ? CONTADOR_NAV :
     CLIENT_NAV;
   const extraItems = role === "admin" ? ADMIN_EXTRA : [];
 
-  const userInitials = session ? initials(session.nombre) : "?";
-  const userName = session?.nombre ?? "";
-  const userEmail = session?.email ?? "";
+  const userInitials = appSession ? initials(appSession.nombre) : "?";
+  const userName = appSession?.nombre ?? "";
+  const userEmail = appSession?.email ?? "";
 
   function handleLogout() {
-    clearSession();
-    router.push("/login");
+    signOut();
   }
 
   return (

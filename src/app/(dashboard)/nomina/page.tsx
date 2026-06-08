@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmpresaMock } from "@/lib/empresas-mock";
-import { getSessionFresh, AppSession } from "@/lib/app-auth";
+import { useAppSession } from "@/hooks/useAppSession";
 import { NovedadIngreso } from "@/lib/novedades-store";
 import NovedadIngresoModal, { IngresoFormData, EmpresaOption } from "@/components/nomina/NovedadIngresoModal";
 import { UserPlus } from "lucide-react";
@@ -199,11 +199,7 @@ function periodoLabel(p: Periodo) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NominaPage() {
-  const [appSession, setAppSession] = useState<AppSession | null>(null);
-
-  useEffect(() => {
-    getSessionFresh().then(setAppSession);
-  }, []);
+  const { appSession } = useAppSession();
 
   // Empresas loaded from server so all browsers see the same data
   const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
@@ -325,7 +321,7 @@ export default function NominaPage() {
   const empresasAsignadas = useMemo(
     () =>
       appSession?.role === "cliente"
-        ? empresasData.filter((e) => isActiva(e) && appSession.empresaIds.includes(e.id))
+        ? empresasData.filter((e) => isActiva(e) && appSession.empresaIds.includes(String(e.id)))
         : [],
     [appSession, empresasData]
   );
@@ -338,7 +334,7 @@ export default function NominaPage() {
       isRestrictedRole && appSession
         ? empresasConNomina.filter((nombre) => {
             const emp = empresasData.find((e) => e.razonSocial === nombre);
-            return emp && appSession.empresaIds.includes(emp.id);
+            return emp && appSession.empresaIds.includes(String(emp.id));
           })
         : empresasConNomina,
     [empresasConNomina, empresasData, appSession, isRestrictedRole]
@@ -347,7 +343,7 @@ export default function NominaPage() {
   const filtered = reportes.filter((r) => {
     if (deletedIds.has(r.id)) return false;
     // Clients and contadores only see their assigned empresas
-    if (isRestrictedRole && appSession && !appSession.empresaIds.includes(r.empresaNumId)) return false;
+    if (isRestrictedRole && appSession && !appSession.empresaIds.includes(String(r.empresaNumId))) return false;
     const matchEmpresa = empresaFilter === "todas" || r.empresa === empresaFilter;
     const matchPeriodo = periodoFilter === "todos" || r.periodo === periodoFilter;
     const matchEstado = estadoFilter === "todos" || r.estado === estadoFilter;
@@ -356,17 +352,17 @@ export default function NominaPage() {
 
   const pendientes = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
     r.estado === "BORRADOR"
   ).length;
   const enviados = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
     r.estado === "ENVIADO"
   ).length;
   const aprobados = reportes.filter((r) =>
     !deletedIds.has(r.id) &&
-    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(r.empresaNumId)) &&
+    (!isRestrictedRole || !appSession || appSession.empresaIds.includes(String(r.empresaNumId))) &&
     r.estado === "APROBADO"
   ).length;
 
@@ -777,7 +773,7 @@ export default function NominaPage() {
       {/* ── Novedades de Ingreso ─────────────────────────────────────────────── */}
       {(() => {
         const visibles = appSession?.role === "cliente"
-          ? novedades.filter((n) => appSession.empresaIds.includes(n.empresaId))
+          ? novedades.filter((n) => appSession.empresaIds.includes(String(n.empresaId)))
           : novedades;
         if (visibles.length === 0 && appSession?.role !== "cliente") return null;
         return (
