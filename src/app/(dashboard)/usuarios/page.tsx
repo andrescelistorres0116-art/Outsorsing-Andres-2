@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect } from "react";
 import {
   UserCog,
   Plus,
@@ -11,7 +11,6 @@ import {
   Shield,
   User,
   Calculator,
-  X,
   Search,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,18 +32,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AppUser } from "@/lib/app-auth";
-import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
-import { EmpresaMock } from "@/lib/empresas-mock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+interface ApiUser {
+  id: string;
+  nombre: string;
+  email: string;
+  role: "admin" | "contador" | "cliente";
+  empresaIds: string[];
+  activo: boolean;
+  creadoEn: string;
+}
+
+interface EmpresaItem {
+  id: string;
+  razonSocial: string;
+  nit: string;
+  estado: string;
+}
 
 interface UserFormData {
   nombre: string;
   email: string;
   password: string;
   role: "contador" | "cliente";
-  empresaIds: number[];
+  empresaIds: string[];
   activo: boolean;
 }
 
@@ -60,44 +73,33 @@ const DEFAULT_FORM: UserFormData = {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [empresas, setEmpresas] = useState<EmpresaMock[]>(EMPRESAS_MOCK);
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [empresas, setEmpresas] = useState<EmpresaItem[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof UserFormData | "general", string>>>({});
 
   function fetchUsers() {
     fetch("/api/app-users")
       .then((r) => r.json())
-      .then((data: AppUser[]) => setUsers(data))
+      .then((data) => {
+        if (Array.isArray(data)) setUsers(data);
+      })
       .catch(() => {});
   }
 
   useEffect(() => {
     fetchUsers();
-    // Load empresas from server first, fall back to localStorage
-    fetch("/api/app-empresas")
-      .then(async (r) => {
-        if (r.status === 200) {
-          const data: EmpresaMock[] = await r.json();
-          setEmpresas(Array.isArray(data) ? data : []);
-          return;
-        }
-        // 204 = not yet initialized, fall back to localStorage
-        try {
-          const stored = localStorage.getItem("empresas-data");
-          if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
-        } catch {}
+    fetch("/api/empresas?limit=200")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.empresas)) setEmpresas(data.empresas);
       })
-      .catch(() => {
-        try {
-          const stored = localStorage.getItem("empresas-data");
-          if (stored) setEmpresas(JSON.parse(stored) as EmpresaMock[]);
-        } catch {}
-      });
+      .catch(() => {});
   }, []);
 
   const filtered = users.filter(
@@ -118,12 +120,12 @@ export default function UsuariosPage() {
     setModalOpen(true);
   }
 
-  function openEdit(user: AppUser) {
+  function openEdit(user: ApiUser) {
     setEditingUser(user);
     setForm({
       nombre: user.nombre,
       email: user.email,
-      password: user.password,
+      password: "",
       role: user.role === "admin" ? "cliente" : user.role,
       empresaIds: user.empresaIds,
       activo: user.activo,
@@ -152,64 +154,69 @@ export default function UsuariosPage() {
       );
       if (dup) errs.email = "Este correo ya está en uso";
     }
-    if (!form.password) errs.password = "Ingrese la contraseña";
-    else if (form.password.length < 6) errs.password = "Mínimo 6 caracteres";
+    // Password required only when creating; optional when editing
+    if (!editingUser && !form.password) errs.password = "Ingrese la contraseña";
+    else if (form.password && form.password.length < 6) errs.password = "Mínimo 6 caracteres";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
   async function handleSave() {
     if (!validate()) return;
+    setSaving(true);
 
-    if (editingUser) {
-      const updated: AppUser = {
-        ...editingUser,
-        nombre: form.nombre,
-        email: form.email,
-        password: form.password,
-        role: editingUser.role === "admin" ? "admin" : form.role,
-        empresaIds: form.empresaIds,
-        activo: form.activo,
-      };
-      const res = await fetch("/api/app-users", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-      if (res.ok) {
-        fetchUsers();
-        handleClose();
+    try {
+      if (editingUser) {
+        const payload: Record<string, unknown> = {
+          id: editingUser.id,
+          nombre: form.nombre,
+          email: form.email,
+          role: editingUser.role === "admin" ? "admin" : form.role,
+          empresaIds: form.empresaIds,
+          activo: form.activo,
+        };
+        if (form.password) payload.password = form.password;
+
+        const res = await fetch("/api/app-users", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          fetchUsers();
+          handleClose();
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setErrors({ general: body.error ?? "Error al guardar" });
+        }
+      } else {
+        const payload = {
+          nombre: form.nombre,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+          empresaIds: form.empresaIds,
+          activo: form.activo,
+        };
+        const res = await fetch("/api/app-users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          fetchUsers();
+          handleClose();
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setErrors({ general: body.error ?? "Error al crear usuario" });
+        }
       }
-    } else {
-      const maxId = users
-        .map((u) => {
-          const n = parseInt(u.id.replace("user-", ""), 10);
-          return isNaN(n) ? 0 : n;
-        })
-        .reduce((a, b) => Math.max(a, b), 0);
-      const newUser: AppUser = {
-        id: `user-${maxId + 1}`,
-        nombre: form.nombre,
-        email: form.email,
-        password: form.password,
-        role: form.role,
-        empresaIds: form.empresaIds,
-        activo: form.activo,
-        creadoEn: new Date().toISOString().split("T")[0],
-      };
-      const res = await fetch("/api/app-users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      });
-      if (res.ok) {
-        fetchUsers();
-        handleClose();
-      }
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function handleDelete(user: AppUser) {
+  async function handleDelete(user: ApiUser) {
     if (user.role === "admin") return;
     const res = await fetch("/api/app-users", {
       method: "DELETE",
@@ -221,7 +228,7 @@ export default function UsuariosPage() {
     }
   }
 
-  function toggleEmpresa(id: number) {
+  function toggleEmpresa(id: string) {
     setForm((prev) => ({
       ...prev,
       empresaIds: prev.empresaIds.includes(id)
@@ -230,9 +237,11 @@ export default function UsuariosPage() {
     }));
   }
 
-  function empresaNombre(id: number): string {
-    return empresas.find((e) => e.id === id)?.razonSocial ?? `Empresa #${id}`;
+  function empresaNombre(id: string): string {
+    return empresas.find((e) => e.id === id)?.razonSocial ?? `Empresa #${id.slice(0, 8)}`;
   }
+
+  const activeEmpresas = empresas.filter((e) => e.estado === "ACTIVA");
 
   return (
     <div className="space-y-6">
@@ -405,6 +414,13 @@ export default function UsuariosPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* General error */}
+            {errors.general && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                {errors.general}
+              </p>
+            )}
+
             {/* Nombre */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
@@ -437,14 +453,16 @@ export default function UsuariosPage() {
             {/* Password */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
-                Contraseña <span className="text-red-500">*</span>
+                {editingUser ? "Nueva contraseña" : "Contraseña"}{" "}
+                {!editingUser && <span className="text-red-500">*</span>}
+                {editingUser && <span className="text-gray-400 font-normal text-xs">(dejar vacío para no cambiar)</span>}
               </Label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder={editingUser ? "Nueva contraseña (opcional)" : "Mínimo 6 caracteres"}
                   className={`pr-10 ${errors.password ? "border-red-400" : ""}`}
                 />
                 <button
@@ -491,15 +509,10 @@ export default function UsuariosPage() {
                     : "Empresas que puede gestionar (Contador)"}
                 </p>
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-52 overflow-y-auto">
-                  {empresas
-                    .filter((e) => {
-                      if (e.fechaFinRelacion) {
-                        const today = new Date().toISOString().split("T")[0];
-                        if (e.fechaFinRelacion <= today) return false;
-                      }
-                      return e.estado === "ACTIVA";
-                    })
-                    .map((emp) => (
+                  {activeEmpresas.length === 0 ? (
+                    <p className="text-xs text-gray-400 px-3 py-4 text-center">No hay empresas activas</p>
+                  ) : (
+                    activeEmpresas.map((emp) => (
                       <label
                         key={emp.id}
                         className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
@@ -513,7 +526,8 @@ export default function UsuariosPage() {
                         <span className="text-sm text-gray-700 font-medium">{emp.razonSocial}</span>
                         <span className="text-xs text-gray-400 ml-auto">{emp.nit}</span>
                       </label>
-                    ))}
+                    ))
+                  )}
                 </div>
                 {form.empresaIds.length > 0 && (
                   <p className="text-xs text-violet-600 font-medium">
@@ -547,9 +561,9 @@ export default function UsuariosPage() {
           </div>
 
           <DialogFooter className="gap-2 pt-2">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-            <Button onClick={handleSave} className="bg-violet-600 hover:bg-violet-700 text-white">
-              {editingUser ? "Guardar Cambios" : "Crear Usuario"}
+            <Button variant="outline" onClick={handleClose} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-violet-600 hover:bg-violet-700 text-white">
+              {saving ? "Guardando..." : editingUser ? "Guardar Cambios" : "Crear Usuario"}
             </Button>
           </DialogFooter>
         </DialogContent>
