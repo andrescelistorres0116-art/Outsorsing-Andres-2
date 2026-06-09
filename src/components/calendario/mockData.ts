@@ -19,6 +19,7 @@ export type PeriodicidadObligacion =
 export interface Obligacion {
   id: string;
   empresa: string;
+  empresaId?: string;
   empresaColor: string;
   tipoObligacion: string;
   municipio: string;
@@ -30,7 +31,13 @@ export interface Obligacion {
   responsable: string;
   observaciones?: string;
   contabilizado: boolean;
+  contabilizadoArchivoNombre?: string | null;
+  contabilizadoFecha?: string | null;
+  contabilizadoPorNombre?: string | null;
   declarado: boolean;
+  declaradoArchivoNombre?: string | null;
+  declaradoFecha?: string | null;
+  declaradoPorNombre?: string | null;
   pagado: boolean;
 }
 

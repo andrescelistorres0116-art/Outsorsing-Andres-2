@@ -1,93 +1,77 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
-  Plus,
-  Download,
-  Search,
-  X,
-  ChevronDown,
-  Pencil,
-  Trash2,
-  Building2,
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
-  CalendarDays,
-  List,
-  LayoutGrid,
+  Plus, Download, Search, X, ChevronDown, Pencil, Trash2,
+  Building2, AlertTriangle, Clock, CheckCircle2, CalendarDays,
+  List, LayoutGrid, Paperclip, History,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
-  OBLIGACIONES_MOCK,
-  EMPRESAS,
-  TIPOS_OBLIGACION,
-  ESTADOS_LABELS,
-  EstadoObligacion,
-  Obligacion,
+  TIPOS_OBLIGACION, ESTADOS_LABELS, EstadoObligacion, Obligacion,
 } from "@/components/calendario/mockData";
 import { useAppSession } from "@/hooks/useAppSession";
-import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
 import VencimientoBadge from "@/components/calendario/VencimientoBadge";
 import CalendarioView from "@/components/calendario/CalendarioView";
 import ObligacionFormModal from "@/components/calendario/ObligacionFormModal";
+import UploadDocumentoModal, { DocumentoInfo } from "@/components/calendario/UploadDocumentoModal";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const TODAY = new Date(2026, 5, 3); // June 3, 2026
-
-const RESPONSABLES_FILTER = [
-  "Andrés Torres",
-  "María López",
-  "Carlos Ramírez",
-  "Ana Martínez",
-  "Pedro Gómez",
-  "Luisa Herrera",
-];
+const TODAY = new Date();
 
 const MONTHS = [
-  { value: "0", label: "Enero" },
-  { value: "1", label: "Febrero" },
-  { value: "2", label: "Marzo" },
-  { value: "3", label: "Abril" },
-  { value: "4", label: "Mayo" },
-  { value: "5", label: "Junio" },
-  { value: "6", label: "Julio" },
-  { value: "7", label: "Agosto" },
-  { value: "8", label: "Septiembre" },
-  { value: "9", label: "Octubre" },
-  { value: "10", label: "Noviembre" },
-  { value: "11", label: "Diciembre" },
+  { value: "0", label: "Enero" }, { value: "1", label: "Febrero" },
+  { value: "2", label: "Marzo" }, { value: "3", label: "Abril" },
+  { value: "4", label: "Mayo" }, { value: "5", label: "Junio" },
+  { value: "6", label: "Julio" }, { value: "7", label: "Agosto" },
+  { value: "8", label: "Septiembre" }, { value: "9", label: "Octubre" },
+  { value: "10", label: "Noviembre" }, { value: "11", label: "Diciembre" },
 ];
+
+const EMPRESA_COLORS = [
+  "#3B82F6","#8B5CF6","#EC4899","#F59E0B","#10B981",
+  "#EF4444","#6366F1","#14B8A6","#F97316","#84CC16",
+];
+
+const PERIODICIDAD_LABEL: Record<string, string> = {
+  MENSUAL: "Mensual", BIMESTRAL: "Bimestral", TRIMESTRAL: "Trimestral",
+  CUATRIMESTRAL: "Cuatrimestral", SEMESTRAL: "Semestral",
+  ANUAL: "Anual", UNICA: "Única",
+};
+
+const PERIODICIDAD_ENUM: Record<string, string> = {
+  Mensual: "MENSUAL", Bimestral: "BIMESTRAL", Trimestral: "TRIMESTRAL",
+  Cuatrimestral: "CUATRIMESTRAL", Semestral: "SEMESTRAL", Anual: "ANUAL",
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+function empresaColor(id: string): string {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return EMPRESA_COLORS[Math.abs(h) % EMPRESA_COLORS.length];
+}
+
 function getDaysUntil(dateStr: string): number {
-  const due = new Date(dateStr + "T00:00:00");
-  const todayMidnight = new Date(
-    TODAY.getFullYear(),
-    TODAY.getMonth(),
-    TODAY.getDate()
-  );
-  return Math.round(
-    (due.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const due = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  const now = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+  return Math.round((due.getTime() - now.getTime()) / 86400000);
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   return format(d, "dd/MM/yyyy");
 }
 
@@ -95,75 +79,75 @@ function getMesLabel(mes: number): string {
   return MONTHS[mes - 1]?.label ?? `Mes ${mes}`;
 }
 
+function isoDate(str: string): string {
+  return str.includes("T") ? str.split("T")[0] : str;
+}
+
+function mapDB(row: any): Obligacion {
+  const fv = row.fechaVencimiento ?? "";
+  return {
+    id: row.id,
+    empresa: row.empresa?.razonSocial ?? "",
+    empresaId: row.empresaId,
+    empresaColor: empresaColor(row.empresaId ?? "x"),
+    tipoObligacion: row.tipoObligacion,
+    municipio: row.municipio ?? "Nacional",
+    periodicidad: (PERIODICIDAD_LABEL[row.periodicidad] ?? row.periodicidad ?? "Mensual") as any,
+    periodo: row.periodo ? Number(row.periodo) : 1,
+    anio: row.año,
+    fechaVencimiento: isoDate(fv),
+    estado: (row.estado ?? "PENDIENTE") as EstadoObligacion,
+    responsable: row.responsableNombre ?? row.responsable?.name ?? "Sin asignar",
+    observaciones: row.observaciones ?? undefined,
+    contabilizado: !!row.contabilizado,
+    contabilizadoArchivoNombre: row.contabilizadoArchivoNombre ?? null,
+    contabilizadoFecha: row.contabilizadoFecha ? isoDate(String(row.contabilizadoFecha)) : null,
+    contabilizadoPorNombre: row.contabilizadoPor?.name ?? null,
+    declarado: !!row.declarado,
+    declaradoArchivoNombre: row.declaradoArchivoNombre ?? null,
+    declaradoFecha: row.declaradoFecha ? isoDate(String(row.declaradoFecha)) : null,
+    declaradoPorNombre: row.declaradoPor?.name ?? null,
+    pagado: !!row.pagado,
+  };
+}
+
 // ── Estado Badge ───────────────────────────────────────────────────────────────
 
 const estadoBadgeStyles: Record<EstadoObligacion, string> = {
   PENDIENTE: "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200",
   EN_PROCESO: "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200",
-  PRESENTADO:
-    "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200",
+  PRESENTADO: "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200",
   PAGADO: "bg-green-100 text-green-700 border-green-200 hover:bg-green-200",
   VENCIDO: "bg-red-100 text-red-700 border-red-200 hover:bg-red-200",
 };
 
-interface EstadoDropdownProps {
-  estado: EstadoObligacion;
-  onChange: (estado: EstadoObligacion) => void;
-}
-
-function EstadoDropdown({ estado, onChange }: EstadoDropdownProps) {
+function EstadoDropdown({ estado, onChange }: { estado: EstadoObligacion; onChange: (e: EstadoObligacion) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const estados: EstadoObligacion[] = ["PENDIENTE", "EN_PROCESO", "PRESENTADO", "PAGADO", "VENCIDO"];
 
-  const estados: EstadoObligacion[] = [
-    "PENDIENTE",
-    "EN_PROCESO",
-    "PRESENTADO",
-    "PAGADO",
-    "VENCIDO",
-  ];
+  useEffect(() => {
+    function onClick(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className={cn(
-          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors",
-          estadoBadgeStyles[estado]
-        )}
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors", estadoBadgeStyles[estado])}
       >
         {ESTADOS_LABELS[estado]}
         <ChevronDown className="w-3 h-3 opacity-70" />
       </button>
-
       {open && (
         <div className="absolute left-0 top-full mt-1 z-50 w-40 bg-white border border-gray-200 rounded-xl shadow-xl py-1">
           {estados.map((e) => (
-            <button
-              key={e}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                onChange(e);
-                setOpen(false);
-              }}
-              className={cn(
-                "flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-gray-50 transition-colors",
-                estado === e && "bg-blue-50 text-blue-700"
-              )}
+            <button key={e} onClick={(ev) => { ev.stopPropagation(); onChange(e); setOpen(false); }}
+              className={cn("flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-gray-50 transition-colors", estado === e && "bg-blue-50 text-blue-700")}
             >
-              <span
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  e === "PENDIENTE" && "bg-gray-400",
-                  e === "EN_PROCESO" && "bg-blue-500",
-                  e === "PRESENTADO" && "bg-purple-500",
-                  e === "PAGADO" && "bg-green-500",
-                  e === "VENCIDO" && "bg-red-500"
-                )}
-              />
+              <span className={cn("w-2 h-2 rounded-full", e === "PENDIENTE" && "bg-gray-400", e === "EN_PROCESO" && "bg-blue-500", e === "PRESENTADO" && "bg-purple-500", e === "PAGADO" && "bg-green-500", e === "VENCIDO" && "bg-red-500")} />
               {ESTADOS_LABELS[e]}
             </button>
           ))}
@@ -173,23 +157,9 @@ function EstadoDropdown({ estado, onChange }: EstadoDropdownProps) {
   );
 }
 
-// ── Stat Pill ──────────────────────────────────────────────────────────────────
-
-interface StatPillProps {
-  label: string;
-  count: number;
-  color: string;
-  icon: React.ReactNode;
-}
-
-function StatPill({ label, count, color, icon }: StatPillProps) {
+function StatPill({ label, count, color, icon }: { label: string; count: number; color: string; icon: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold",
-        color
-      )}
-    >
+    <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold", color)}>
       {icon}
       <span className="font-bold">{count}</span>
       <span className="font-medium opacity-90">{label}</span>
@@ -197,356 +167,448 @@ function StatPill({ label, count, color, icon }: StatPillProps) {
   );
 }
 
-// Returns true if the obligation's empresa belongs to the active store.
-// loaded=false → store not fetched yet → show all (loading state).
-// loaded=true, activaNames empty → no active companies → show nothing.
-function isInActiveStore(empresa: string, activaNames: Set<string>, loaded: boolean): boolean {
-  if (!loaded) return true;
-  if (activaNames.size === 0) return false;
-  const n = empresa.toLowerCase().replace(/\s+/g, " ").trim();
-  for (const a of activaNames) {
-    if (n === a || n.includes(a) || a.includes(n)) return true;
+// ── Document cell ──────────────────────────────────────────────────────────────
+
+function DocCell({
+  marcado,
+  archivoNombre,
+  fecha,
+  porNombre,
+  color,
+  label,
+  onMark,
+  onDownload,
+}: {
+  marcado: boolean;
+  archivoNombre?: string | null;
+  fecha?: string | null;
+  porNombre?: string | null;
+  color: "green" | "blue";
+  label: string;
+  onMark: () => void;
+  onDownload: () => void;
+}) {
+  const green = color === "green";
+  if (marcado && archivoNombre) {
+    return (
+      <div className="flex items-center gap-1 group/doc">
+        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold border",
+          green ? "bg-green-100 text-green-700 border-green-200" : "bg-blue-100 text-blue-700 border-blue-200"
+        )}>
+          <Paperclip className="w-3 h-3" />
+          {label}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDownload(); }}
+          title={`Descargar: ${archivoNombre}${fecha ? ` · ${fecha}` : ""}${porNombre ? ` · ${porNombre}` : ""}`}
+          className={cn("w-6 h-6 flex items-center justify-center rounded-lg transition-colors",
+            green ? "text-green-600 bg-green-50 hover:bg-green-100" : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+          )}
+        >
+          <Download className="w-3 h-3" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onMark(); }}
+          title="Reemplazar o quitar"
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 bg-slate-50 hover:bg-slate-100 hover:text-slate-600 transition-colors opacity-0 group-hover/doc:opacity-100"
+        >
+          <Pencil className="w-3 h-3" />
+        </button>
+      </div>
+    );
   }
-  return false;
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onMark(); }}
+      className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-0.5 text-xs text-slate-400 hover:border-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+    >
+      <Paperclip className="w-3 h-3" />
+      Adjuntar
+    </button>
+  );
+}
+
+// ── Audit Modal ────────────────────────────────────────────────────────────────
+
+const ACCION_LABELS: Record<string, string> = {
+  CONTABILIZADO: "Contabilizado — archivo adjunto",
+  CONTABILIZADO_REMOVIDO: "Contabilizado removido",
+  DECLARADO: "Declarado — archivo adjunto",
+  DECLARADO_REMOVIDO: "Declarado removido",
+};
+
+function AuditoriaModal({ obligacionId, open, onClose }: { obligacionId: string; open: boolean; onClose: () => void }) {
+  const [auds, setAuds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !obligacionId) return;
+    setLoading(true);
+    fetch(`/api/obligaciones/${obligacionId}/auditorias`)
+      .then(r => r.json())
+      .then(d => setAuds(d.auditorias ?? []))
+      .catch(() => setAuds([]))
+      .finally(() => setLoading(false));
+  }, [obligacionId, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="w-5 h-5 text-slate-500" />
+            Historial de Auditoría
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto space-y-2 mt-2">
+          {loading && <p className="text-sm text-center text-slate-400 py-6">Cargando...</p>}
+          {!loading && auds.length === 0 && (
+            <p className="text-sm text-center text-slate-400 py-6">Sin registros de auditoría</p>
+          )}
+          {auds.map((a) => (
+            <div key={a.id} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-700">
+                  {ACCION_LABELS[a.accion] ?? a.accion}
+                </span>
+                <span className="text-xs text-slate-400 shrink-0">
+                  {a.fechaAccion ? format(new Date(a.fechaAccion), "dd/MM/yyyy HH:mm") : ""}
+                </span>
+              </div>
+              {a.archivoNombre && (
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <Paperclip className="w-3 h-3" />
+                  {a.archivoNombre}
+                </p>
+              )}
+              {a.realizadoPor?.name && (
+                <p className="text-xs text-slate-500">Por: <strong>{a.realizadoPor.name}</strong></p>
+              )}
+              {a.detalles && <p className="text-xs text-slate-400">{a.detalles}</p>}
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function CalendarioPage() {
-  const [obligaciones, setObligaciones] = useState<Obligacion[]>(OBLIGACIONES_MOCK);
-  // hydrated: true after the first useEffect reads localStorage.
-  // Prevents the save-effect from overwriting localStorage with OBLIGACIONES_MOCK
-  // before the stored data has been loaded (SSR hydration race condition).
-  const [hydrated, setHydrated] = useState(false);
-
-  // Load from localStorage after mount (avoids SSR mismatch)
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("calendario-obligaciones");
-      if (stored) {
-        const parsed = JSON.parse(stored) as Obligacion[];
-        if (parsed.length > 0) setObligaciones(parsed);
-      }
-    } catch {}
-    setHydrated(true);
-  }, []);
-
-  // Persist changes — skip the initial render to avoid overwriting saved data
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem("calendario-obligaciones", JSON.stringify(obligaciones));
-  }, [obligaciones, hydrated]);
+  const [obligaciones, setObligaciones] = useState<Obligacion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const { appSession: session } = useAppSession();
-  const [empresasData, setEmpresasData] = useState<EmpresaMock[]>([]);
-  const [empresasLoaded, setEmpresasLoaded] = useState(false);
+  const [empresasData, setEmpresasData] = useState<{ id: string; razonSocial: string; nit: string; estado: string }[]>([]);
 
+  // Load empresas + obligaciones
   useEffect(() => {
-    async function loadEmpresas() {
-      try {
-        const res = await fetch("/api/app-empresas");
-        if (res.status === 200) {
-          const data: EmpresaMock[] = await res.json();
-          setEmpresasData(Array.isArray(data) ? data : []);
-          setEmpresasLoaded(true);
-          return;
-        }
-      } catch {}
-      // 204 or error → server not yet initialized, fall back to localStorage
-      try {
-        const stored = localStorage.getItem("empresas-data");
-        if (stored) {
-          const parsed = JSON.parse(stored) as EmpresaMock[];
-          if (Array.isArray(parsed)) setEmpresasData(parsed);
-        }
-      } catch {}
-      setEmpresasLoaded(true);
+    async function load() {
+      const [empRes, oblRes] = await Promise.allSettled([
+        fetch("/api/empresas?limit=500"),
+        fetch("/api/obligaciones?limit=500"),
+      ]);
+
+      if (empRes.status === "fulfilled" && empRes.value.ok) {
+        const d = await empRes.value.json();
+        setEmpresasData(Array.isArray(d.empresas) ? d.empresas : Array.isArray(d) ? d : []);
+      }
+
+      if (oblRes.status === "fulfilled" && oblRes.value.ok) {
+        const d = await oblRes.value.json();
+        const rows: any[] = Array.isArray(d.obligaciones) ? d.obligaciones : [];
+        setObligaciones(rows.map(mapDB));
+      }
+
+      setLoading(false);
     }
-    loadEmpresas();
+    load();
   }, []);
 
-  // Normalized names of ACTIVA empresas in the store.
-  // Only obligations whose empresa matches an entry here are shown.
-  // If the store is empty (not loaded yet), the set is empty → no filtering applied.
-  const activaNames = useMemo(() => {
-    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
-    return new Set(
-      empresasData.filter((e) => e.estado === "ACTIVA").map((e) => norm(e.razonSocial))
-    );
-  }, [empresasData]);
+  // Empresa options for the form modal
+  const empresasOptions = useMemo(() =>
+    empresasData
+      .filter(e => e.estado === "ACTIVA" || e.estado === undefined)
+      .map(e => ({ id: e.id, nombre: e.razonSocial, color: empresaColor(e.id) })),
+    [empresasData]
+  );
 
-  // Names of empresas the current user can see (null = all)
+  // Role-based empresa filter
   const empresasPermitidas: Set<string> | null = useMemo(() => {
     if (!session || session.role === "admin") return null;
+    const ids = new Set(session.empresaIds?.map(String) ?? []);
+    if (ids.size === 0) return null;
     return new Set(
-      empresasData
-        .filter((e) => session.empresaIds.includes(String(e.id)))
-        .map((e) => e.razonSocial)
+      empresasData.filter(e => ids.has(String(e.id))).map(e => e.razonSocial)
     );
   }, [session, empresasData]);
 
+  // ── Filter state ─────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [filterEmpresa, setFilterEmpresa] = useState("TODAS");
   const [filterTipo, setFilterTipo] = useState("TODOS");
-  const [filterResponsable, setFilterResponsable] = useState("TODOS");
   const [filterMes, setFilterMes] = useState("TODOS");
   const [filterAnio, setFilterAnio] = useState("TODOS");
   const [filterFechaDesde, setFilterFechaDesde] = useState("");
   const [filterFechaHasta, setFilterFechaHasta] = useState("");
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingObligacion, setEditingObligacion] =
-    useState<Obligacion | null>(null);
+  // ── Modal state ──────────────────────────────────────────────────────────────
+  const [showForm, setShowForm] = useState(false);
+  const [editingObligacion, setEditingObligacion] = useState<Obligacion | null>(null);
   const [activeTab, setActiveTab] = useState("lista");
 
-  // Stats
-  const stats = useMemo(() => {
-    const now = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
-    const weekEnd = new Date(now);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const [uploadModal, setUploadModal] = useState<{
+    tipo: "contabilizado" | "declarado";
+    obligacion: Obligacion;
+  } | null>(null);
 
-    const visible = obligaciones.filter((o) => {
-      if (!isInActiveStore(o.empresa, activaNames, empresasLoaded)) return false;
-      if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
-      return true;
-    });
+  const [auditModal, setAuditModal] = useState<string | null>(null); // obligacionId
 
-    const vencidas = visible.filter((o) => o.estado === "VENCIDO").length;
-    const estaSemana = visible.filter((o) => {
-      if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
-      const d = new Date(o.fechaVencimiento + "T00:00:00");
-      return d >= now && d <= weekEnd;
-    }).length;
-    const esteMes = visible.filter((o) => {
-      if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
-      const d = new Date(o.fechaVencimiento + "T00:00:00");
-      return d >= now && d <= monthEnd;
-    }).length;
-    const completadas = visible.filter(
-      (o) => o.estado === "PAGADO" || o.estado === "PRESENTADO"
-    ).length;
-
-    return { vencidas, estaSemana, esteMes, completadas };
-  }, [obligaciones, empresasPermitidas, activaNames, empresasLoaded]);
-
-  // Filtered list
-  const filtered = useMemo(() => {
-    return obligaciones.filter((o) => {
-      // Only show obligations for empresas that exist and are ACTIVA in the store
-      if (!isInActiveStore(o.empresa, activaNames, empresasLoaded)) return false;
-      // Role-based: only show empresas the user is assigned to
-      if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
-      if (
-        search &&
-        !o.empresa.toLowerCase().includes(search.toLowerCase()) &&
-        !o.tipoObligacion.toLowerCase().includes(search.toLowerCase()) &&
-        !o.responsable.toLowerCase().includes(search.toLowerCase())
-      )
-        return false;
-      if (filterEmpresa !== "TODAS" && o.empresa !== filterEmpresa)
-        return false;
-      if (filterTipo !== "TODOS" && o.tipoObligacion !== filterTipo)
-        return false;
-      if (filterResponsable !== "TODOS" && o.responsable !== filterResponsable)
-        return false;
-      if (filterMes !== "TODOS") {
-        const d = new Date(o.fechaVencimiento + "T00:00:00");
-        if (d.getMonth() !== Number(filterMes)) return false;
-      }
-      if (filterAnio !== "TODOS") {
-        const d = new Date(o.fechaVencimiento + "T00:00:00");
-        if (d.getFullYear() !== Number(filterAnio)) return false;
-      }
-      if (filterFechaDesde) {
-        if (o.fechaVencimiento < filterFechaDesde) return false;
-      }
-      if (filterFechaHasta) {
-        if (o.fechaVencimiento > filterFechaHasta) return false;
-      }
-      return true;
-    });
-  }, [
-    obligaciones,
-    activaNames,
-    empresasLoaded,
-    empresasPermitidas,
-    search,
-    filterEmpresa,
-    filterTipo,
-    filterResponsable,
-    filterMes,
-    filterAnio,
-    filterFechaDesde,
-    filterFechaHasta,
-  ]);
-
-  // Sorted: vencidas first, then by date asc
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const daysA = getDaysUntil(a.fechaVencimiento);
-      const daysB = getDaysUntil(b.fechaVencimiento);
-      // Vencidas (negative days or VENCIDO) go first
-      if (a.estado === "VENCIDO" && b.estado !== "VENCIDO") return -1;
-      if (b.estado === "VENCIDO" && a.estado !== "VENCIDO") return 1;
-      // Completed go last
-      const aCompleted = a.estado === "PAGADO" || a.estado === "PRESENTADO";
-      const bCompleted = b.estado === "PAGADO" || b.estado === "PRESENTADO";
-      if (aCompleted && !bCompleted) return 1;
-      if (!aCompleted && bCompleted) return -1;
-      return daysA - daysB;
-    });
-  }, [filtered]);
-
-  // Grouped by empresa
-  const groupedByEmpresa = useMemo(() => {
-    const groups: Record<string, Obligacion[]> = {};
-    sorted.forEach((o) => {
-      if (!groups[o.empresa]) groups[o.empresa] = [];
-      groups[o.empresa].push(o);
-    });
-    return groups;
-  }, [sorted]);
-
-  const hasActiveFilters =
-    search ||
-    filterEmpresa !== "TODAS" ||
-    filterTipo !== "TODOS" ||
-    filterResponsable !== "TODOS" ||
-    filterMes !== "TODOS" ||
-    filterAnio !== "TODOS" ||
-    filterFechaDesde !== "" ||
-    filterFechaHasta !== "";
-
-  function clearFilters() {
-    setSearch("");
-    setFilterEmpresa("TODAS");
-    setFilterTipo("TODOS");
-    setFilterResponsable("TODOS");
-    setFilterMes("TODOS");
-    setFilterAnio("TODOS");
-    setFilterFechaDesde("");
-    setFilterFechaHasta("");
-  }
-
-  function handleEstadoChange(id: string, newEstado: EstadoObligacion) {
-    setObligaciones((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, estado: newEstado } : o))
-    );
-  }
-
-  function handleContabilizadoChange(id: string, value: boolean) {
-    setObligaciones((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, contabilizado: value } : o))
-    );
-  }
-
-  function handleDeclaradoChange(id: string, value: boolean) {
-    setObligaciones((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, declarado: value } : o))
-    );
-  }
-
-  function handlePagadoChange(id: string, value: boolean) {
-    setObligaciones((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, pagado: value } : o))
-    );
-  }
-
-  function handleSave(obligacion: Obligacion) {
-    setObligaciones((prev) => {
-      const idx = prev.findIndex((o) => o.id === obligacion.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = obligacion;
-        return next;
-      }
-      return [...prev, obligacion];
-    });
-  }
-
-  function handleDelete(id: string) {
-    if (confirm("¿Eliminar esta obligación?")) {
-      setObligaciones((prev) => prev.filter((o) => o.id !== id));
-    }
-  }
-
-  function handleEdit(obligacion: Obligacion) {
-    setEditingObligacion(obligacion);
-    setShowModal(true);
-  }
-
-  function handleNewObligacion() {
-    setEditingObligacion(null);
-    setShowModal(true);
-  }
-
-  function handleExport() {
-    const headers = [
-      "Empresa",
-      "Tipo Obligación",
-      "Municipio",
-      "Periodicidad",
-      "Período",
-      "Año",
-      "Fecha Vencimiento",
-      "Días",
-      "Estado",
-      "Contabilizado",
-      "Declarado",
-      "Pagado",
-      "Responsable",
-      "Observaciones",
-    ];
-    const rows = sorted.map((o) => [
-      o.empresa,
-      o.tipoObligacion,
-      o.municipio,
-      o.periodicidad,
-      getMesLabel(o.periodo),
-      o.anio,
-      formatDate(o.fechaVencimiento),
-      getDaysUntil(o.fechaVencimiento),
-      ESTADOS_LABELS[o.estado],
-      o.contabilizado ? "Sí" : "No",
-      o.declarado ? "Sí" : "No",
-      o.pagado ? "Sí" : "No",
-      o.responsable,
-      o.observaciones || "",
-    ]);
-
-    const csv = [headers, ...rows]
-      .map((row) => row.map((v) => `"${v}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  // ── Downloads ─────────────────────────────────────────────────────────────────
+  async function downloadArchivo(id: string, tipo: "contabilizado" | "declarado", nombre: string) {
+    const res = await fetch(`/api/obligaciones/${id}/archivo/${tipo}`);
+    if (!res.ok) { alert("No se pudo descargar el archivo"); return; }
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `calendario-tributario-${format(TODAY, "yyyy-MM-dd")}.csv`;
-    a.click();
+    a.href = url; a.download = nombre; a.click();
     URL.revokeObjectURL(url);
   }
 
-  const currentMonthYear = format(TODAY, "MMMM yyyy", { locale: es });
+  // ── CRUD ──────────────────────────────────────────────────────────────────────
+  async function handleSave(obligacion: Obligacion) {
+    setSaving(true);
+    try {
+      const empresaEncontrada = empresasData.find(e => e.razonSocial === obligacion.empresa);
+      const payload = {
+        empresaId: obligacion.empresaId ?? empresaEncontrada?.id,
+        tipoObligacion: obligacion.tipoObligacion,
+        periodicidad: PERIODICIDAD_ENUM[obligacion.periodicidad] ?? "MENSUAL",
+        periodo: String(obligacion.periodo),
+        año: obligacion.anio,
+        fechaVencimiento: obligacion.fechaVencimiento,
+        municipio: obligacion.municipio,
+        observaciones: obligacion.observaciones ?? null,
+        responsableNombre: obligacion.responsable,
+        estado: obligacion.estado,
+      };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+      const isNew = !obligaciones.find(o => o.id === obligacion.id);
+      let res: Response;
+      if (isNew) {
+        res = await fetch("/api/obligaciones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`/api/obligaciones/${obligacion.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) { alert("Error al guardar la obligación"); return; }
+      const data = await res.json();
+      const mapped = mapDB(data);
+
+      if (isNew) {
+        setObligaciones(prev => [...prev, mapped]);
+      } else {
+        setObligaciones(prev => prev.map(o => o.id === obligacion.id ? mapped : o));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEstadoChange(id: string, newEstado: EstadoObligacion) {
+    setObligaciones(prev => prev.map(o => o.id === id ? { ...o, estado: newEstado } : o));
+    await fetch(`/api/obligaciones/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: newEstado }),
+    }).catch(() => {});
+  }
+
+  async function handlePagadoChange(id: string, value: boolean) {
+    setObligaciones(prev => prev.map(o => o.id === id ? { ...o, pagado: value } : o));
+    await fetch(`/api/obligaciones/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pagado: value }),
+    }).catch(() => {});
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("¿Eliminar esta obligación? Esta acción no se puede deshacer.")) return;
+    await fetch(`/api/obligaciones/${id}`, { method: "DELETE" });
+    setObligaciones(prev => prev.filter(o => o.id !== id));
+  }
+
+  function handleUploadSuccess(tipo: "contabilizado" | "declarado", info: DocumentoInfo) {
+    if (!uploadModal) return;
+    const id = uploadModal.obligacion.id;
+    setObligaciones(prev => prev.map(o => {
+      if (o.id !== id) return o;
+      if (tipo === "contabilizado") {
+        return {
+          ...o,
+          contabilizado: !!info.archivoNombre,
+          contabilizadoArchivoNombre: info.archivoNombre,
+          contabilizadoFecha: info.fecha,
+          contabilizadoPorNombre: info.porNombre,
+        };
+      } else {
+        return {
+          ...o,
+          declarado: !!info.archivoNombre,
+          declaradoArchivoNombre: info.archivoNombre,
+          declaradoFecha: info.fecha,
+          declaradoPorNombre: info.porNombre,
+        };
+      }
+    }));
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const now = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const visible = obligaciones.filter(o =>
+      !empresasPermitidas || empresasPermitidas.has(o.empresa)
+    );
+
+    return {
+      vencidas: visible.filter(o => o.estado === "VENCIDO").length,
+      estaSemana: visible.filter(o => {
+        if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
+        const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
+        return d >= now && d <= weekEnd;
+      }).length,
+      esteMes: visible.filter(o => {
+        if (o.estado === "PAGADO" || o.estado === "PRESENTADO") return false;
+        const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
+        return d >= now && d <= monthEnd;
+      }).length,
+      completadas: visible.filter(o => o.estado === "PAGADO" || o.estado === "PRESENTADO").length,
+    };
+  }, [obligaciones, empresasPermitidas]);
+
+  // ── Filtered list ─────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    return obligaciones.filter(o => {
+      if (empresasPermitidas && !empresasPermitidas.has(o.empresa)) return false;
+      if (search && !o.empresa.toLowerCase().includes(search.toLowerCase()) &&
+          !o.tipoObligacion.toLowerCase().includes(search.toLowerCase()) &&
+          !o.responsable.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterEmpresa !== "TODAS" && o.empresa !== filterEmpresa) return false;
+      if (filterTipo !== "TODOS" && o.tipoObligacion !== filterTipo) return false;
+      if (filterMes !== "TODOS") {
+        const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
+        if (d.getMonth() !== Number(filterMes)) return false;
+      }
+      if (filterAnio !== "TODOS") {
+        const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
+        if (d.getFullYear() !== Number(filterAnio)) return false;
+      }
+      if (filterFechaDesde && o.fechaVencimiento < filterFechaDesde) return false;
+      if (filterFechaHasta && o.fechaVencimiento > filterFechaHasta) return false;
+      return true;
+    });
+  }, [obligaciones, empresasPermitidas, search, filterEmpresa, filterTipo, filterMes, filterAnio, filterFechaDesde, filterFechaHasta]);
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
+    if (a.estado === "VENCIDO" && b.estado !== "VENCIDO") return -1;
+    if (b.estado === "VENCIDO" && a.estado !== "VENCIDO") return 1;
+    const aC = a.estado === "PAGADO" || a.estado === "PRESENTADO";
+    const bC = b.estado === "PAGADO" || b.estado === "PRESENTADO";
+    if (aC && !bC) return 1;
+    if (!aC && bC) return -1;
+    return getDaysUntil(a.fechaVencimiento) - getDaysUntil(b.fechaVencimiento);
+  }), [filtered]);
+
+  const groupedByEmpresa = useMemo(() => {
+    const groups: Record<string, Obligacion[]> = {};
+    sorted.forEach(o => { if (!groups[o.empresa]) groups[o.empresa] = []; groups[o.empresa].push(o); });
+    return groups;
+  }, [sorted]);
+
+  const uniqueEmpresas = useMemo(() =>
+    [...new Set(obligaciones.map(o => o.empresa))].filter(Boolean).sort(),
+    [obligaciones]
+  );
+
+  const hasActiveFilters = search || filterEmpresa !== "TODAS" || filterTipo !== "TODOS" ||
+    filterMes !== "TODOS" || filterAnio !== "TODOS" || filterFechaDesde || filterFechaHasta;
+
+  function clearFilters() {
+    setSearch(""); setFilterEmpresa("TODAS"); setFilterTipo("TODOS");
+    setFilterMes("TODOS"); setFilterAnio("TODOS"); setFilterFechaDesde(""); setFilterFechaHasta("");
+  }
+
+  function handleExport() {
+    const headers = ["Empresa","Tipo Obligación","Municipio","Periodicidad","Período","Año","Fecha Vencimiento","Días","Estado","Contabilizado","Doc. Contabilización","Declarado","Doc. Declaración","Pagado","Responsable","Observaciones"];
+    const rows = sorted.map(o => [
+      o.empresa, o.tipoObligacion, o.municipio, o.periodicidad,
+      getMesLabel(o.periodo), o.anio, formatDate(o.fechaVencimiento),
+      getDaysUntil(o.fechaVencimiento), ESTADOS_LABELS[o.estado],
+      o.contabilizado ? "Sí" : "No", o.contabilizadoArchivoNombre ?? "",
+      o.declarado ? "Sí" : "No", o.declaradoArchivoNombre ?? "",
+      o.pagado ? "Sí" : "No", o.responsable, o.observaciones ?? "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `calendario-${format(TODAY, "yyyy-MM-dd")}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Row renderer helpers ──────────────────────────────────────────────────────
+
+  function renderDocCell(o: Obligacion, tipo: "contabilizado" | "declarado", size: "sm" | "xs" = "sm") {
+    const isCont = tipo === "contabilizado";
+    const marcado = isCont ? o.contabilizado : o.declarado;
+    const nombre = isCont ? o.contabilizadoArchivoNombre : o.declaradoArchivoNombre;
+    const fecha = isCont ? o.contabilizadoFecha : o.declaradoFecha;
+    const por = isCont ? o.contabilizadoPorNombre : o.declaradoPorNombre;
+    return (
+      <DocCell
+        key={tipo}
+        marcado={marcado}
+        archivoNombre={nombre}
+        fecha={fecha}
+        porNombre={por}
+        color={isCont ? "green" : "blue"}
+        label={isCont ? "Contabilizado" : "Declarado"}
+        onMark={() => setUploadModal({ tipo, obligacion: o })}
+        onDownload={() => nombre && downloadArchivo(o.id, tipo, nombre)}
+      />
+    );
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+  const currentMonthYear = format(TODAY, "MMMM yyyy", { locale: es });
 
   return (
     <div className="space-y-5">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Calendario Tributario
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Calendario Tributario</h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">
             {currentMonthYear} · {obligaciones.length} obligaciones registradas
           </p>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           <Button
-            onClick={handleNewObligacion}
+            onClick={() => { setEditingObligacion(null); setShowForm(true); }}
             className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm shadow-blue-600/25"
           >
             <Plus className="w-4 h-4" />
@@ -559,188 +621,85 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {/* ── Stats Pills ── */}
+      {/* Stats */}
       <div className="flex flex-wrap gap-2">
-        <StatPill
-          label="Vencidas"
-          count={stats.vencidas}
-          color="bg-red-50 text-red-700 border-red-200"
-          icon={<AlertTriangle className="w-3.5 h-3.5" />}
-        />
-        <StatPill
-          label="Esta Semana"
-          count={stats.estaSemana}
-          color="bg-orange-50 text-orange-700 border-orange-200"
-          icon={<Clock className="w-3.5 h-3.5" />}
-        />
-        <StatPill
-          label="Este Mes"
-          count={stats.esteMes}
-          color="bg-yellow-50 text-yellow-700 border-yellow-200"
-          icon={<CalendarDays className="w-3.5 h-3.5" />}
-        />
-        <StatPill
-          label="Completadas"
-          count={stats.completadas}
-          color="bg-green-50 text-green-700 border-green-200"
-          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
-        />
+        <StatPill label="Vencidas" count={stats.vencidas} color="bg-red-50 text-red-700 border-red-200" icon={<AlertTriangle className="w-3.5 h-3.5" />} />
+        <StatPill label="Esta Semana" count={stats.estaSemana} color="bg-orange-50 text-orange-700 border-orange-200" icon={<Clock className="w-3.5 h-3.5" />} />
+        <StatPill label="Este Mes" count={stats.esteMes} color="bg-yellow-50 text-yellow-700 border-yellow-200" icon={<CalendarDays className="w-3.5 h-3.5" />} />
+        <StatPill label="Completadas" count={stats.completadas} color="bg-green-50 text-green-700 border-green-200" icon={<CheckCircle2 className="w-3.5 h-3.5" />} />
       </div>
 
-      {/* ── Filter Bar ── */}
+      {/* Filter Bar */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {/* Search */}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Buscar</p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Empresa, tipo..."
-                className="pl-9 text-sm"
-              />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Empresa, tipo..." className="pl-9 text-sm" />
             </div>
           </div>
 
-          {/* Empresa */}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Empresa</p>
             <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Empresa" />
-              </SelectTrigger>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Empresa" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {EMPRESAS.filter((e) => isInActiveStore(e.nombre, activaNames, empresasLoaded) && (!empresasPermitidas || empresasPermitidas.has(e.nombre))).map((e) => (
-                  <SelectItem key={e.nombre} value={e.nombre}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: e.color }}
-                      />
-                      {e.nombre}
-                    </div>
-                  </SelectItem>
-                ))}
+                {uniqueEmpresas.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Tipo */}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo de Obligación</p>
             <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Tipo obligación" />
-              </SelectTrigger>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Tipo" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos los tipos</SelectItem>
-                {TIPOS_OBLIGACION.filter((t) => t !== "Personalizada").map(
-                  (t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  )
-                )}
+                {TIPOS_OBLIGACION.filter(t => t !== "Personalizada").map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Responsable */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Responsable</p>
-            <Select value={filterResponsable} onValueChange={setFilterResponsable}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Responsable" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
-                {RESPONSABLES_FILTER.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Mes */}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mes de Vencimiento</p>
             <Select value={filterMes} onValueChange={setFilterMes}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Mes" />
-              </SelectTrigger>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Mes" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos los meses</SelectItem>
-                {MONTHS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
+                {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Año */}
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Año de Vencimiento</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Año</p>
             <Select value={filterAnio} onValueChange={setFilterAnio}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Año" />
-              </SelectTrigger>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Año" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos los años</SelectItem>
-                {[2024, 2025, 2026, 2027].map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
+                {[2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Rango de vencimiento */}
           <div className="sm:col-span-2 space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rango de Fechas de Vencimiento</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rango de Fechas</p>
             <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                value={filterFechaDesde}
-                onChange={(e) => setFilterFechaDesde(e.target.value)}
-                className="text-sm h-9"
-                title="Desde"
-              />
+              <Input type="date" value={filterFechaDesde} onChange={(e) => setFilterFechaDesde(e.target.value)} className="text-sm h-9" />
               <span className="text-xs text-gray-400 shrink-0">—</span>
-              <Input
-                type="date"
-                value={filterFechaHasta}
-                onChange={(e) => setFilterFechaHasta(e.target.value)}
-                className="text-sm h-9"
-                title="Hasta"
-              />
+              <Input type="date" value={filterFechaHasta} onChange={(e) => setFilterFechaHasta(e.target.value)} className="text-sm h-9" />
               {(filterFechaDesde || filterFechaHasta) && (
-                <button
-                  onClick={() => { setFilterFechaDesde(""); setFilterFechaHasta(""); }}
-                  className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Limpiar rango"
-                >
+                <button onClick={() => { setFilterFechaDesde(""); setFilterFechaHasta(""); }} className="shrink-0 text-gray-400 hover:text-gray-600">
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Clear */}
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs text-gray-500 hover:text-gray-700 gap-1.5 self-end"
-            >
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-gray-500 hover:text-gray-700 gap-1.5 self-end">
               <X className="w-3.5 h-3.5" />
               Limpiar filtros
             </Button>
@@ -749,282 +708,120 @@ export default function CalendarioPage() {
 
         {filtered.length !== obligaciones.length && (
           <p className="text-xs text-gray-400 mt-3">
-            Mostrando{" "}
-            <span className="font-semibold text-gray-600">{filtered.length}</span>{" "}
-            de {obligaciones.length} obligaciones
+            Mostrando <span className="font-semibold text-gray-600">{filtered.length}</span> de {obligaciones.length} obligaciones
           </p>
         )}
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-10">
-          <TabsTrigger value="lista" className="gap-2 text-sm px-4">
-            <List className="w-4 h-4" />
-            Lista
-          </TabsTrigger>
-          <TabsTrigger value="calendario" className="gap-2 text-sm px-4">
-            <CalendarDays className="w-4 h-4" />
-            Calendario
-          </TabsTrigger>
-          <TabsTrigger value="empresa" className="gap-2 text-sm px-4">
-            <LayoutGrid className="w-4 h-4" />
-            Por Empresa
-          </TabsTrigger>
+          <TabsTrigger value="lista" className="gap-2 text-sm px-4"><List className="w-4 h-4" />Lista</TabsTrigger>
+          <TabsTrigger value="calendario" className="gap-2 text-sm px-4"><CalendarDays className="w-4 h-4" />Calendario</TabsTrigger>
+          <TabsTrigger value="empresa" className="gap-2 text-sm px-4"><LayoutGrid className="w-4 h-4" />Por Empresa</TabsTrigger>
         </TabsList>
 
-        {/* ── Tab: Lista ── */}
+        {/* Lista tab */}
         <TabsContent value="lista" className="mt-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/60">
-                    {[
-                      "Empresa",
-                      "Tipo Obligación",
-                      "Nivel",
-                      "Periodicidad",
-                      "Período",
-                      "Año",
-                      "Vencimiento",
-                      "Días",
-                      "Contabilizado",
-                      "Declarado",
-                      "Pagado",
-                      "Responsable",
-                      "",
-                    ].map((col) => (
-                      <th
-                        key={col}
-                        className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {sorted.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={13}
-                        className="px-4 py-12 text-center text-sm text-gray-400"
-                      >
+            {loading ? (
+              <div className="py-16 text-center text-sm text-gray-400">Cargando obligaciones...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50/60">
+                      {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Estado","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
+                        <th key={col} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {sorted.length === 0 ? (
+                      <tr><td colSpan={14} className="px-4 py-12 text-center text-sm text-gray-400">
                         <div className="flex flex-col items-center gap-2">
                           <CalendarDays className="w-8 h-8 text-gray-200" />
                           <span>No hay obligaciones que coincidan con los filtros</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    sorted.map((o) => {
-                      const days = getDaysUntil(o.fechaVencimiento);
-                      const isCompleted =
-                        o.estado === "PAGADO" || o.estado === "PRESENTADO";
-                      return (
-                        <tr
-                          key={o.id}
-                          className={cn(
-                            "hover:bg-gray-50/80 transition-colors group",
-                            isCompleted && "opacity-70"
+                          {!loading && obligaciones.length === 0 && (
+                            <button onClick={() => { setEditingObligacion(null); setShowForm(true); }} className="text-blue-600 hover:underline mt-1">
+                              + Agregar primera obligación
+                            </button>
                           )}
-                        >
-                          {/* Empresa */}
+                        </div>
+                      </td></tr>
+                    ) : sorted.map(o => {
+                      const days = getDaysUntil(o.fechaVencimiento);
+                      const isCompleted = o.estado === "PAGADO" || o.estado === "PRESENTADO";
+                      return (
+                        <tr key={o.id} className={cn("hover:bg-gray-50/80 transition-colors group", isCompleted && "opacity-70")}>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                style={{ backgroundColor: o.empresaColor }}
-                              />
-                              <span className="font-medium text-gray-900 text-xs leading-tight max-w-[130px] truncate">
-                                {o.empresa}
-                              </span>
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: o.empresaColor }} />
+                              <span className="font-medium text-gray-900 text-xs leading-tight max-w-[130px] truncate">{o.empresa}</span>
                             </div>
                           </td>
-
-                          {/* Tipo */}
+                          <td className="px-4 py-3 whitespace-nowrap"><span className="text-gray-700 text-xs font-medium">{o.tipoObligacion}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-gray-700 text-xs font-medium">
-                              {o.tipoObligacion}
-                            </span>
+                            <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                           </td>
-
-                          {/* Nivel */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span
-                              className={cn(
-                                "text-xs rounded-full px-2 py-0.5 font-medium",
-                                o.municipio === "Nacional"
-                                  ? "bg-slate-100 text-slate-600"
-                                  : "bg-indigo-50 text-indigo-600"
-                              )}
-                            >
-                              {o.municipio}
-                            </span>
-                          </td>
-
-                          {/* Periodicidad */}
-                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
-                            {o.periodicidad}
-                          </td>
-
-                          {/* Período */}
-                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
-                            {getMesLabel(o.periodo)}
-                          </td>
-
-                          {/* Año */}
-                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
-                            {o.anio}
-                          </td>
-
-                          {/* Fecha */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-xs font-mono text-gray-600">
-                              {formatDate(o.fechaVencimiento)}
-                            </span>
-                          </td>
-
-                          {/* Días badge */}
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{o.periodicidad}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{getMesLabel(o.periodo)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{o.anio}</td>
+                          <td className="px-4 py-3 whitespace-nowrap"><span className="text-xs font-mono text-gray-600">{formatDate(o.fechaVencimiento)}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {o.contabilizado && o.declarado && o.pagado ? (
-                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                ✓ Hecho
-                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">✓ Hecho</span>
                             ) : (
-                              <VencimientoBadge
-                                days={days}
-                                estado={o.estado}
-                                showText={true}
-                              />
+                              <VencimientoBadge days={days} estado={o.estado} showText={true} />
                             )}
                           </td>
-
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <EstadoDropdown estado={o.estado} onChange={(e) => handleEstadoChange(o.id, e)} />
+                          </td>
                           {/* Contabilizado */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, true); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
-                                  o.contabilizado
-                                    ? "bg-green-500 text-white border-green-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-green-400 hover:text-green-600"
-                                )}
-                              >
-                                Sí
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, false); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
-                                  !o.contabilizado
-                                    ? "bg-gray-500 text-white border-gray-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                )}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </td>
-
+                          <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "contabilizado")}</td>
                           {/* Declarado */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, true); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
-                                  o.declarado
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-blue-400 hover:text-blue-600"
-                                )}
-                              >
-                                Sí
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, false); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
-                                  !o.declarado
-                                    ? "bg-gray-500 text-white border-gray-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                )}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </td>
-
+                          <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "declarado")}</td>
                           {/* Pagado */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
-                                  o.pagado
-                                    ? "bg-purple-500 text-white border-purple-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
-                                )}
-                              >
-                                Sí
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
-                                  !o.pagado
-                                    ? "bg-gray-500 text-white border-gray-500"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                )}
-                              >
-                                No
-                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
+                                className={cn("px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
+                                  o.pagado ? "bg-purple-500 text-white border-purple-500" : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
+                                )}>Sí</button>
+                              <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
+                                className={cn("px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
+                                  !o.pagado ? "bg-gray-500 text-white border-gray-500" : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                )}>No</button>
                             </div>
                           </td>
-
-                          {/* Responsable */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-xs text-gray-500 max-w-[110px] truncate block">
-                              {o.responsable}
-                            </span>
-                          </td>
-
-                          {/* Actions */}
+                          <td className="px-4 py-3 whitespace-nowrap"><span className="text-xs text-gray-500 max-w-[110px] truncate block">{o.responsable}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleEdit(o)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
-                                title="Editar"
-                              >
+                              <button onClick={() => { setEditingObligacion(o); setShowForm(true); }}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" title="Editar">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(o.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                title="Eliminar"
-                              >
+                              <button onClick={() => setAuditModal(o.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors" title="Ver auditoría">
+                                <History className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => handleDelete(o.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors" title="Eliminar">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
                         </tr>
                       );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Quick add row */}
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30">
-              <button
-                onClick={handleNewObligacion}
-                className="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-600 transition-colors group"
-              >
+              <button onClick={() => { setEditingObligacion(null); setShowForm(true); }}
+                className="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-600 transition-colors group">
                 <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center transition-colors">
                   <Plus className="w-3 h-3" />
                 </div>
@@ -1034,306 +831,156 @@ export default function CalendarioPage() {
           </div>
         </TabsContent>
 
-        {/* ── Tab: Calendario ── */}
+        {/* Calendario tab */}
         <TabsContent value="calendario" className="mt-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
             <CalendarioView obligaciones={filtered} />
           </div>
         </TabsContent>
 
-        {/* ── Tab: Por Empresa ── */}
+        {/* Por Empresa tab */}
         <TabsContent value="empresa" className="mt-4">
           <div className="space-y-4">
             {Object.keys(groupedByEmpresa).length === 0 ? (
               <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
                 <Building2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">
-                  No hay obligaciones que coincidan con los filtros
-                </p>
+                <p className="text-sm text-gray-400">No hay obligaciones que coincidan con los filtros</p>
               </div>
-            ) : (
-              Object.entries(groupedByEmpresa).map(
-                ([empresa, empresaObligaciones]) => {
-                  const empresaInfo = EMPRESAS.find(
-                    (e) => e.nombre === empresa
-                  );
-                  const vencidas = empresaObligaciones.filter(
-                    (o) => o.estado === "VENCIDO"
-                  ).length;
-                  const completadas = empresaObligaciones.filter(
-                    (o) =>
-                      o.estado === "PAGADO" || o.estado === "PRESENTADO"
-                  ).length;
-                  const pendientes = empresaObligaciones.filter(
-                    (o) =>
-                      o.estado === "PENDIENTE" || o.estado === "EN_PROCESO"
-                  ).length;
+            ) : Object.entries(groupedByEmpresa).map(([empresa, empObs]) => {
+              const vencidas = empObs.filter(o => o.estado === "VENCIDO").length;
+              const completadas = empObs.filter(o => o.estado === "PAGADO" || o.estado === "PRESENTADO").length;
+              const pendientes = empObs.filter(o => o.estado === "PENDIENTE" || o.estado === "EN_PROCESO").length;
+              const color = empObs[0]?.empresaColor ?? "#3B82F6";
 
-                  return (
-                    <div
-                      key={empresa}
-                      className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
-                    >
-                      {/* Company header */}
-                      <div
-                        className="flex items-center justify-between px-5 py-4 border-b border-gray-100"
-                        style={{
-                          borderLeftColor: empresaInfo?.color,
-                          borderLeftWidth: "4px",
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-9 h-9 rounded-lg flex items-center justify-center"
-                            style={{
-                              backgroundColor: empresaInfo?.color + "20",
-                            }}
-                          >
-                            <Building2
-                              className="w-4 h-4"
-                              style={{ color: empresaInfo?.color }}
-                            />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-bold text-gray-900">
-                              {empresa}
-                            </h3>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {empresaObligaciones.length} obligaciones
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {vencidas > 0 && (
-                            <span className="text-xs font-semibold bg-red-100 text-red-700 border border-red-200 rounded-full px-2.5 py-1">
-                              {vencidas} vencida{vencidas > 1 ? "s" : ""}
-                            </span>
-                          )}
-                          {pendientes > 0 && (
-                            <span className="text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200 rounded-full px-2.5 py-1">
-                              {pendientes} pendiente{pendientes > 1 ? "s" : ""}
-                            </span>
-                          )}
-                          {completadas > 0 && (
-                            <span className="text-xs font-semibold bg-green-100 text-green-700 border border-green-200 rounded-full px-2.5 py-1">
-                              {completadas} completada{completadas > 1 ? "s" : ""}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingObligacion(null);
-                              setShowModal(true);
-                            }}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Agregar obligación a esta empresa"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+              return (
+                <div key={empresa} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100" style={{ borderLeftColor: color, borderLeftWidth: "4px" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + "20" }}>
+                        <Building2 className="w-4 h-4" style={{ color }} />
                       </div>
-
-                      {/* Obligations table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="bg-gray-50/50">
-                              {[
-                                "Tipo Obligación",
-                                "Nivel",
-                                "Periodicidad",
-                                "Período / Año",
-                                "Vencimiento",
-                                "Días",
-                                "Contabilizado",
-                                "Declarado",
-                                "Pagado",
-                                "Responsable",
-                                "",
-                              ].map((col) => (
-                                <th
-                                  key={col}
-                                  className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
-                                >
-                                  {col}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {empresaObligaciones.map((o) => {
-                              const days = getDaysUntil(o.fechaVencimiento);
-                              const isCompleted =
-                                o.estado === "PAGADO" ||
-                                o.estado === "PRESENTADO";
-                              return (
-                                <tr
-                                  key={o.id}
-                                  className={cn(
-                                    "hover:bg-gray-50/60 transition-colors group",
-                                    isCompleted && "opacity-60"
-                                  )}
-                                >
-                                  <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-800">
-                                    {o.tipoObligacion}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <span
-                                      className={cn(
-                                        "rounded-full px-2 py-0.5 font-medium",
-                                        o.municipio === "Nacional"
-                                          ? "bg-slate-100 text-slate-600"
-                                          : "bg-indigo-50 text-indigo-600"
-                                      )}
-                                    >
-                                      {o.municipio}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                                    {o.periodicidad}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                                    {getMesLabel(o.periodo)} {o.anio}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-mono text-gray-600">
-                                    {formatDate(o.fechaVencimiento)}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    {o.contabilizado && o.declarado && o.pagado ? (
-                                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                        ✓ Hecho
-                                      </span>
-                                    ) : (
-                                      <VencimientoBadge
-                                        days={days}
-                                        estado={o.estado}
-                                        showText={true}
-                                      />
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, true); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
-                                          o.contabilizado
-                                            ? "bg-green-500 text-white border-green-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-green-400 hover:text-green-600"
-                                        )}
-                                      >
-                                        Sí
-                                      </button>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleContabilizadoChange(o.id, false); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
-                                          !o.contabilizado
-                                            ? "bg-gray-500 text-white border-gray-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                        )}
-                                      >
-                                        No
-                                      </button>
-                                    </div>
-                                  </td>
-                                  {/* Declarado */}
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, true); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
-                                          o.declarado
-                                            ? "bg-blue-500 text-white border-blue-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-blue-400 hover:text-blue-600"
-                                        )}
-                                      >
-                                        Sí
-                                      </button>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeclaradoChange(o.id, false); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
-                                          !o.declarado
-                                            ? "bg-gray-500 text-white border-gray-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                        )}
-                                      >
-                                        No
-                                      </button>
-                                    </div>
-                                  </td>
-                                  {/* Pagado */}
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
-                                          o.pagado
-                                            ? "bg-purple-500 text-white border-purple-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
-                                        )}
-                                      >
-                                        Sí
-                                      </button>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
-                                          !o.pagado
-                                            ? "bg-gray-500 text-white border-gray-500"
-                                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                        )}
-                                      >
-                                        No
-                                      </button>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[120px] truncate">
-                                    {o.responsable}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={() => handleEdit(o)}
-                                        className="w-6 h-6 flex items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
-                                      >
-                                        <Pencil className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDelete(o.id)}
-                                        className="w-6 h-6 flex items-center justify-center rounded text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900">{empresa}</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{empObs.length} obligaciones</p>
                       </div>
                     </div>
-                  );
-                }
-              )
-            )}
+                    <div className="flex items-center gap-2">
+                      {vencidas > 0 && <span className="text-xs font-semibold bg-red-100 text-red-700 border border-red-200 rounded-full px-2.5 py-1">{vencidas} vencida{vencidas > 1 ? "s" : ""}</span>}
+                      {pendientes > 0 && <span className="text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200 rounded-full px-2.5 py-1">{pendientes} pendiente{pendientes > 1 ? "s" : ""}</span>}
+                      {completadas > 0 && <span className="text-xs font-semibold bg-green-100 text-green-700 border border-green-200 rounded-full px-2.5 py-1">{completadas} completada{completadas > 1 ? "s" : ""}</span>}
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50/50">
+                          {["Tipo Obligación","Nivel","Periodicidad","Período / Año","Vencimiento","Días","Estado","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
+                            <th key={col} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {empObs.map(o => {
+                          const days = getDaysUntil(o.fechaVencimiento);
+                          const isCompleted = o.estado === "PAGADO" || o.estado === "PRESENTADO";
+                          return (
+                            <tr key={o.id} className={cn("hover:bg-gray-50/60 transition-colors group", isCompleted && "opacity-60")}>
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-800">{o.tipoObligacion}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className={cn("rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-gray-500">{o.periodicidad}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-gray-500">{getMesLabel(o.periodo)} {o.anio}</td>
+                              <td className="px-4 py-3 whitespace-nowrap font-mono text-gray-600">{formatDate(o.fechaVencimiento)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {o.contabilizado && o.declarado && o.pagado ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">✓ Hecho</span>
+                                ) : <VencimientoBadge days={days} estado={o.estado} showText={true} />}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <EstadoDropdown estado={o.estado} onChange={(e) => handleEstadoChange(o.id, e)} />
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "contabilizado", "xs")}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "declarado", "xs")}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
+                                    className={cn("px-2 py-0.5 rounded-l-full text-xs font-semibold border transition-colors",
+                                      o.pagado ? "bg-purple-500 text-white border-purple-500" : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
+                                    )}>Sí</button>
+                                  <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
+                                    className={cn("px-2 py-0.5 rounded-r-full text-xs font-semibold border transition-colors",
+                                      !o.pagado ? "bg-gray-500 text-white border-gray-500" : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                    )}>No</button>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[120px] truncate">{o.responsable}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => { setEditingObligacion(o); setShowForm(true); }}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => setAuditModal(o.id)}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <History className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => handleDelete(o.id)}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
 
-      {/* ── Modal ── */}
+      {/* Form Modal */}
       <ObligacionFormModal
-        open={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setEditingObligacion(null);
-        }}
+        open={showForm}
+        onClose={() => { setShowForm(false); setEditingObligacion(null); }}
         onSave={handleSave}
         editingObligacion={editingObligacion}
+        empresasList={empresasOptions.length > 0 ? empresasOptions : undefined}
+      />
+
+      {/* Upload Modal */}
+      {uploadModal && (
+        <UploadDocumentoModal
+          open={true}
+          tipo={uploadModal.tipo}
+          obligacionId={uploadModal.obligacion.id}
+          obligacionNombre={`${uploadModal.obligacion.empresa} — ${uploadModal.obligacion.tipoObligacion}`}
+          documentoActual={{
+            archivoNombre: uploadModal.tipo === "contabilizado"
+              ? uploadModal.obligacion.contabilizadoArchivoNombre ?? null
+              : uploadModal.obligacion.declaradoArchivoNombre ?? null,
+            fecha: uploadModal.tipo === "contabilizado"
+              ? uploadModal.obligacion.contabilizadoFecha ?? null
+              : uploadModal.obligacion.declaradoFecha ?? null,
+            porNombre: uploadModal.tipo === "contabilizado"
+              ? uploadModal.obligacion.contabilizadoPorNombre ?? null
+              : uploadModal.obligacion.declaradoPorNombre ?? null,
+          }}
+          onClose={() => setUploadModal(null)}
+          onSuccess={(tipo, info) => { handleUploadSuccess(tipo, info); setUploadModal(null); }}
+        />
+      )}
+
+      {/* Audit Modal */}
+      <AuditoriaModal
+        open={!!auditModal}
+        obligacionId={auditModal ?? ""}
+        onClose={() => setAuditModal(null)}
       />
     </div>
   );

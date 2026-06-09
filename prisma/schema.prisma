@@ -130,6 +130,10 @@ model User {
   auditoriasReporte     AuditoriaReporte[]
   auditoriasNovedad     AuditoriaNovedad[]
   auditoriasEmpleado    AuditoriaEmpleado[]
+  obligacionesContabilizadas ObligacionTributaria[] @relation("ObligacionContabilizadoPor")
+  obligacionesDeclaradas     ObligacionTributaria[] @relation("ObligacionDeclaradoPor")
+  obligacionesPagadas        ObligacionTributaria[] @relation("ObligacionPagadoPor")
+  auditoriasObligacion       AuditoriaObligacion[]
 
   @@index([email])
 }
@@ -267,13 +271,40 @@ model ObligacionTributaria {
   fechaVencimiento DateTime
   estado           EstadoObligacion @default(PENDIENTE)
   responsableId    String?
+  responsableNombre String?
   observaciones    String?
   municipio        String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
 
-  empresa     Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  responsable User?   @relation("ObligacionResponsable", fields: [responsableId], references: [id])
+  // Contabilizado
+  contabilizado              Boolean   @default(false)
+  contabilizadoArchivoNombre String?
+  contabilizadoArchivoData   String?
+  contabilizadoArchivoTipo   String?
+  contabilizadoFecha         DateTime?
+  contabilizadoPorId         String?
+
+  // Declarado
+  declarado                  Boolean   @default(false)
+  declaradoArchivoNombre     String?
+  declaradoArchivoData       String?
+  declaradoArchivoTipo       String?
+  declaradoFecha             DateTime?
+  declaradoPorId             String?
+
+  // Pagado
+  pagado       Boolean   @default(false)
+  pagadoFecha  DateTime?
+  pagadoPorId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa          Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  responsable      User?                @relation("ObligacionResponsable", fields: [responsableId], references: [id])
+  contabilizadoPor User?                @relation("ObligacionContabilizadoPor", fields: [contabilizadoPorId], references: [id])
+  declaradoPor     User?                @relation("ObligacionDeclaradoPor", fields: [declaradoPorId], references: [id])
+  pagadoPor        User?                @relation("ObligacionPagadoPor", fields: [pagadoPorId], references: [id])
+  auditorias       AuditoriaObligacion[]
 
   @@index([empresaId])
   @@index([estado])
@@ -500,6 +531,23 @@ model AuditoriaEmpleado {
   realizadoPor User     @relation(fields: [realizadoPorId], references: [id])
 
   @@index([empleadoId])
+  @@index([realizadoPorId])
+  @@index([fechaAccion])
+}
+
+model AuditoriaObligacion {
+  id             String   @id @default(cuid())
+  obligacionId   String
+  accion         String
+  archivoNombre  String?
+  detalles       String?
+  realizadoPorId String
+  fechaAccion    DateTime @default(now())
+
+  obligacion   ObligacionTributaria @relation(fields: [obligacionId], references: [id], onDelete: Cascade)
+  realizadoPor User                 @relation(fields: [realizadoPorId], references: [id])
+
+  @@index([obligacionId])
   @@index([realizadoPorId])
   @@index([fechaAccion])
 }

@@ -34,6 +34,7 @@ interface ObligacionFormModalProps {
   onClose: () => void;
   onSave: (obligacion: Obligacion) => void;
   editingObligacion?: Obligacion | null;
+  empresasList?: { nombre: string; color: string; id?: string }[];
 }
 
 const PERIODICIDADES: PeriodicidadObligacion[] = [
@@ -132,7 +133,9 @@ export default function ObligacionFormModal({
   onClose,
   onSave,
   editingObligacion,
+  empresasList,
 }: ObligacionFormModalProps) {
+  const empresasOptions = empresasList ?? EMPRESAS.map(e => ({ nombre: e.nombre, color: e.color }));
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -187,11 +190,12 @@ export default function ObligacionFormModal({
     }
 
     setIsSubmitting(true);
-    const empresaObj = EMPRESAS.find((e) => e.nombre === form.empresa);
+    const empresaObj = empresasOptions.find((e) => e.nombre === form.empresa);
 
     const obligacion: Obligacion = {
       id: editingObligacion?.id ?? Date.now().toString(),
       empresa: form.empresa,
+      empresaId: (empresaObj as any)?.id ?? editingObligacion?.empresaId,
       empresaColor: empresaObj?.color ?? form.empresaColor,
       tipoObligacion:
         form.tipoObligacion === "Personalizada"
@@ -247,7 +251,7 @@ export default function ObligacionFormModal({
                 <SelectValue placeholder="Seleccionar empresa..." />
               </SelectTrigger>
               <SelectContent>
-                {EMPRESAS.map((e) => (
+                {empresasOptions.map((e) => (
                   <SelectItem key={e.nombre} value={e.nombre}>
                     <div className="flex items-center gap-2">
                       <span
