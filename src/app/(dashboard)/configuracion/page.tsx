@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import {
   Settings,
@@ -14,6 +14,7 @@ import {
   Key,
   CheckCircle2,
   Save,
+  X,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -32,9 +33,47 @@ function TabGeneral() {
   const [language, setLanguage] = useState("es")
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY")
   const [saved, setSaved] = useState(false)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoError, setLogoError] = useState("")
+  const logoRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const savedName = localStorage.getItem("company_name")
+    const savedLogo = localStorage.getItem("company_logo")
+    if (savedName) setCompanyName(savedName)
+    if (savedLogo) setLogoPreview(savedLogo)
+  }, [])
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setLogoError("Solo se permiten archivos PNG o JPG.")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("El logo no puede superar 2 MB.")
+      return
+    }
+    setLogoError("")
+    const reader = new FileReader()
+    reader.onload = () => setLogoPreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
 
   function handleSave() {
-    // In a real app, POST to /api/settings
+    localStorage.setItem("company_name", companyName)
+    if (logoPreview) {
+      localStorage.setItem("company_logo", logoPreview)
+    } else {
+      localStorage.removeItem("company_logo")
+    }
+    window.dispatchEvent(
+      new CustomEvent("company-settings-updated", {
+        detail: { name: companyName, logo: logoPreview },
+      })
+    )
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -65,15 +104,50 @@ function TabGeneral() {
             <div className="space-y-1.5">
               <Label>Logo</Label>
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white text-sm font-bold shadow">
-                  CF
+                <div className="relative w-12 h-12 shrink-0">
+                  {logoPreview ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoPreview}
+                        alt="Logo"
+                        className="w-12 h-12 rounded-xl object-cover shadow"
+                      />
+                      <button
+                        onClick={() => { setLogoPreview(null); setLogoError("") }}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-gray-300 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 transition-colors"
+                        title="Quitar logo"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white text-sm font-bold shadow">
+                      CF
+                    </div>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2">
+                <input
+                  ref={logoRef}
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={handleLogoChange}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => logoRef.current?.click()}
+                >
                   <Upload className="w-3.5 h-3.5" />
-                  Subir logo
+                  {logoPreview ? "Cambiar logo" : "Subir logo"}
                 </Button>
                 <span className="text-xs text-gray-400">PNG, JPG · máx 2 MB</span>
               </div>
+              {logoError && (
+                <p className="text-xs text-red-600 mt-1">{logoError}</p>
+              )}
             </div>
           </div>
         </CardContent>

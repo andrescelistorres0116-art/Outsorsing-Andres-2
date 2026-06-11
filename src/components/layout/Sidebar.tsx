@@ -15,7 +15,7 @@ import {
   ChevronRight,
   UserCog,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppSession } from "@/hooks/useAppSession";
 import { initials } from "@/lib/app-auth";
 
@@ -47,6 +47,21 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { appSession, signOut } = useAppSession();
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarName, setSidebarName] = useState("Outsoursing Andrés");
+  const [sidebarLogo, setSidebarLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSidebarName(localStorage.getItem("company_name") ?? "Outsoursing Andrés");
+    setSidebarLogo(localStorage.getItem("company_logo") ?? null);
+
+    function onSettingsUpdate(e: Event) {
+      const { name, logo } = (e as CustomEvent).detail ?? {};
+      if (name) setSidebarName(name);
+      setSidebarLogo(logo ?? null);
+    }
+    window.addEventListener("company-settings-updated", onSettingsUpdate);
+    return () => window.removeEventListener("company-settings-updated", onSettingsUpdate);
+  }, []);
 
   const role = appSession?.role ?? "cliente";
   const navItems =
@@ -77,12 +92,17 @@ export default function Sidebar() {
             collapsed ? "justify-center" : "gap-3"
           }`}
         >
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 shrink-0 shadow-lg shadow-blue-600/25">
-            <TrendingUp className="w-4 h-4 text-white" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 shrink-0 shadow-lg shadow-blue-600/25 overflow-hidden">
+            {sidebarLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={sidebarLogo} alt="Logo" className="w-8 h-8 object-cover" />
+            ) : (
+              <TrendingUp className="w-4 h-4 text-white" />
+            )}
           </div>
           {!collapsed && (
             <span className="text-lg font-bold text-white tracking-tight truncate">
-              Outsoursing Andrés
+              {sidebarName}
             </span>
           )}
         </div>
