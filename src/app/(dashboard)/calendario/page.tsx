@@ -358,6 +358,7 @@ export default function CalendarioPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingObligacion, setEditingObligacion] = useState<Obligacion | null>(null);
   const [activeTab, setActiveTab] = useState("lista");
+  const [listaSubTab, setListaSubTab] = useState<"pendientes" | "hechas">("pendientes");
 
   const [uploadModal, setUploadModal] = useState<{
     tipo: "contabilizado" | "declarado";
@@ -743,10 +744,43 @@ export default function CalendarioPage() {
         {/* Lista tab */}
         <TabsContent value="lista" className="mt-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            {/* Sub-tabs */}
+            <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-100">
+              {(["pendientes", "hechas"] as const).map((sub) => {
+                const count = sub === "pendientes"
+                  ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado)).length
+                  : sorted.filter(o => o.contabilizado && o.declarado && o.pagado).length;
+                const active = listaSubTab === sub;
+                return (
+                  <button
+                    key={sub}
+                    onClick={() => setListaSubTab(sub)}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors capitalize flex items-center gap-1.5",
+                      active
+                        ? sub === "pendientes"
+                          ? "border-orange-500 text-orange-600"
+                          : "border-emerald-500 text-emerald-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    )}
+                  >
+                    {sub === "pendientes" ? "Pendientes" : "Hechas"}
+                    <span className={cn(
+                      "inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 min-w-[1.25rem]",
+                      active
+                        ? sub === "pendientes" ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"
+                        : "bg-gray-100 text-gray-500"
+                    )}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
             {loading ? (
               <div className="py-16 text-center text-sm text-gray-400">Cargando obligaciones...</div>
             ) : (
-              <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-22rem)]">
+              <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-24rem)]">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-gray-100 bg-gray-50/60">
@@ -756,19 +790,24 @@ export default function CalendarioPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {sorted.length === 0 ? (
-                      <tr><td colSpan={13} className="px-4 py-12 text-center text-sm text-gray-400">
-                        <div className="flex flex-col items-center gap-2">
-                          <CalendarDays className="w-8 h-8 text-gray-200" />
-                          <span>No hay obligaciones que coincidan con los filtros</span>
-                          {!loading && obligaciones.length === 0 && (
-                            <button onClick={() => { setEditingObligacion(null); setShowForm(true); }} className="text-blue-600 hover:underline mt-1">
-                              + Agregar primera obligación
-                            </button>
-                          )}
-                        </div>
-                      </td></tr>
-                    ) : sorted.map(o => {
+                    {(() => {
+                      const rows = listaSubTab === "pendientes"
+                        ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado))
+                        : sorted.filter(o => o.contabilizado && o.declarado && o.pagado);
+                      if (rows.length === 0) return (
+                        <tr><td colSpan={13} className="px-4 py-12 text-center text-sm text-gray-400">
+                          <div className="flex flex-col items-center gap-2">
+                            <CalendarDays className="w-8 h-8 text-gray-200" />
+                            <span>{listaSubTab === "pendientes" ? "No hay obligaciones pendientes" : "No hay obligaciones completadas"}</span>
+                            {!loading && obligaciones.length === 0 && (
+                              <button onClick={() => { setEditingObligacion(null); setShowForm(true); }} className="text-blue-600 hover:underline mt-1">
+                                + Agregar primera obligación
+                              </button>
+                            )}
+                          </div>
+                        </td></tr>
+                      );
+                      return rows.map(o => {
                       const days = getDaysUntil(o.fechaVencimiento);
                       const isCompleted = o.estado === "PAGADO" || o.estado === "PRESENTADO";
                       return (
@@ -834,7 +873,8 @@ export default function CalendarioPage() {
                           </td>
                         </tr>
                       );
-                    })}
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
