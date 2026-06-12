@@ -750,14 +750,14 @@ export default function CalendarioPage() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Estado","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
+                      {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
                         <th key={col} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/60">{col}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {sorted.length === 0 ? (
-                      <tr><td colSpan={14} className="px-4 py-12 text-center text-sm text-gray-400">
+                      <tr><td colSpan={13} className="px-4 py-12 text-center text-sm text-gray-400">
                         <div className="flex flex-col items-center gap-2">
                           <CalendarDays className="w-8 h-8 text-gray-200" />
                           <span>No hay obligaciones que coincidan con los filtros</span>
@@ -793,9 +793,6 @@ export default function CalendarioPage() {
                             ) : (
                               <VencimientoBadge days={days} estado={o.estado} showText={true} />
                             )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <EstadoDropdown estado={o.estado} onChange={(e) => handleEstadoChange(o.id, e)} />
                           </td>
                           {/* Contabilizado */}
                           <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "contabilizado")}</td>
@@ -897,7 +894,7 @@ export default function CalendarioPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-gray-50/50">
-                          {["Tipo Obligación","Nivel","Periodicidad","Período / Año","Vencimiento","Días","Estado","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
+                          {["Tipo Obligación","Nivel","Periodicidad","Período / Año","Vencimiento","Días","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
                             <th key={col} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                           ))}
                         </tr>
@@ -919,9 +916,6 @@ export default function CalendarioPage() {
                                 {o.contabilizado && o.declarado && o.pagado ? (
                                   <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">✓ Hecho</span>
                                 ) : <VencimientoBadge days={days} estado={o.estado} showText={true} />}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <EstadoDropdown estado={o.estado} onChange={(e) => handleEstadoChange(o.id, e)} />
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "contabilizado", "xs")}</td>
                               <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "declarado", "xs")}</td>
