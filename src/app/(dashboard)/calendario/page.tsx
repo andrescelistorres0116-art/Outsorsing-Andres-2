@@ -47,14 +47,15 @@ const EMPRESA_COLORS = [
 ];
 
 const PERIODICIDAD_LABEL: Record<string, string> = {
-  MENSUAL: "Mensual", BIMESTRAL: "Bimestral", TRIMESTRAL: "Trimestral",
-  CUATRIMESTRAL: "Cuatrimestral", SEMESTRAL: "Semestral",
-  ANUAL: "Anual", UNICA: "Única",
+  QUINCENAL: "Quincenal", MENSUAL: "Mensual", BIMESTRAL: "Bimestral",
+  TRIMESTRAL: "Trimestral", CUATRIMESTRAL: "Cuatrimestral",
+  SEMESTRAL: "Semestral", ANUAL: "Anual", UNICA: "Única",
 };
 
 const PERIODICIDAD_ENUM: Record<string, string> = {
-  Mensual: "MENSUAL", Bimestral: "BIMESTRAL", Trimestral: "TRIMESTRAL",
-  Cuatrimestral: "CUATRIMESTRAL", Semestral: "SEMESTRAL", Anual: "ANUAL",
+  Quincenal: "QUINCENAL", Mensual: "MENSUAL", Bimestral: "BIMESTRAL",
+  Trimestral: "TRIMESTRAL", Cuatrimestral: "CUATRIMESTRAL",
+  Semestral: "SEMESTRAL", Anual: "ANUAL",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -78,6 +79,19 @@ function formatDate(dateStr: string): string {
 
 function getMesLabel(mes: number): string {
   return MONTHS[mes - 1]?.label ?? `Mes ${mes}`;
+}
+
+const QUINCENA_LABELS: string[] = (() => {
+  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                 "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return meses.flatMap((m) => [`1ª quincena de ${m}`, `2ª quincena de ${m}`]);
+})();
+
+function getPeriodoLabel(periodo: number, periodicidad: string): string {
+  if (periodicidad === "Quincenal") {
+    return QUINCENA_LABELS[periodo - 1] ?? `Quincena ${periodo}`;
+  }
+  return getMesLabel(periodo);
 }
 
 function isoDate(str: string): string {
@@ -577,7 +591,7 @@ export default function CalendarioPage() {
     const headers = ["Empresa","Tipo Obligación","Municipio","Periodicidad","Período","Año","Fecha Vencimiento","Días","Estado","Contabilizado","Doc. Contabilización","Declarado","Doc. Declaración","Pagado","Responsable","Observaciones"];
     const rows = sorted.map(o => [
       o.empresa, o.tipoObligacion, o.municipio, o.periodicidad,
-      getMesLabel(o.periodo), o.anio, formatDate(o.fechaVencimiento),
+      getPeriodoLabel(o.periodo, o.periodicidad), o.anio, formatDate(o.fechaVencimiento),
       getDaysUntil(o.fechaVencimiento), ESTADOS_LABELS[o.estado],
       o.contabilizado ? "Sí" : "No", o.contabilizadoArchivoNombre ?? "",
       o.declarado ? "Sí" : "No", o.declaradoArchivoNombre ?? "",
@@ -828,7 +842,7 @@ export default function CalendarioPage() {
                             <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{o.periodicidad}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{getMesLabel(o.periodo)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{getPeriodoLabel(o.periodo, o.periodicidad)}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{o.anio}</td>
                           <td className="px-4 py-3 whitespace-nowrap"><span className="text-xs font-mono text-gray-600">{formatDate(o.fechaVencimiento)}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -955,7 +969,7 @@ export default function CalendarioPage() {
                                 <span className={cn("rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-gray-500">{o.periodicidad}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-gray-500">{getMesLabel(o.periodo)} {o.anio}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-gray-500">{getPeriodoLabel(o.periodo, o.periodicidad)} {o.anio}</td>
                               <td className="px-4 py-3 whitespace-nowrap font-mono text-gray-600">{formatDate(o.fechaVencimiento)}</td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 {o.contabilizado && o.declarado && o.pagado ? (
