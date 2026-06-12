@@ -43,6 +43,7 @@ interface Acceso {
   tags: string[];
   ultimoAcceso: string;
   archivado?: boolean;
+  observaciones?: string;
   // DIAN-specific
   nitTercero?: string;
   tipoDocumento?: string;
@@ -253,6 +254,13 @@ function AccesoCard({
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Observaciones */}
+        {acceso.observaciones && (
+          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            <p className="text-xs text-amber-700 leading-relaxed">{acceso.observaciones}</p>
           </div>
         )}
 
@@ -538,7 +546,7 @@ export default function AccesosPage() {
       usuario: a.usuario, contrasena: a.contrasena, confirmarContrasena: a.contrasena,
       correoAsociado: a.correoAsociado ?? "", tags: a.tags,
       nitTercero: a.nitTercero ?? "", tipoDocumento: a.tipoDocumento ?? "",
-      nitEmpresa: a.nitEmpresa ?? "", nombreSoftware: a.nombreSoftware ?? "", observaciones: "",
+      nitEmpresa: a.nitEmpresa ?? "", nombreSoftware: a.nombreSoftware ?? "", observaciones: a.observaciones ?? "",
     });
     setEditMode("edit");
     setEditId(a.id);
