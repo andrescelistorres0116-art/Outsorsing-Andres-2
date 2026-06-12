@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Plus, Download, Search, X, ChevronDown, Pencil, Trash2,
   Building2, AlertTriangle, Clock, CheckCircle2, CalendarDays,
-  List, LayoutGrid, Paperclip, History,
+  List, LayoutGrid, Paperclip, History, Copy,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -449,6 +449,25 @@ export default function CalendarioPage() {
     setObligaciones(prev => prev.filter(o => o.id !== id));
   }
 
+  function handleDuplicate(o: Obligacion) {
+    const copy: Obligacion = {
+      ...o,
+      id: `dup-${Date.now()}`,
+      estado: "PENDIENTE",
+      contabilizado: false,
+      contabilizadoArchivoNombre: null,
+      contabilizadoFecha: null,
+      contabilizadoPorNombre: null,
+      declarado: false,
+      declaradoArchivoNombre: null,
+      declaradoFecha: null,
+      declaradoPorNombre: null,
+      pagado: false,
+    };
+    setEditingObligacion(copy);
+    setShowForm(true);
+  }
+
   function handleUploadSuccess(tipo: "contabilizado" | "declarado", info: DocumentoInfo) {
     if (!uploadModal) return;
     const id = uploadModal.obligacion.id;
@@ -802,6 +821,10 @@ export default function CalendarioPage() {
                                 className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" title="Editar">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
+                              <button onClick={() => handleDuplicate(o)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors" title="Duplicar">
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
                               <button onClick={() => setAuditModal(o.id)}
                                 className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors" title="Ver auditoría">
                                 <History className="w-3.5 h-3.5" />
@@ -918,15 +941,19 @@ export default function CalendarioPage() {
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex items-center gap-1">
                                   <button onClick={() => { setEditingObligacion(o); setShowForm(true); }}
-                                    className="w-6 h-6 flex items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                    className="w-6 h-6 flex items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" title="Editar">
                                     <Pencil className="w-3 h-3" />
                                   </button>
+                                  <button onClick={() => handleDuplicate(o)}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors" title="Duplicar">
+                                    <Copy className="w-3 h-3" />
+                                  </button>
                                   <button onClick={() => setAuditModal(o.id)}
-                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors" title="Ver auditoría">
                                     <History className="w-3 h-3" />
                                   </button>
                                   <button onClick={() => handleDelete(o.id)}
-                                    className="w-6 h-6 flex items-center justify-center rounded text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+                                    className="w-6 h-6 flex items-center justify-center rounded text-red-600 bg-red-50 hover:bg-red-100 transition-colors" title="Eliminar">
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
