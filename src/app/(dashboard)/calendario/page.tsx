@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -347,10 +348,10 @@ export default function CalendarioPage() {
 
   // ── Filter state ─────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
-  const [filterEmpresa, setFilterEmpresa] = useState("TODAS");
-  const [filterTipo, setFilterTipo] = useState("TODOS");
-  const [filterMes, setFilterMes] = useState("TODOS");
-  const [filterAnio, setFilterAnio] = useState("TODOS");
+  const [filterEmpresa, setFilterEmpresa] = useState<string[]>([]);
+  const [filterTipo, setFilterTipo] = useState<string[]>([]);
+  const [filterMes, setFilterMes] = useState<string[]>([]);
+  const [filterAnio, setFilterAnio] = useState<string[]>([]);
   const [filterFechaDesde, setFilterFechaDesde] = useState("");
   const [filterFechaHasta, setFilterFechaHasta] = useState("");
 
@@ -527,15 +528,15 @@ export default function CalendarioPage() {
       if (search && !o.empresa.toLowerCase().includes(search.toLowerCase()) &&
           !o.tipoObligacion.toLowerCase().includes(search.toLowerCase()) &&
           !o.responsable.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterEmpresa !== "TODAS" && o.empresa !== filterEmpresa) return false;
-      if (filterTipo !== "TODOS" && o.tipoObligacion !== filterTipo) return false;
-      if (filterMes !== "TODOS") {
+      if (filterEmpresa.length > 0 && !filterEmpresa.includes(o.empresa)) return false;
+      if (filterTipo.length > 0 && !filterTipo.includes(o.tipoObligacion)) return false;
+      if (filterMes.length > 0) {
         const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
-        if (d.getMonth() !== Number(filterMes)) return false;
+        if (!filterMes.includes(String(d.getMonth()))) return false;
       }
-      if (filterAnio !== "TODOS") {
+      if (filterAnio.length > 0) {
         const d = new Date(o.fechaVencimiento + (o.fechaVencimiento.includes("T") ? "" : "T00:00:00"));
-        if (d.getFullYear() !== Number(filterAnio)) return false;
+        if (!filterAnio.includes(String(d.getFullYear()))) return false;
       }
       if (filterFechaDesde && o.fechaVencimiento < filterFechaDesde) return false;
       if (filterFechaHasta && o.fechaVencimiento > filterFechaHasta) return false;
@@ -564,12 +565,12 @@ export default function CalendarioPage() {
     [obligaciones]
   );
 
-  const hasActiveFilters = search || filterEmpresa !== "TODAS" || filterTipo !== "TODOS" ||
-    filterMes !== "TODOS" || filterAnio !== "TODOS" || filterFechaDesde || filterFechaHasta;
+  const hasActiveFilters = search || filterEmpresa.length > 0 || filterTipo.length > 0 ||
+    filterMes.length > 0 || filterAnio.length > 0 || filterFechaDesde || filterFechaHasta;
 
   function clearFilters() {
-    setSearch(""); setFilterEmpresa("TODAS"); setFilterTipo("TODOS");
-    setFilterMes("TODOS"); setFilterAnio("TODOS"); setFilterFechaDesde(""); setFilterFechaHasta("");
+    setSearch(""); setFilterEmpresa([]); setFilterTipo([]);
+    setFilterMes([]); setFilterAnio([]); setFilterFechaDesde(""); setFilterFechaHasta("");
   }
 
   function handleExport() {
@@ -662,46 +663,50 @@ export default function CalendarioPage() {
 
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Empresa</p>
-            <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
-              <SelectTrigger className="text-sm"><SelectValue placeholder="Empresa" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODAS">Todas las empresas</SelectItem>
-                {uniqueEmpresas.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              values={filterEmpresa}
+              onValuesChange={setFilterEmpresa}
+              options={uniqueEmpresas.map(e => ({ value: e, label: e }))}
+              allLabel="Todas las empresas"
+              searchPlaceholder="Buscar empresa..."
+              className="w-full text-sm"
+            />
           </div>
 
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo de Obligación</p>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="text-sm"><SelectValue placeholder="Tipo" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos los tipos</SelectItem>
-                {TIPOS_OBLIGACION.filter(t => t !== "Personalizada").map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              values={filterTipo}
+              onValuesChange={setFilterTipo}
+              options={TIPOS_OBLIGACION.filter(t => t !== "Personalizada").map(t => ({ value: t, label: t }))}
+              allLabel="Todos los tipos"
+              searchPlaceholder="Buscar tipo..."
+              className="w-full text-sm"
+            />
           </div>
 
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mes de Vencimiento</p>
-            <Select value={filterMes} onValueChange={setFilterMes}>
-              <SelectTrigger className="text-sm"><SelectValue placeholder="Mes" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos los meses</SelectItem>
-                {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              values={filterMes}
+              onValuesChange={setFilterMes}
+              options={MONTHS.map(m => ({ value: m.value, label: m.label }))}
+              allLabel="Todos los meses"
+              searchPlaceholder="Buscar mes..."
+              className="w-full text-sm"
+            />
           </div>
 
           <div className="space-y-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Año</p>
-            <Select value={filterAnio} onValueChange={setFilterAnio}>
-              <SelectTrigger className="text-sm"><SelectValue placeholder="Año" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos los años</SelectItem>
-                {[2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              values={filterAnio}
+              onValuesChange={setFilterAnio}
+              options={[2024, 2025, 2026, 2027].map(y => ({ value: String(y), label: String(y) }))}
+              allLabel="Todos los años"
+              searchPlaceholder="Buscar año..."
+              className="w-full text-sm"
+            />
           </div>
 
           <div className="sm:col-span-2 space-y-1">
