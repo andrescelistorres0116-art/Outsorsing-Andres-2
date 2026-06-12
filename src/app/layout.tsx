@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Outsoursing Andrés",
+  title: "Orbita AC",
   description:
     "Plataforma de outsourcing contable y tributario para empresas colombianas. Gestión integral de obligaciones fiscales, nómina y contabilidad.",
   keywords: ["contabilidad", "outsourcing contable", "Colombia", "tributario", "nómina"],

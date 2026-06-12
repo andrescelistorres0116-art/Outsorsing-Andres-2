@@ -712,7 +712,7 @@ export default function EmpresaFormModal({
             <DialogDescription className="text-sm text-gray-500 mt-1">
               {mode === "edit"
                 ? "Actualice los datos de la empresa"
-                : "Complete los campos para registrar una nueva empresa en Outsoursing Andrés"}
+                : "Complete los campos para registrar una nueva empresa en Orbita AC"}
             </DialogDescription>
           </DialogHeader>
         </div>

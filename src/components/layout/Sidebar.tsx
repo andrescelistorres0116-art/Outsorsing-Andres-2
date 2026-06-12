@@ -47,11 +47,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { appSession, signOut } = useAppSession();
   const [collapsed, setCollapsed] = useState(false);
-  const [sidebarName, setSidebarName] = useState("Outsoursing Andrés");
+  const [sidebarName, setSidebarName] = useState("Orbita AC");
   const [sidebarLogo, setSidebarLogo] = useState<string | null>(null);
 
   useEffect(() => {
-    setSidebarName(localStorage.getItem("company_name") ?? "Outsoursing Andrés");
+    setSidebarName(localStorage.getItem("company_name") ?? "Orbita AC");
     setSidebarLogo(localStorage.getItem("company_logo") ?? null);
 
     function onSettingsUpdate(e: Event) {

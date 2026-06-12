@@ -360,7 +360,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Resumen ejecutivo · Outsoursing Andrés · {mesLabel}
+            Resumen ejecutivo · Orbita AC · {mesLabel}
           </p>
         </div>
         <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-500 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">

@@ -1294,7 +1294,7 @@ export default function NominaDetallePage() {
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">Aprobar novedades de nómina</DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
-              ¿Está seguro de aprobar estas novedades? Una vez enviadas, el contador de Outsoursing Andrés
+              ¿Está seguro de aprobar estas novedades? Una vez enviadas, el contador de Orbita AC
               las revisará y no podrá realizar cambios hasta que el reporte sea reabierto.
             </DialogDescription>
           </DialogHeader>
