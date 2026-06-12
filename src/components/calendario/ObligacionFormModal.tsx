@@ -85,7 +85,6 @@ function getPeriodos(periodicidad: PeriodicidadObligacion): PeriodoOption[] {
   }
 }
 
-
 const MUNICIPIOS = [
   "Nacional",
   "Bogotá",
@@ -99,18 +98,6 @@ const MUNICIPIOS = [
   "Manizales",
   "Otro",
 ];
-
-const RESPONSABLES = [
-  "Andrés Torres",
-  "María López",
-  "Carlos Ramírez",
-  "Ana Martínez",
-  "Pedro Gómez",
-  "Luisa Herrera",
-  "Juan García",
-  "Valentina Ruiz",
-];
-
 
 const EMPTY_FORM = {
   empresa: "",
@@ -138,8 +125,25 @@ export default function ObligacionFormModal({
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [responsables, setResponsables] = useState<string[]>([]);
 
   const isEditing = !!editingObligacion;
+
+  // Fetch real users (admin + contador) for responsable dropdown
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/app-users")
+      .then(async (r) => {
+        if (!r.ok) return;
+        const users: { nombre: string; role: string; activo: boolean }[] = await r.json();
+        setResponsables(
+          users
+            .filter((u) => u.activo && (u.role === "admin" || u.role === "contador"))
+            .map((u) => u.nombre)
+        );
+      })
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (editingObligacion) {
@@ -433,20 +437,24 @@ export default function ObligacionFormModal({
             </Label>
             <div className="flex gap-2">
               <Select
-                value={
-                  RESPONSABLES.includes(form.responsable) ? form.responsable : ""
-                }
+                value={responsables.includes(form.responsable) ? form.responsable : ""}
                 onValueChange={(v) => setField("responsable", v)}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {RESPONSABLES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
+                  {responsables.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-400">
+                      Sin usuarios disponibles
+                    </div>
+                  ) : (
+                    responsables.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <Input
