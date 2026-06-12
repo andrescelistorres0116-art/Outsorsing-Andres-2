@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import EmpresaFormModal from "@/components/empresas/EmpresaFormModal";
-import { EmpresaMock, EMPRESAS_MOCK } from "@/lib/empresas-mock";
+import { EmpresaMock } from "@/lib/empresas-mock";
 import { useAppSession } from "@/hooks/useAppSession";
 
 // Empresa is EmpresaMock — single source of truth in @/lib/empresas-mock

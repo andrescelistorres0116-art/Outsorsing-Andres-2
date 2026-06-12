@@ -98,28 +98,26 @@ async function run() {
   const prisma = new PrismaClient({ adapter })
 
   try {
-    // ── 1. Usuarios por defecto ───────────────────────────────────────────────
-    console.log('[init] Ensuring default users exist with correct passwords...')
-
-    const adminHash  = await bcrypt.hash('Admin123!',  10)
-    const clientHash = await bcrypt.hash('Client123!', 10)
-
-    const users = [
-      { email: 'admin@contaflow.co',    name: 'Andrés Torres',    password: adminHash,  role: 'ADMIN'   },
-      { email: 'analista@contaflow.co', name: 'María González',   password: adminHash,  role: 'ANALYST' },
-      { email: 'nomina@contaflow.co',   name: 'Carlos Rodríguez', password: adminHash,  role: 'NOMINA'  },
-      { email: 'cliente@xtours.com.co', name: 'Cliente X Tours',  password: clientHash, role: 'CLIENT'  },
-    ]
-
-    for (const u of users) {
-      await prisma.user.upsert({
-        where:  { email: u.email },
-        update: { password: u.password, isActive: true },
-        create: { ...u, isActive: true },
+    // ── 1. Usuarios por defecto — solo en base de datos vacía ────────────────
+    // No upsert: if users already exist, skip entirely so manual deletions
+    // or custom accounts are never overwritten or recreated on deploy.
+    const userCount = await prisma.user.count()
+    if (userCount === 0) {
+      console.log('[init] No users found — creating default admin for first-time setup...')
+      const adminHash = await bcrypt.hash('Admin123!', 10)
+      await prisma.user.create({
+        data: {
+          email: 'admin@contaflow.co',
+          name: 'Administrador',
+          password: adminHash,
+          role: 'ADMIN',
+          isActive: true,
+        },
       })
+      console.log('[init] Default admin created: admin@contaflow.co / Admin123!')
+    } else {
+      console.log(`[init] ${userCount} user(s) found — skipping first-time seed`)
     }
-
-    console.log('[init] Default users ready')
 
     // ── 2. Reportes del mes actual ────────────────────────────────────────────
     await generarReportesActuales(prisma)

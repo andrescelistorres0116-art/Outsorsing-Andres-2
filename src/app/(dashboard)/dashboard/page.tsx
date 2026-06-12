@@ -33,9 +33,15 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { OBLIGACIONES_MOCK } from "@/components/calendario/mockData";
 import type { EmpresaMock } from "@/lib/empresas-mock";
-import { EMPRESAS_MOCK } from "@/lib/empresas-mock";
+
+interface DashboardObligation {
+  id: string;
+  empresa: string;
+  tipoObligacion: string;
+  fechaVencimiento: string;
+  estado: string;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -207,6 +213,7 @@ function CustomTooltip({
 export default function DashboardPage() {
   const [empresas, setEmpresas] = useState<EmpresaMock[]>([]);
   const [empresasLoaded, setEmpresasLoaded] = useState(false);
+  const [obligations, setObligations] = useState<DashboardObligation[]>([]);
 
   useEffect(() => {
     fetch("/api/app-empresas")
@@ -215,10 +222,31 @@ export default function DashboardPage() {
           const data: EmpresaMock[] = await r.json();
           if (Array.isArray(data)) setEmpresas(data);
         }
-        // 204 = not yet initialized, leave empresas as []
       })
       .catch(() => {})
       .finally(() => setEmpresasLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/obligaciones?limit=500")
+      .then(async (r) => {
+        if (!r.ok) return;
+        const data = await r.json();
+        if (Array.isArray(data)) {
+          setObligations(
+            data.map((o: any) => ({
+              id: o.id,
+              empresa: o.empresa?.razonSocial ?? o.empresa ?? "",
+              tipoObligacion: o.tipoObligacion ?? "",
+              fechaVencimiento: typeof o.fechaVencimiento === "string"
+                ? o.fechaVencimiento.split("T")[0]
+                : "",
+              estado: o.estado ?? "PENDIENTE",
+            }))
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const activeEmpresas = useMemo(
@@ -232,15 +260,15 @@ export default function DashboardPage() {
     [activeEmpresas]
   );
 
-  // Only show obligations for ACTIVA empresas in the store.
-  // While loading (empresasLoaded=false) show nothing to avoid flash of mock data.
+  // Only show obligations for ACTIVA empresas.
+  // While loading show nothing to avoid flash of stale data.
   const visibleObligaciones = useMemo(() => {
     if (!empresasLoaded) return [];
-    if (activaNames.size === 0) return [];
-    return OBLIGACIONES_MOCK.filter((o) =>
+    if (activaNames.size === 0) return obligations;
+    return obligations.filter((o) =>
       [...activaNames].some((name) => matchesName(o.empresa, name))
     );
-  }, [activaNames, empresasLoaded]);
+  }, [obligations, activaNames, empresasLoaded]);
 
   // Pending/overdue obligations sorted by date (top 8)
   const upcoming = useMemo(() => {

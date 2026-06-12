@@ -15,6 +15,11 @@ const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter } as any)
 
 async function main() {
+  console.log('✅ Seed: no hay datos de demostración configurados.')
+  console.log('   La base de datos no será modificada. Usa la interfaz para crear datos reales.')
+}
+
+async function _disabledMain_original() {
   console.log('🌱 Seeding database...')
 
   // ─── Users ───────────────────────────────────────────────

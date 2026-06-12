@@ -24,7 +24,6 @@ import {
   Obligacion,
   EstadoObligacion,
   PeriodicidadObligacion,
-  EMPRESAS,
   TIPOS_OBLIGACION,
   ESTADOS_LABELS,
 } from "./mockData";
@@ -135,7 +134,7 @@ export default function ObligacionFormModal({
   editingObligacion,
   empresasList,
 }: ObligacionFormModalProps) {
-  const empresasOptions = empresasList ?? EMPRESAS.map(e => ({ nombre: e.nombre, color: e.color }));
+  const empresasOptions = empresasList ?? [];
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
