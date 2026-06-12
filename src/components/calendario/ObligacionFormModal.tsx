@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Obligacion,
   EstadoObligacion,
@@ -277,23 +278,14 @@ export default function ObligacionFormModal({
             <Label className="text-sm font-medium text-gray-700 mb-1.5 block">
               Tipo de Obligación <span className="text-red-500">*</span>
             </Label>
-            <Select
+            <SearchableSelect
               value={form.tipoObligacion}
               onValueChange={(v) => setField("tipoObligacion", v)}
-            >
-              <SelectTrigger
-                className={errors.tipoObligacion ? "border-red-400" : ""}
-              >
-                <SelectValue placeholder="Seleccionar tipo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {TIPOS_OBLIGACION.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={TIPOS_OBLIGACION.map((t) => ({ value: t, label: t }))}
+              placeholder="Seleccionar tipo..."
+              searchPlaceholder="Buscar tipo de obligación..."
+              className={`w-full ${errors.tipoObligacion ? "border-red-400" : ""}`}
+            />
             {errors.tipoObligacion && (
               <p className="text-xs text-red-500 mt-1">{errors.tipoObligacion}</p>
             )}

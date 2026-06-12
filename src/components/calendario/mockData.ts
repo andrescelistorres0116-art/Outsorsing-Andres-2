@@ -55,6 +55,7 @@ export const TIPOS_OBLIGACION = [
   "ICA",
   "ReteICA",
   "Declaración de Renta",
+  "Impuesto anual consolidado RST",
   "Información Exógena",
   "Nómina Electrónica",
   "Seguridad Social",
