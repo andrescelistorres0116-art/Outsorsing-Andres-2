@@ -573,6 +573,7 @@ export default function AccesosPage() {
         nitTercero: data.nitTercero || undefined, tipoDocumento: data.tipoDocumento || undefined,
         nitEmpresa: data.nitEmpresa || undefined,
         nombreSoftware: data.nombreSoftware || undefined,
+        observaciones: data.observaciones || undefined,
       }, ...prev]);
     } else if (editId !== null) {
       setAccesos((prev) =>
@@ -585,6 +586,7 @@ export default function AccesosPage() {
             tipoDocumento: data.tipoDocumento || undefined,
             nitEmpresa: data.nitEmpresa || undefined,
             nombreSoftware: data.nombreSoftware || undefined,
+            observaciones: data.observaciones || undefined,
           } : a
         )
       );
