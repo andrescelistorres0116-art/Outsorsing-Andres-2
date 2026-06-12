@@ -88,10 +88,40 @@ const QUINCENA_LABELS: string[] = (() => {
 })();
 
 function getPeriodoLabel(periodo: number, periodicidad: string): string {
-  if (periodicidad === "Quincenal") {
-    return QUINCENA_LABELS[periodo - 1] ?? `Quincena ${periodo}`;
+  switch (periodicidad) {
+    case "Quincenal":
+      return QUINCENA_LABELS[periodo - 1] ?? `Quincena ${periodo}`;
+    case "Bimestral": {
+      const m: Record<number, string> = {
+        1: "Enero – Febrero", 3: "Marzo – Abril", 5: "Mayo – Junio",
+        7: "Julio – Agosto", 9: "Septiembre – Octubre", 11: "Noviembre – Diciembre",
+      };
+      return m[periodo] ?? getMesLabel(periodo);
+    }
+    case "Trimestral": {
+      const m: Record<number, string> = {
+        1: "Enero – Marzo", 4: "Abril – Junio",
+        7: "Julio – Septiembre", 10: "Octubre – Diciembre",
+      };
+      return m[periodo] ?? getMesLabel(periodo);
+    }
+    case "Cuatrimestral": {
+      const m: Record<number, string> = {
+        1: "Enero – Abril", 5: "Mayo – Agosto", 9: "Septiembre – Diciembre",
+      };
+      return m[periodo] ?? getMesLabel(periodo);
+    }
+    case "Semestral": {
+      const m: Record<number, string> = {
+        1: "Enero – Junio", 7: "Julio – Diciembre",
+      };
+      return m[periodo] ?? getMesLabel(periodo);
+    }
+    case "Anual":
+      return "Año completo";
+    default:
+      return getMesLabel(periodo);
   }
-  return getMesLabel(periodo);
 }
 
 function isoDate(str: string): string {
