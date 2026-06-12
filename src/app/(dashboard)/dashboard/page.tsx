@@ -291,7 +291,7 @@ export default function DashboardPage() {
     ).length;
   }, [visibleObligaciones]);
 
-  // KPI: due within 7 days (not completed, not vencidas)
+  // KPI: due within 5 days (not completed, not vencidas)
   const countSemana = useMemo(() => {
     return visibleObligaciones.filter((o) => {
       if (
@@ -301,7 +301,7 @@ export default function DashboardPage() {
       )
         return false;
       const d = daysFromNow(o.fechaVencimiento);
-      return d >= 0 && d <= 7;
+      return d >= 0 && d <= 5;
     }).length;
   }, [visibleObligaciones]);
 
@@ -390,9 +390,9 @@ export default function DashboardPage() {
           href="/calendario"
         />
         <StatCard
-          title="Vencen Esta Semana"
+          title="Próximos a Vencer"
           value={String(countSemana)}
-          sub="próximas a vencer"
+          sub="vencen en los próximos 5 días"
           icon={<Clock className="w-6 h-6 text-orange-600" />}
           color="text-orange-600"
           bgColor="bg-orange-50"
