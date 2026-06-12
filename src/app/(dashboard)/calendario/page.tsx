@@ -746,12 +746,12 @@ export default function CalendarioPage() {
             {loading ? (
               <div className="py-16 text-center text-sm text-gray-400">Cargando obligaciones...</div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-22rem)]">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr className="border-b border-gray-100 bg-gray-50/60">
                       {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Estado","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
-                        <th key={col} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                        <th key={col} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/60">{col}</th>
                       ))}
                     </tr>
                   </thead>
