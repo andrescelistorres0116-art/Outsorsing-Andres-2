@@ -37,6 +37,7 @@ enum TipoAcceso {
 }
 
 enum Periodicidad {
+  QUINCENAL
   MENSUAL
   BIMESTRAL
   TRIMESTRAL
