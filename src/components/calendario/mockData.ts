@@ -9,6 +9,7 @@ export type EstadoObligacion =
   | "VENCIDO";
 
 export type PeriodicidadObligacion =
+  | "Quincenal"
   | "Mensual"
   | "Bimestral"
   | "Trimestral"
@@ -57,6 +58,7 @@ export const TIPOS_OBLIGACION = [
   "Declaración de Renta",
   "Impuesto anual consolidado RST",
   "Información Exógena",
+  "Nómina",
   "Nómina Electrónica",
   "Seguridad Social",
   "Parafiscales",

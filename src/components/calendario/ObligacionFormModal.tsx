@@ -38,6 +38,7 @@ interface ObligacionFormModalProps {
 }
 
 const PERIODICIDADES: PeriodicidadObligacion[] = [
+  "Quincenal",
   "Mensual",
   "Bimestral",
   "Trimestral",
@@ -46,12 +47,19 @@ const PERIODICIDADES: PeriodicidadObligacion[] = [
   "Anual",
 ];
 
+const PERIODICIDADES_NOMINA: PeriodicidadObligacion[] = ["Quincenal", "Mensual"];
+
 type PeriodoOption = { value: number; label: string };
 
 function getPeriodos(periodicidad: PeriodicidadObligacion): PeriodoOption[] {
   const M = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
              "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   switch (periodicidad) {
+    case "Quincenal":
+      return M.flatMap((mes, i) => [
+        { value: i * 2 + 1, label: `Primera quincena de ${mes}` },
+        { value: i * 2 + 2, label: `Segunda quincena de ${mes}` },
+      ]);
     case "Mensual":
       return M.map((label, i) => ({ value: i + 1, label }));
     case "Bimestral":
@@ -280,7 +288,26 @@ export default function ObligacionFormModal({
             </Label>
             <SearchableSelect
               value={form.tipoObligacion}
-              onValueChange={(v) => setField("tipoObligacion", v)}
+              onValueChange={(v) => {
+                if (v === "Nómina") {
+                  setForm((prev) => ({
+                    ...prev,
+                    tipoObligacion: v,
+                    periodicidad: "Quincenal",
+                    periodo: 1,
+                  }));
+                } else if (form.tipoObligacion === "Nómina") {
+                  setForm((prev) => ({
+                    ...prev,
+                    tipoObligacion: v,
+                    periodicidad: "Mensual",
+                    periodo: 1,
+                  }));
+                } else {
+                  setField("tipoObligacion", v);
+                }
+                setErrors((prev) => ({ ...prev, tipoObligacion: "" }));
+              }}
               options={TIPOS_OBLIGACION.map((t) => ({ value: t, label: t }))}
               placeholder="Seleccionar tipo..."
               searchPlaceholder="Buscar tipo de obligación..."
@@ -329,7 +356,7 @@ export default function ObligacionFormModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PERIODICIDADES.map((p) => (
+                {(form.tipoObligacion === "Nómina" ? PERIODICIDADES_NOMINA : PERIODICIDADES).map((p) => (
                   <SelectItem key={p} value={p}>
                     {p}
                   </SelectItem>
