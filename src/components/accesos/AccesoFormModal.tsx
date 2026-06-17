@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -129,6 +129,16 @@ export default function AccesoFormModal({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof AccesoFormData, string>>>({});
+
+  // Sync form with initialData every time the modal opens
+  useEffect(() => {
+    if (open) {
+      setForm({ ...DEFAULT_FORM, ...initialData });
+      setErrors({});
+      setShowPassword(false);
+      setShowConfirm(false);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (field: keyof AccesoFormData, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
