@@ -158,6 +158,8 @@ function AccesoCard({
   onDelete: (id: string) => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
+  const [loadingPassword, setLoadingPassword] = useState(false);
   const [copied, setCopied] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"archive" | "delete" | null>(null);
@@ -166,16 +168,38 @@ function AccesoCard({
   const Icon = cfg.Icon;
   const showLogo = !!cfg.logoUrl && !logoError;
 
-  const handleCopy = useCallback(async () => {
+  const fetchPassword = useCallback(async (): Promise<string> => {
+    if (revealedPassword !== null) return revealedPassword;
     try {
-      await navigator.clipboard.writeText(acceso.contrasena);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      const res = await fetch(`/api/accesos/${acceso.id}?reveal=true`);
+      if (res.ok) {
+        const data = await res.json();
+        const pwd: string = data.contrasena ?? "";
+        setRevealedPassword(pwd);
+        return pwd;
+      }
+    } catch {}
+    return "";
+  }, [acceso.id, revealedPassword]);
+
+  const handleTogglePassword = useCallback(async () => {
+    if (!showPassword && revealedPassword === null) {
+      setLoadingPassword(true);
+      await fetchPassword();
+      setLoadingPassword(false);
     }
-  }, [acceso.contrasena]);
+    setShowPassword((v) => !v);
+  }, [showPassword, revealedPassword, fetchPassword]);
+
+  const handleCopy = useCallback(async () => {
+    const pwd = await fetchPassword();
+    if (!pwd) return;
+    try {
+      await navigator.clipboard.writeText(pwd);
+    } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [fetchPassword]);
 
   return (
     <Card className={`border-l-4 ${cfg.border} transition-all duration-200 flex flex-col ${archived ? "opacity-70" : "hover:shadow-md"}`}>
@@ -235,11 +259,12 @@ function AccesoCard({
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Contraseña:</span>
             <span className="text-xs text-gray-800 font-mono flex-1 truncate">
-              {showPassword ? acceso.contrasena : "●●●●●●●●"}
+              {showPassword ? (revealedPassword ?? "●●●●●●●●") : "●●●●●●●●"}
             </span>
             <button
-              onClick={() => setShowPassword((v) => !v)}
-              className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors shrink-0"
+              onClick={handleTogglePassword}
+              disabled={loadingPassword}
+              className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors shrink-0 disabled:opacity-50"
             >
               {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
