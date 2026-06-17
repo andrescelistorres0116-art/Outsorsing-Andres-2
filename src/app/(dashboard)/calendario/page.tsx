@@ -662,7 +662,7 @@ export default function CalendarioPage() {
   const currentMonthYear = format(TODAY, "MMMM yyyy", { locale: es });
 
   return (
-    <div className="flex flex-col h-full gap-5">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -783,7 +783,7 @@ export default function CalendarioPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-10">
           <TabsTrigger value="lista" className="gap-2 text-sm px-4"><List className="w-4 h-4" />Lista</TabsTrigger>
           <TabsTrigger value="calendario" className="gap-2 text-sm px-4"><CalendarDays className="w-4 h-4" />Calendario</TabsTrigger>
@@ -791,10 +791,10 @@ export default function CalendarioPage() {
         </TabsList>
 
         {/* Lista tab */}
-        <TabsContent value="lista" className="flex-1 min-h-0 mt-4">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full min-h-0">
+        <TabsContent value="lista" className="mt-4">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             {/* Sub-tabs */}
-            <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-100 shrink-0">
+            <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-100">
               {(["pendientes", "hechas"] as const).map((sub) => {
                 const count = sub === "pendientes"
                   ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado)).length
@@ -827,9 +827,9 @@ export default function CalendarioPage() {
               })}
             </div>
             {loading ? (
-              <div className="flex-1 py-16 text-center text-sm text-gray-400">Cargando obligaciones...</div>
+              <div className="py-16 text-center text-sm text-gray-400">Cargando obligaciones...</div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
+              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: "calc(100vh - 26rem)" }}>
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-gray-100 bg-gray-50/60">
@@ -928,7 +928,7 @@ export default function CalendarioPage() {
                 </table>
               </div>
             )}
-            <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30 shrink-0">
+            <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30">
               <button onClick={() => { setEditingObligacion(null); setShowForm(true); }}
                 className="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-600 transition-colors group">
                 <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 group-hover:border-blue-400 flex items-center justify-center transition-colors">
