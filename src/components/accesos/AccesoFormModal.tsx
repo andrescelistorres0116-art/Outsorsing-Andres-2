@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 export type TipoAcceso =
   | "DIAN"
@@ -201,16 +202,14 @@ export default function AccesoFormModal({
             <Label className="text-sm font-medium text-gray-700">
               Empresa <span className="text-red-500">*</span>
             </Label>
-            <Select value={form.empresa} onValueChange={(v) => set("empresa", v)}>
-              <SelectTrigger className={errors.empresa ? "border-red-400" : ""}>
-                <SelectValue placeholder="Seleccionar empresa..." />
-              </SelectTrigger>
-              <SelectContent>
-                {empresas.map((e) => (
-                  <SelectItem key={e} value={e}>{e}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={form.empresa}
+              onValueChange={(v) => set("empresa", v)}
+              placeholder="Seleccionar empresa..."
+              searchPlaceholder="Buscar empresa..."
+              className={errors.empresa ? "border-red-400" : ""}
+              options={empresas.map((e) => ({ value: e, label: e }))}
+            />
             {errors.empresa && <p className="text-xs text-red-500">{errors.empresa}</p>}
           </div>
 
@@ -219,16 +218,14 @@ export default function AccesoFormModal({
             <Label className="text-sm font-medium text-gray-700">
               Tipo de Acceso <span className="text-red-500">*</span>
             </Label>
-            <Select value={form.tipo} onValueChange={handleTipoChange}>
-              <SelectTrigger className={errors.tipo ? "border-red-400" : ""}>
-                <SelectValue placeholder="Seleccionar tipo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {TIPOS_ACCESO.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={form.tipo}
+              onValueChange={handleTipoChange}
+              placeholder="Seleccionar tipo..."
+              searchPlaceholder="Buscar tipo..."
+              className={errors.tipo ? "border-red-400" : ""}
+              options={TIPOS_ACCESO.map((t) => ({ value: t.value, label: t.label }))}
+            />
             {errors.tipo && <p className="text-xs text-red-500">{errors.tipo}</p>}
           </div>
 
