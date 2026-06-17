@@ -791,8 +791,8 @@ export default function CalendarioPage() {
         </TabsList>
 
         {/* Lista tab */}
-        <TabsContent value="lista" className="flex-1 min-h-0 mt-4 data-[state=active]:flex data-[state=active]:flex-col">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-0 flex-1">
+        <TabsContent value="lista" className="flex-1 min-h-0 mt-4">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full min-h-0">
             {/* Sub-tabs */}
             <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-100 shrink-0">
               {(["pendientes", "hechas"] as const).map((sub) => {
