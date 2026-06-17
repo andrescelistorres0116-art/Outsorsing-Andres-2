@@ -134,6 +134,22 @@ const TIPO_CONFIG: Record<
   },
 };
 
+function CopyBtn({ getValue }: { getValue: () => string | Promise<string> }) {
+  const [done, setDone] = useState(false);
+  const handle = async () => {
+    const v = await getValue();
+    if (!v) return;
+    try { await navigator.clipboard.writeText(v); } catch {}
+    setDone(true);
+    setTimeout(() => setDone(false), 1500);
+  };
+  return (
+    <button onClick={handle} title="Copiar" className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 transition-colors shrink-0">
+      {done ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+    </button>
+  );
+}
+
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
   const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -230,18 +246,21 @@ function AccesoCard({
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT empresa:</span>
               <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.nitEmpresa}</span>
+              <CopyBtn getValue={() => acceso.nitEmpresa ?? ""} />
             </div>
           )}
           {acceso.nombreSoftware && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Software:</span>
               <span className="text-xs text-gray-800 truncate flex-1">{acceso.nombreSoftware}</span>
+              <CopyBtn getValue={() => acceso.nombreSoftware ?? ""} />
             </div>
           )}
           {acceso.tipo === "DIAN" && acceso.nitTercero && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">NIT tercero:</span>
               <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.nitTercero}</span>
+              <CopyBtn getValue={() => acceso.nitTercero ?? ""} />
             </div>
           )}
           {acceso.tipo === "DIAN" && acceso.tipoDocumento && (
@@ -255,12 +274,14 @@ function AccesoCard({
               {acceso.tipo === "DIAN" ? "Núm. doc.:" : "Usuario:"}
             </span>
             <span className="text-xs text-gray-800 font-mono truncate flex-1">{acceso.usuario}</span>
+            <CopyBtn getValue={() => acceso.usuario} />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 w-20 shrink-0 font-medium">Contraseña:</span>
             <span className="text-xs text-gray-800 font-mono flex-1 truncate">
               {showPassword ? (revealedPassword ?? "●●●●●●●●") : "●●●●●●●●"}
             </span>
+            <CopyBtn getValue={fetchPassword} />
             <button
               onClick={handleTogglePassword}
               disabled={loadingPassword}
