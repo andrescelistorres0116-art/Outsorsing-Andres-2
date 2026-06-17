@@ -33,7 +33,8 @@ import { EmpresaMock } from "@/lib/empresas-mock";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Acceso {
-  id: number;
+  id: string;
+  empresaId?: string;
   empresa: string;
   tipo: TipoAcceso;
   plataforma: string;
@@ -152,9 +153,9 @@ function AccesoCard({
   acceso: Acceso;
   archived?: boolean;
   onEdit: (a: Acceso) => void;
-  onArchive: (id: number) => void;
-  onRestore: (id: number) => void;
-  onDelete: (id: number) => void;
+  onArchive: (id: string) => void;
+  onRestore: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -421,7 +422,7 @@ export default function AccesosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Partial<AccesoFormData> | undefined>();
   const [editMode, setEditMode] = useState<"create" | "edit">("create");
-  const [editId, setEditId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // Load empresas on mount; session comes from useAppSession hook
   useEffect(() => {
@@ -448,48 +449,18 @@ export default function AccesosPage() {
     loadEmpresas();
   }, []);
 
-  // Load accesos from server on mount; 204 = not yet initialized, keep empty
+  // Load accesos from DB on mount
   useEffect(() => {
-    fetch("/api/app-accesos")
+    fetch("/api/accesos?all=1")
       .then(async (r) => {
-        if (r.status === 200) {
+        if (r.ok) {
           const data: Acceso[] = await r.json();
           if (Array.isArray(data)) setAccesos(data);
         }
-        // 204 = no accesos file yet, keep initial empty state
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
-
-  // Auto-archive accesos whose empresa is INACTIVA or deleted
-  useEffect(() => {
-    if (!loaded || !empresasLoaded) return;
-    if (empresasData.length === 0) return; // no empresas store yet, skip
-    const activaSet = new Set(
-      empresasData.filter((e) => e.estado === "ACTIVA").map((e) => normAcceso(e.razonSocial))
-    );
-    let changed = false;
-    const updated = accesos.map((a) => {
-      if (!a.archivado && !matchesActiva(a.empresa, activaSet)) {
-        changed = true;
-        return { ...a, archivado: true };
-      }
-      return a;
-    });
-    if (changed) setAccesos(updated);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, empresasLoaded]);
-
-  // Sync to server on every change
-  useEffect(() => {
-    if (!loaded) return;
-    fetch("/api/app-accesos", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(accesos),
-    }).catch(() => {});
-  }, [accesos, loaded]);
 
   // For non-admin roles: only show accesos of assigned empresas.
   // NOTE: empresaIds are Prisma CUIDs (string); file-based empresa IDs are numeric.
@@ -553,43 +524,102 @@ export default function AccesosPage() {
     setModalOpen(true);
   };
 
-  const handleArchive = (id: number) =>
-    setAccesos((prev) => prev.map((a) => a.id === id ? { ...a, archivado: true } : a));
+  const handleArchive = async (id: string) => {
+    try {
+      const res = await fetch(`/api/accesos/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archivado: true }),
+      });
+      if (res.ok) setAccesos((prev) => prev.map((a) => a.id === id ? { ...a, archivado: true } : a));
+    } catch {}
+  };
 
-  const handleRestore = (id: number) =>
-    setAccesos((prev) => prev.map((a) => a.id === id ? { ...a, archivado: false } : a));
+  const handleRestore = async (id: string) => {
+    try {
+      const res = await fetch(`/api/accesos/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archivado: false }),
+      });
+      if (res.ok) setAccesos((prev) => prev.map((a) => a.id === id ? { ...a, archivado: false } : a));
+    } catch {}
+  };
 
-  const handleDelete = (id: number) =>
-    setAccesos((prev) => prev.filter((a) => a.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/accesos/${id}`, { method: "DELETE" });
+      if (res.ok) setAccesos((prev) => prev.filter((a) => a.id !== id));
+    } catch {}
+  };
 
-  const handleSave = (data: AccesoFormData) => {
+  const handleSave = async (data: AccesoFormData) => {
     if (editMode === "create") {
-      setAccesos((prev) => [{
-        id: Date.now(),
-        empresa: data.empresa, tipo: data.tipo as TipoAcceso,
-        plataforma: data.plataforma, usuario: data.usuario,
-        contrasena: data.contrasena, correoAsociado: data.correoAsociado || undefined,
-        tags: data.tags, ultimoAcceso: new Date().toISOString().split("T")[0],
-        nitTercero: data.nitTercero || undefined, tipoDocumento: data.tipoDocumento || undefined,
-        nitEmpresa: data.nitEmpresa || undefined,
-        nombreSoftware: data.nombreSoftware || undefined,
-        observaciones: data.observaciones || undefined,
-      }, ...prev]);
-    } else if (editId !== null) {
-      setAccesos((prev) =>
-        prev.map((a) =>
-          a.id === editId ? {
-            ...a, empresa: data.empresa, tipo: data.tipo as TipoAcceso,
-            plataforma: data.plataforma, usuario: data.usuario,
-            contrasena: data.contrasena, correoAsociado: data.correoAsociado || undefined,
-            tags: data.tags, nitTercero: data.nitTercero || undefined,
+      try {
+        const res = await fetch("/api/accesos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            empresaNombre: data.empresa,
+            tipo: data.tipo,
+            plataforma: data.plataforma,
+            usuario: data.usuario,
+            contrasena: data.contrasena,
+            correoAsociado: data.correoAsociado || undefined,
+            tags: data.tags,
+            nitTercero: data.nitTercero || undefined,
             tipoDocumento: data.tipoDocumento || undefined,
             nitEmpresa: data.nitEmpresa || undefined,
             nombreSoftware: data.nombreSoftware || undefined,
             observaciones: data.observaciones || undefined,
-          } : a
-        )
-      );
+          }),
+        });
+        if (res.ok) {
+          const acceso: Acceso = await res.json();
+          setAccesos((prev) => [acceso, ...prev]);
+        }
+      } catch {}
+    } else if (editId !== null) {
+      try {
+        const res = await fetch(`/api/accesos/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tipo: data.tipo,
+            plataforma: data.plataforma,
+            usuario: data.usuario,
+            contrasena: data.contrasena,
+            correoAsociado: data.correoAsociado || undefined,
+            tags: data.tags,
+            nitTercero: data.nitTercero || undefined,
+            tipoDocumento: data.tipoDocumento || undefined,
+            nitEmpresa: data.nitEmpresa || undefined,
+            nombreSoftware: data.nombreSoftware || undefined,
+            observaciones: data.observaciones || undefined,
+          }),
+        });
+        if (res.ok) {
+          setAccesos((prev) =>
+            prev.map((a) =>
+              a.id === editId ? {
+                ...a,
+                empresa: data.empresa,
+                tipo: data.tipo as TipoAcceso,
+                plataforma: data.plataforma,
+                usuario: data.usuario,
+                contrasena: "••••••",
+                correoAsociado: data.correoAsociado || undefined,
+                tags: data.tags,
+                nitTercero: data.nitTercero || undefined,
+                tipoDocumento: data.tipoDocumento || undefined,
+                nitEmpresa: data.nitEmpresa || undefined,
+                nombreSoftware: data.nombreSoftware || undefined,
+                observaciones: data.observaciones || undefined,
+              } : a
+            )
+          );
+        }
+      } catch {}
     }
     setModalOpen(false);
   };

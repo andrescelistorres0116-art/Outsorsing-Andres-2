@@ -233,6 +233,12 @@ model Acceso {
   municipio          String?
   tags               String[]
   createdBy          String?
+  archivado          Boolean    @default(false)
+  ultimoAcceso       DateTime   @default(now())
+  nitTercero         String?
+  tipoDocumento      String?
+  nitEmpresa         String?
+  nombreSoftware     String?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
