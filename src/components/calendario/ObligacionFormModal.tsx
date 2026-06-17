@@ -422,7 +422,7 @@ export default function ObligacionFormModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2024, 2025, 2026, 2027].map((y) => (
+                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 1 + i).map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
