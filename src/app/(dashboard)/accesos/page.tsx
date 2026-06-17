@@ -259,8 +259,8 @@ function AccesoCard({
 
         {/* Observaciones */}
         {acceso.observaciones && (
-          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-            <p className="text-xs text-amber-700 leading-relaxed">{acceso.observaciones}</p>
+          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 overflow-hidden">
+            <p className="text-xs text-amber-700 leading-relaxed break-all">{acceso.observaciones}</p>
           </div>
         )}
 
