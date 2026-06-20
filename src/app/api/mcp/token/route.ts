@@ -17,6 +17,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const expectedId = process.env.MCP_CLIENT_ID
   const expectedSecret = process.env.MCP_CLIENT_SECRET
 
+  // TEMP DIAGNOSTIC — remove after confirming env vars are visible
+  console.log("[mcp/token] MCP env keys visible:", JSON.stringify(
+    Object.keys(process.env).filter(k => k.includes("MCP"))
+  ))
+  console.log("[mcp/token] MCP_CLIENT_ID present:", !!expectedId, "| MCP_CLIENT_SECRET present:", !!expectedSecret)
+
   if (!expectedId || !expectedSecret) {
     return NextResponse.json(
       { error: "server_error", error_description: "MCP credentials not configured" },
