@@ -20,11 +20,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json(
     {
       issuer: base,
+      authorization_endpoint: `${base}/api/mcp/authorize`,
       token_endpoint: `${base}/api/mcp/token`,
-      grant_types_supported: ["client_credentials"],
-      token_endpoint_auth_methods_supported: ["client_secret_post"],
+      grant_types_supported: ["authorization_code", "client_credentials"],
+      response_types_supported: ["code"],
+      code_challenge_methods_supported: ["S256"],
+      token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
       scopes_supported: ["mcp"],
-      response_types_supported: ["token"],
     },
     {
       headers: {
