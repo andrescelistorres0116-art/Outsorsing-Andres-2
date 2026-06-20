@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { joseAuth } from "@/lib/jose-auth"
+import { TIPOS_NOMINA } from "@/lib/calendario-helpers"
 
 export const dynamic = "force-dynamic"
 
@@ -20,10 +21,15 @@ export async function GET(request: NextRequest) {
         ciudad: true,
         correo: true,
         telefono: true,
-        tipoNomina: true,
         obligadoFacturar: true,
         agenteRetenedor: true,
         responsabilidadIva: true,
+        // Derive tiene_nomina from obligations, not the static tipoNomina field.
+        obligaciones: {
+          where: { tipoObligacion: { in: [...TIPOS_NOMINA] } },
+          select: { id: true },
+          take: 1,
+        },
       },
     })
 
@@ -38,7 +44,7 @@ export async function GET(request: NextRequest) {
         ciudad: e.ciudad ?? null,
         correo: e.correo ?? null,
         telefono: e.telefono ?? null,
-        tiene_nomina: !!e.tipoNomina,
+        tiene_nomina: e.obligaciones.length > 0,
         obligado_facturar: e.obligadoFacturar ?? false,
         agente_retenedor: e.agenteRetenedor ?? false,
         responsabilidad_iva: e.responsabilidadIva ?? null,

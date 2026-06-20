@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "node scripts/deploy-start.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint",
     "db:seed": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:reset": "npx prisma migrate reset --force && npm run db:seed"
@@ -73,6 +75,7 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
