@@ -9,6 +9,10 @@ const PUBLIC_PATHS = [
   // original URL (it gets rewritten to /api/mcp/oauth-metadata later).
   "/.well-known",
   "/api/mcp",
+  // José AI endpoints — each route validates Authorization: Bearer JOSE_API_KEY
+  // internally via joseAuth(). The middleware must not redirect to /login first,
+  // since server-to-server calls carry no session cookie.
+  "/api/jose",
 ]
 
 export async function proxy(request: NextRequest) {
