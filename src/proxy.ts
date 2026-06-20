@@ -1,7 +1,15 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
 
-const PUBLIC_PATHS = ["/login", "/api/auth"]
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth",
+  // MCP server — uses its own Bearer-token / OAuth auth, not session cookies.
+  // Middleware runs before rewrites, so /.well-known must be listed by its
+  // original URL (it gets rewritten to /api/mcp/oauth-metadata later).
+  "/.well-known",
+  "/api/mcp",
+]
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
