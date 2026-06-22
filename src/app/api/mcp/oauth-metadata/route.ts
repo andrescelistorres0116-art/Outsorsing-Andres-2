@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { publicOrigin } from "@/lib/public-origin"
 
 export const dynamic = "force-dynamic"
 
-function originFromRequest(req: NextRequest): string {
-  // Prefer explicit env var; fall back to deriving from the request host header.
-  const env = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.INTERNAL_BASE_URL ?? ""
-  if (env) return env.replace(/\/$/, "")
-
-  const proto =
-    req.headers.get("x-forwarded-proto") ??
-    (req.url.startsWith("https") ? "https" : "http")
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? ""
-  return `${proto}://${host}`
-}
-
 // Served at /.well-known/oauth-authorization-server via next.config rewrite
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const base = originFromRequest(req)
+  const base = publicOrigin(req)
   return NextResponse.json(
     {
       issuer: base,

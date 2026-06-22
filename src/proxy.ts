@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
+import { publicOrigin } from "@/lib/public-origin"
 
 const PUBLIC_PATHS = [
   "/login",
@@ -34,22 +35,24 @@ export async function proxy(request: NextRequest) {
   })
 
   if (!token) {
-    const loginUrl = new URL("/login", request.url)
+    const base = publicOrigin(request)
+    const loginUrl = new URL("/login", base)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
   }
 
   // Role-based route protection
   const role = token.role as string
+  const base = publicOrigin(request)
 
   // Protect admin-only routes
   if (pathname.startsWith("/configuracion") && role !== "admin") {
-    return NextResponse.redirect(new URL("/", request.url))
+    return NextResponse.redirect(new URL("/", base))
   }
 
   // Clients can only access /nomina
   if (role === "cliente" && !pathname.startsWith("/nomina") && !pathname.startsWith("/api")) {
-    return NextResponse.redirect(new URL("/nomina", request.url))
+    return NextResponse.redirect(new URL("/nomina", base))
   }
 
   return NextResponse.next()

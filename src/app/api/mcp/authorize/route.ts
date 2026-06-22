@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { randomBytes } from "crypto"
 import { storeCode } from "@/lib/mcp-codes"
+import { publicOrigin } from "@/lib/public-origin"
 
 export const dynamic = "force-dynamic"
 
@@ -24,7 +25,11 @@ function redirectError(
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const { searchParams, href } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
+  // Rebuild the full authorize URL using the public origin so that the login
+  // callbackUrl points to the Railway domain, not the internal 0.0.0.0:PORT.
+  const origin = publicOrigin(request)
+  const publicHref = `${origin}${request.nextUrl.pathname}${request.nextUrl.search}`
 
   const responseType = searchParams.get("response_type")
   const clientId = searchParams.get("client_id")
@@ -61,10 +66,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
   if (!token) {
-    // No session — redirect to the app's login page.
-    // After login, NextAuth will bounce back to this same authorize URL.
-    const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("callbackUrl", href)
+    // No session — redirect to the app's login page using the public origin.
+    // After login, NextAuth bounces back to this authorize URL (also public).
+    const loginUrl = new URL("/login", origin)
+    loginUrl.searchParams.set("callbackUrl", publicHref)
     return NextResponse.redirect(loginUrl)
   }
 
