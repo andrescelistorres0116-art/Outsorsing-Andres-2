@@ -98,15 +98,19 @@ async function run() {
   const prisma = new PrismaClient({ adapter })
 
   try {
-    // ── 1. Usuarios por defecto — solo en base de datos vacía ────────────────
-    // No upsert: if users already exist, skip entirely so manual deletions
-    // or custom accounts are never overwritten or recreated on deploy.
-    const userCount = await prisma.user.count()
-    if (userCount === 0) {
-      console.log('[init] No users found — creating default admin for first-time setup...')
+    // ── 1. Garantizar que siempre exista al menos un usuario ADMIN ───────────
+    // Si ya hay un admin, no se toca nada. Si no hay ninguno (DB vacía o todos
+    // los usuarios son contadores/clientes), se crea/restaura el admin por defecto
+    // sin modificar contraseñas de cuentas existentes.
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+    if (adminCount === 0) {
+      console.log('[init] No admin users found — creating/restoring default admin...')
       const adminHash = await bcrypt.hash('Admin123!', 10)
-      await prisma.user.create({
-        data: {
+      await prisma.user.upsert({
+        where: { email: 'admin@contaflow.co' },
+        // Only restore the role — never change the password of an existing account
+        update: { role: 'ADMIN', isActive: true },
+        create: {
           email: 'admin@contaflow.co',
           name: 'Administrador',
           password: adminHash,
@@ -114,9 +118,9 @@ async function run() {
           isActive: true,
         },
       })
-      console.log('[init] Default admin created: admin@contaflow.co / Admin123!')
+      console.log('[init] Default admin ready: admin@contaflow.co / Admin123! (use this to log in and assign admin role to your account)')
     } else {
-      console.log(`[init] ${userCount} user(s) found — skipping first-time seed`)
+      console.log(`[init] ${adminCount} admin user(s) found — skipping admin seed`)
     }
 
     // ── 2. Reportes del mes actual ────────────────────────────────────────────

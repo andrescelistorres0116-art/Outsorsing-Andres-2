@@ -45,7 +45,7 @@ const CLIENT_NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { appSession, signOut } = useAppSession();
+  const { appSession, signOut, isLoading } = useAppSession();
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarName, setSidebarName] = useState("Orbita AC");
   const [sidebarLogo, setSidebarLogo] = useState<string | null>(null);
@@ -63,11 +63,12 @@ export default function Sidebar() {
     return () => window.removeEventListener("company-settings-updated", onSettingsUpdate);
   }, []);
 
-  const role = appSession?.role ?? "cliente";
+  const role = appSession?.role ?? (isLoading ? null : "cliente");
   const navItems =
     role === "admin" ? ADMIN_NAV :
     role === "contador" ? CONTADOR_NAV :
-    CLIENT_NAV;
+    role === "cliente" ? CLIENT_NAV :
+    [];
   const extraItems = role === "admin" ? ADMIN_EXTRA : [];
 
   const userInitials = appSession ? initials(appSession.nombre) : "?";

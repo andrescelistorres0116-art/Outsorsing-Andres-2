@@ -59,7 +59,7 @@ interface UserFormData {
   nombre: string;
   email: string;
   password: string;
-  role: "contador" | "cliente";
+  role: "admin" | "contador" | "cliente";
   empresaIds: string[];
   activo: boolean;
 }
@@ -570,12 +570,13 @@ export default function UsuariosPage() {
                 </Label>
                 <Select
                   value={form.role}
-                  onValueChange={(v) => setForm((p) => ({ ...p, role: v as "contador" | "cliente" }))}
+                  onValueChange={(v) => setForm((p) => ({ ...p, role: v as "admin" | "contador" | "cliente" }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="admin">Administrador — acceso total a la plataforma</SelectItem>
                     <SelectItem value="contador">Contador — accede a Empresas, Accesos y Calendario</SelectItem>
                     <SelectItem value="cliente">Cliente — accede solo a Nómina</SelectItem>
                   </SelectContent>
@@ -583,8 +584,8 @@ export default function UsuariosPage() {
               </div>
             )}
 
-            {/* Empresas — only for non-admin */}
-            {editingUser?.role !== "admin" && (
+            {/* Empresas — only for non-admin roles */}
+            {editingUser?.role !== "admin" && form.role !== "admin" && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
                   Empresas asignadas
