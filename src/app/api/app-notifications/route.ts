@@ -116,5 +116,7 @@ export async function GET(_req: NextRequest) {
   }
 
   notifications.sort((a, b) => a.diasRestantes - b.diasRestantes);
-  return NextResponse.json(notifications);
+  return NextResponse.json(notifications, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
+  });
 }

@@ -26,7 +26,8 @@ export function useAppSession() {
     : null
 
   const signOut = async () => {
-    await nextAuthSignOut({ callbackUrl: "/login" })
+    await nextAuthSignOut({ redirect: false })
+    window.location.href = "/login"
   }
 
   return {

@@ -84,7 +84,9 @@ export async function GET() {
     const empresas = await prisma.empresa.findMany({
       orderBy: { razonSocial: "asc" },
     })
-    return NextResponse.json(empresas.map(toEmpresaMock))
+    return NextResponse.json(empresas.map(toEmpresaMock), {
+      headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=600" },
+    })
   } catch (err) {
     console.error("[app-empresas GET]", err)
     return NextResponse.json([])
