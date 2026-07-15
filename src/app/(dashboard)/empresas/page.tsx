@@ -41,6 +41,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import EmpresaFormModal from "@/components/empresas/EmpresaFormModal";
+import TipoClienteModal from "@/components/empresas/TipoClienteModal";
+import PersonaNaturalFormModal, { PnFormData } from "@/components/empresas/PersonaNaturalFormModal";
 import { EmpresaMock } from "@/lib/empresas-mock";
 import { useAppSession } from "@/hooks/useAppSession";
 
@@ -278,9 +280,12 @@ export default function EmpresasPage() {
   const [estadoFilter, setEstadoFilter] = useState("todos");
   const [ciudadFilter, setCiudadFilter] = useState("Todas");
   const [page, setPage] = useState(1);
+  const [tipoSelectorOpen, setTipoSelectorOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalKey, setModalKey] = useState(0);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
+  const [pnModalOpen, setPnModalOpen] = useState(false);
+  const [pnModalKey, setPnModalKey] = useState(0);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [deletingEmpresa, setDeletingEmpresa] = useState<Empresa | null>(null);
@@ -288,9 +293,40 @@ export default function EmpresasPage() {
   // session now comes from useAppSession hook above
 
   function openCreate() {
-    setEditingEmpresa(null);
-    setModalKey((k) => k + 1);
-    setModalOpen(true);
+    setTipoSelectorOpen(true);
+  }
+
+  function handleTipoSelect(tipo: "empresa" | "persona_natural") {
+    setTipoSelectorOpen(false);
+    if (tipo === "empresa") {
+      setEditingEmpresa(null);
+      setModalKey((k) => k + 1);
+      setModalOpen(true);
+    } else {
+      setPnModalKey((k) => k + 1);
+      setPnModalOpen(true);
+    }
+  }
+
+  function handlePnSave(data: PnFormData) {
+    const newId = `new-${Date.now()}`;
+    setEmpresas((prev) => [...prev, {
+      id: newId,
+      tipoCliente: "persona_natural" as const,
+      razonSocial: data.nombresApellidos,
+      nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
+      numeroDocumento: data.numeroDocumento || undefined,
+      ciudad: data.ciudad,
+      departamento: "",
+      regimen: "Persona Natural",
+      estado: data.estado as "ACTIVA" | "INACTIVA",
+      representante: data.nombresApellidos,
+      telefono: data.telefono,
+      correo: data.correo,
+      fechaInicioRelacion: data.fechaInicioRelacion,
+      fechaFinRelacion: data.fechaFinRelacion || undefined,
+      direccion: data.direccion || undefined,
+    }]);
   }
 
   function openEdit(empresa: Empresa) {
@@ -798,6 +834,7 @@ export default function EmpresasPage() {
             const newId = `new-${Date.now()}`;
             setEmpresas((prev) => [...prev, {
               id: newId,
+              tipoCliente: "empresa" as const,
               razonSocial: data.razonSocial,
               nombreComercial: data.nombreComercial,
               nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
@@ -825,6 +862,21 @@ export default function EmpresasPage() {
             }]);
           }
         }}
+      />
+
+      {/* Tipo selector — shown before any create form */}
+      <TipoClienteModal
+        open={tipoSelectorOpen}
+        onClose={() => setTipoSelectorOpen(false)}
+        onSelect={handleTipoSelect}
+      />
+
+      {/* Persona Natural form */}
+      <PersonaNaturalFormModal
+        key={pnModalKey}
+        open={pnModalOpen}
+        onClose={() => setPnModalOpen(false)}
+        onSave={handlePnSave}
       />
 
       {/* Delete confirmation dialog */}

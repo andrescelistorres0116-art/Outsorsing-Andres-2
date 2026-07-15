@@ -13,6 +13,9 @@ export interface EmpresaMock {
   correo: string;
   fechaInicioRelacion: string;
   fechaFinRelacion?: string;
+  // Distinguishes empresa jurídica from persona natural; undefined = empresa (backward compat)
+  tipoCliente?: "empresa" | "persona_natural";
+  numeroDocumento?: string;
   nombreComercial?: string;
   direccion?: string;
   repCedula?: string;
