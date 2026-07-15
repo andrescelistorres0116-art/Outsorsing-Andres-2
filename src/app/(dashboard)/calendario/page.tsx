@@ -839,8 +839,13 @@ export default function CalendarioPage() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Contabilizado","Declarado","Pagado","Responsable",""].map(col => (
-                        <th key={col} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/60">{col}</th>
+                      {["Empresa","Tipo Obligación","Nivel","Periodicidad","Período","Año","Vencimiento","Días","Contabilizado","Declarado","Pagado","Responsable",""].map((col, i) => (
+                        <th key={col} className={cn(
+                          "text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap",
+                          i === 0 && "sticky left-0 z-20 bg-gray-50 w-[160px]",
+                          i === 1 && "sticky left-[160px] z-20 bg-gray-50 border-r border-gray-200",
+                          i !== 0 && i !== 1 && "bg-gray-50/60"
+                        )}>{col}</th>
                       ))}
                     </tr>
                   </thead>
@@ -871,13 +876,13 @@ export default function CalendarioPage() {
                           isCompleted && "opacity-70",
                           o.noAplica && "bg-gray-50/60 opacity-60"
                         )}>
-                          <td className="px-4 py-3 min-w-[140px]">
+                          <td className="px-4 py-3 w-[160px] sticky left-0 z-10 bg-white group-hover:bg-gray-50/80">
                             <div className="flex items-center gap-2">
                               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: o.noAplica ? "#9CA3AF" : o.empresaColor }} />
                               <span className={cn("font-medium text-xs leading-tight", o.noAplica ? "text-gray-400 line-through" : "text-gray-900")}>{o.empresa}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 min-w-[160px]"><span className={cn("text-xs font-medium", o.noAplica ? "text-gray-400 line-through" : "text-gray-700")}>{o.tipoObligacion}</span></td>
+                          <td className="px-4 py-3 min-w-[160px] sticky left-[160px] z-10 bg-white group-hover:bg-gray-50/80 border-r border-gray-200"><span className={cn("text-xs font-medium", o.noAplica ? "text-gray-400 line-through" : "text-gray-700")}>{o.tipoObligacion}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                           </td>
