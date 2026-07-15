@@ -562,3 +562,18 @@ model AuditoriaObligacion {
   @@index([realizadoPorId])
   @@index([fechaAccion])
 }
+
+// ─────────────────────────────────────────────
+// Recursos de referencia del Calendario Tributario
+// ─────────────────────────────────────────────
+
+model RecursoCalendario {
+  id       String   @id @default(cuid())
+  nombre   String
+  tipo     String   @default("application/pdf")
+  datos    Bytes
+  tamanio  Int      @default(0)
+  subidoEn DateTime @default(now())
+
+  @@index([subidoEn])
+}

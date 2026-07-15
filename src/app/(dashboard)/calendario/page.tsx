@@ -27,6 +27,7 @@ import VencimientoBadge from "@/components/calendario/VencimientoBadge";
 import CalendarioView from "@/components/calendario/CalendarioView";
 import ObligacionFormModal from "@/components/calendario/ObligacionFormModal";
 import UploadDocumentoModal, { DocumentoInfo } from "@/components/calendario/UploadDocumentoModal";
+import RecursosReferenciaModal from "@/components/calendario/RecursosReferenciaModal";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -401,6 +402,7 @@ export default function CalendarioPage() {
   const [filterFechaHasta, setFilterFechaHasta] = useState("");
 
   // ── Modal state ──────────────────────────────────────────────────────────────
+  const [recursosOpen, setRecursosOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingObligacion, setEditingObligacion] = useState<Obligacion | null>(null);
   const [activeTab, setActiveTab] = useState("lista");
@@ -688,6 +690,15 @@ export default function CalendarioPage() {
           <Button variant="outline" onClick={handleExport} className="gap-2">
             <Download className="w-4 h-4" />
             Exportar CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setRecursosOpen(true)}
+            className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+            title="Documentos de referencia"
+          >
+            <Paperclip className="w-4 h-4" />
+            Referencia DIAN
           </Button>
         </div>
       </div>
@@ -1129,6 +1140,12 @@ export default function CalendarioPage() {
         open={!!auditModal}
         obligacionId={auditModal ?? ""}
         onClose={() => setAuditModal(null)}
+      />
+
+      {/* Recursos de Referencia Modal */}
+      <RecursosReferenciaModal
+        open={recursosOpen}
+        onClose={() => setRecursosOpen(false)}
       />
     </div>
   );
