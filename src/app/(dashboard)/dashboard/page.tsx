@@ -372,9 +372,9 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          title="Empresas Activas"
+          title="Clientes Activos"
           value={String(activeEmpresas.length || "—")}
-          sub="empresas"
+          sub="clientes"
           icon={<Building2 className="w-6 h-6 text-green-600" />}
           color="text-green-600"
           bgColor="bg-green-50"
@@ -399,7 +399,7 @@ export default function DashboardPage() {
           href="/calendario"
         />
         <StatCard
-          title="Empresas con Nómina"
+          title="Clientes con Nómina"
           value={String(countNomina)}
           sub="requieren seguimiento"
           icon={<Users className="w-6 h-6 text-blue-600" />}
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                 <div>
                   <CardTitle>Obligaciones Próximas</CardTitle>
                   <CardDescription className="mt-1">
-                    Solo empresas activas · ordenadas por fecha de vencimiento
+                    Solo clientes activos · ordenadas por fecha de vencimiento
                   </CardDescription>
                 </div>
                 <Link href="/calendario">
@@ -498,7 +498,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Empresas Recientes</CardTitle>
+                <CardTitle className="text-base">Clientes Recientes</CardTitle>
                 <Link href="/empresas">
                   <Button
                     variant="ghost"

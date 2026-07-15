@@ -354,7 +354,7 @@ export default function UsuariosPage() {
               <tr className="border-b border-gray-100 bg-gray-50/60">
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rol</th>
-                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresas Asignadas</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Clientes Asignados</th>
                 <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Creado</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -577,7 +577,7 @@ export default function UsuariosPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Administrador — acceso total a la plataforma</SelectItem>
-                    <SelectItem value="contador">Contador — accede a Empresas, Accesos y Calendario</SelectItem>
+                    <SelectItem value="contador">Contador — accede a Clientes, Accesos y Calendario</SelectItem>
                     <SelectItem value="cliente">Cliente — accede solo a Nómina</SelectItem>
                   </SelectContent>
                 </Select>
@@ -588,16 +588,16 @@ export default function UsuariosPage() {
             {editingUser?.role !== "admin" && form.role !== "admin" && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
-                  Empresas asignadas
+                  Clientes asignados
                 </Label>
                 <p className="text-xs text-gray-400">
                   {form.role === "cliente"
-                    ? "Empresas que puede ver en Nómina"
-                    : "Empresas que puede gestionar (Contador)"}
+                    ? "Clientes que puede ver en Nómina"
+                    : "Clientes que puede gestionar (Contador)"}
                 </p>
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-52 overflow-y-auto">
                   {activeEmpresas.length === 0 ? (
-                    <p className="text-xs text-gray-400 px-3 py-4 text-center">No hay empresas activas</p>
+                    <p className="text-xs text-gray-400 px-3 py-4 text-center">No hay clientes activos</p>
                   ) : (
                     activeEmpresas.map((emp) => (
                       <label

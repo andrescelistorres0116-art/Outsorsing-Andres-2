@@ -717,7 +717,7 @@ export default function CalendarioPage() {
               values={filterEmpresa}
               onValuesChange={setFilterEmpresa}
               options={uniqueEmpresas.map(e => ({ value: e, label: e }))}
-              allLabel="Todas las empresas"
+              allLabel="Todos los clientes"
               searchPlaceholder="Buscar empresa..."
               className="w-full text-sm"
             />

@@ -21,7 +21,7 @@ import { initials } from "@/lib/app-auth";
 
 const ADMIN_NAV = [
   { label: "Dashboard",           href: "/dashboard",   icon: LayoutDashboard },
-  { label: "Empresas",            href: "/empresas",    icon: Building2 },
+  { label: "Clientes",            href: "/empresas",    icon: Building2 },
   { label: "Accesos",             href: "/accesos",     icon: KeyRound },
   { label: "Calendario Tributario", href: "/calendario", icon: CalendarCheck },
   { label: "Nómina",              href: "/nomina",      icon: Users },
@@ -33,7 +33,7 @@ const ADMIN_EXTRA = [
 ];
 
 const CONTADOR_NAV = [
-  { label: "Empresas",              href: "/empresas",    icon: Building2 },
+  { label: "Clientes",              href: "/empresas",    icon: Building2 },
   { label: "Accesos",               href: "/accesos",     icon: KeyRound },
   { label: "Calendario Tributario", href: "/calendario",  icon: CalendarCheck },
   { label: "Nómina",                href: "/nomina",      icon: Users },

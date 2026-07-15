@@ -361,9 +361,9 @@ export default function EmpresasPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Empresas</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Gestión de clientes y empresas registradas
+            Gestión de clientes registrados
           </p>
         </div>
         {session?.role !== "contador" && <Button
@@ -371,14 +371,14 @@ export default function EmpresasPage() {
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          Nueva Empresa
+          Nuevo Cliente
         </Button>}
       </div>
 
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Empresas", value: empresas.length, color: "text-gray-900", bg: "bg-white" },
+          { label: "Total Clientes", value: empresas.length, color: "text-gray-900", bg: "bg-white" },
           { label: "Activas", value: activas, color: "text-green-700", bg: "bg-green-50" },
           { label: "Inactivas", value: inactivas, color: "text-gray-500", bg: "bg-white" },
         ].map((s) => (
