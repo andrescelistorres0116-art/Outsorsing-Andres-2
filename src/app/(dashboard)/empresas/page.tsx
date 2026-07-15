@@ -298,8 +298,8 @@ export default function EmpresasPage() {
 
   function handleTipoSelect(tipo: "empresa" | "persona_natural") {
     setTipoSelectorOpen(false);
+    setEditingEmpresa(null);
     if (tipo === "empresa") {
-      setEditingEmpresa(null);
       setModalKey((k) => k + 1);
       setModalOpen(true);
     } else {
@@ -309,9 +309,7 @@ export default function EmpresasPage() {
   }
 
   function handlePnSave(data: PnFormData) {
-    const newId = `new-${Date.now()}`;
-    setEmpresas((prev) => [...prev, {
-      id: newId,
+    const pnRecord = {
       tipoCliente: "persona_natural" as const,
       razonSocial: data.nombresApellidos,
       nit: data.dv ? `${data.nit}-${data.dv}` : data.nit,
@@ -326,13 +324,26 @@ export default function EmpresasPage() {
       fechaInicioRelacion: data.fechaInicioRelacion,
       fechaFinRelacion: data.fechaFinRelacion || undefined,
       direccion: data.direccion || undefined,
-    }]);
+    };
+    if (editingEmpresa) {
+      setEmpresas((prev) => prev.map((e) =>
+        e.id === editingEmpresa.id ? { ...e, ...pnRecord } : e
+      ));
+      setEditingEmpresa(null);
+    } else {
+      setEmpresas((prev) => [...prev, { id: `new-${Date.now()}`, ...pnRecord }]);
+    }
   }
 
   function openEdit(empresa: Empresa) {
     setEditingEmpresa(empresa);
-    setModalKey((k) => k + 1);
-    setModalOpen(true);
+    if (empresa.tipoCliente === "persona_natural") {
+      setPnModalKey((k) => k + 1);
+      setPnModalOpen(true);
+    } else {
+      setModalKey((k) => k + 1);
+      setModalOpen(true);
+    }
   }
 
   async function handleDelete(empresa: Empresa) {
@@ -875,8 +886,22 @@ export default function EmpresasPage() {
       <PersonaNaturalFormModal
         key={pnModalKey}
         open={pnModalOpen}
-        onClose={() => setPnModalOpen(false)}
+        onClose={() => { setPnModalOpen(false); setEditingEmpresa(null); }}
         onSave={handlePnSave}
+        mode={editingEmpresa?.tipoCliente === "persona_natural" ? "edit" : "create"}
+        initialData={editingEmpresa?.tipoCliente === "persona_natural" ? {
+          nombresApellidos: editingEmpresa.razonSocial,
+          numeroDocumento: editingEmpresa.numeroDocumento ?? "",
+          nit: editingEmpresa.nit.split("-")[0] ?? editingEmpresa.nit,
+          dv: editingEmpresa.nit.split("-")[1] ?? "",
+          direccion: editingEmpresa.direccion ?? "",
+          ciudad: editingEmpresa.ciudad,
+          correo: editingEmpresa.correo,
+          telefono: editingEmpresa.telefono,
+          estado: editingEmpresa.estado,
+          fechaInicioRelacion: editingEmpresa.fechaInicioRelacion,
+          fechaFinRelacion: editingEmpresa.fechaFinRelacion ?? "",
+        } : undefined}
       />
 
       {/* Delete confirmation dialog */}

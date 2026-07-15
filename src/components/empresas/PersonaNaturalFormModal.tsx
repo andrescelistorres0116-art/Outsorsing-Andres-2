@@ -95,12 +95,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSave: (data: PnFormData) => void;
+  mode?: "create" | "edit";
+  initialData?: Partial<PnFormData>;
 }
 
 // ── Main Modal ─────────────────────────────────────────────────────────────────
 
-export default function PersonaNaturalFormModal({ open, onClose, onSave }: Props) {
-  const [form, setForm] = useState<PnFormData>(INITIAL);
+export default function PersonaNaturalFormModal({ open, onClose, onSave, mode = "create", initialData }: Props) {
+  const [form, setForm] = useState<PnFormData>({ ...INITIAL, ...initialData });
   const [errors, setErrors] = useState<Errors>({});
   const [saved, setSaved] = useState(false);
 
@@ -121,7 +123,7 @@ export default function PersonaNaturalFormModal({ open, onClose, onSave }: Props
   }
 
   function handleClose() {
-    setForm(INITIAL);
+    setForm({ ...INITIAL, ...initialData });
     setErrors({});
     setSaved(false);
     onClose();
@@ -137,10 +139,12 @@ export default function PersonaNaturalFormModal({ open, onClose, onSave }: Props
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-600 shrink-0">
                 <User className="w-4 h-4 text-white" />
               </div>
-              Nueva Persona Natural
+              {mode === "edit" ? "Editar Persona Natural" : "Nueva Persona Natural"}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500 mt-1">
-              Complete los campos para registrar una persona natural en Orbita AC
+              {mode === "edit"
+                ? "Actualice los datos de la persona natural"
+                : "Complete los campos para registrar una persona natural en Orbita AC"}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -289,7 +293,7 @@ export default function PersonaNaturalFormModal({ open, onClose, onSave }: Props
             {saved ? (
               <><Check className="w-4 h-4" /> Guardado</>
             ) : (
-              <><Check className="w-4 h-4" /> Guardar Cliente</>
+              <><Check className="w-4 h-4" /> {mode === "edit" ? "Actualizar" : "Guardar Cliente"}</>
             )}
           </Button>
         </div>
