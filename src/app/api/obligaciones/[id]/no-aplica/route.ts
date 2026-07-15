@@ -17,20 +17,25 @@ export async function POST(_req: NextRequest, context: { params: Params }) {
   const existing = await prisma.obligacionTributaria.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: "No encontrada" }, { status: 404 })
 
+  const now = new Date()
   const updated = await prisma.obligacionTributaria.update({
     where: { id },
-    data: { noAplica: true, noAplicaFecha: new Date() },
+    data: { noAplica: true, noAplicaFecha: now },
     select: { id: true, noAplica: true, noAplicaFecha: true },
   })
 
-  prisma.auditoriaObligacion.create({
-    data: {
-      obligacionId: id,
-      accion: "NO_APLICA",
-      usuarioId: (session.user as any).id,
-      detalle: "Marcada como No Aplica (sin movimientos o sin obligación vigente)",
-    },
-  }).catch(() => {})
+  const userId = (session.user as any)?.id
+  if (userId) {
+    prisma.auditoriaObligacion.create({
+      data: {
+        obligacionId: id,
+        accion: "NO_APLICA",
+        detalles: "Marcada como No Aplica (sin movimientos o sin obligación vigente)",
+        realizadoPorId: userId,
+        fechaAccion: now,
+      },
+    }).catch(() => {})
+  }
 
   return NextResponse.json(updated)
 }
@@ -45,20 +50,25 @@ export async function DELETE(_req: NextRequest, context: { params: Params }) {
   const existing = await prisma.obligacionTributaria.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: "No encontrada" }, { status: 404 })
 
+  const now = new Date()
   const updated = await prisma.obligacionTributaria.update({
     where: { id },
     data: { noAplica: false, noAplicaFecha: null },
     select: { id: true, noAplica: true, noAplicaFecha: true },
   })
 
-  prisma.auditoriaObligacion.create({
-    data: {
-      obligacionId: id,
-      accion: "NO_APLICA_REMOVIDO",
-      usuarioId: (session.user as any).id,
-      detalle: "No Aplica revertido",
-    },
-  }).catch(() => {})
+  const userId = (session.user as any)?.id
+  if (userId) {
+    prisma.auditoriaObligacion.create({
+      data: {
+        obligacionId: id,
+        accion: "NO_APLICA_REMOVIDO",
+        detalles: "No Aplica revertido",
+        realizadoPorId: userId,
+        fechaAccion: now,
+      },
+    }).catch(() => {})
+  }
 
   return NextResponse.json(updated)
 }
