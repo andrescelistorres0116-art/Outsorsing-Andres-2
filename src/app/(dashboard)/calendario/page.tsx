@@ -871,13 +871,13 @@ export default function CalendarioPage() {
                           isCompleted && "opacity-70",
                           o.noAplica && "bg-gray-50/60 opacity-60"
                         )}>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 min-w-[140px]">
                             <div className="flex items-center gap-2">
                               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: o.noAplica ? "#9CA3AF" : o.empresaColor }} />
-                              <span className={cn("font-medium text-xs leading-tight max-w-[130px] truncate", o.noAplica ? "text-gray-400 line-through" : "text-gray-900")}>{o.empresa}</span>
+                              <span className={cn("font-medium text-xs leading-tight", o.noAplica ? "text-gray-400 line-through" : "text-gray-900")}>{o.empresa}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap"><span className={cn("text-xs font-medium", o.noAplica ? "text-gray-400 line-through" : "text-gray-700")}>{o.tipoObligacion}</span></td>
+                          <td className="px-4 py-3 min-w-[160px]"><span className={cn("text-xs font-medium", o.noAplica ? "text-gray-400 line-through" : "text-gray-700")}>{o.tipoObligacion}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                           </td>
@@ -1027,7 +1027,7 @@ export default function CalendarioPage() {
                           const isCompleted = o.estado === "PAGADO" || o.estado === "PRESENTADO";
                           return (
                             <tr key={o.id} className={cn("hover:bg-gray-50/60 transition-colors group", isCompleted && "opacity-60")}>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-800">{o.tipoObligacion}</td>
+                              <td className="px-4 py-3 min-w-[160px] font-medium text-gray-800">{o.tipoObligacion}</td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={cn("rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                               </td>
