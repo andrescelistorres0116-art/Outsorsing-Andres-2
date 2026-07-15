@@ -15,8 +15,10 @@ export function estadoEfectivo(
   declarado: boolean,
   contabilizado: boolean,
   fechaVencimiento: Date,
-  now: Date
+  now: Date,
+  noAplica = false
 ): string {
+  if (noAplica) return "no_aplica"
   if (pagado) return "pagado"
   if (declarado) return "presentado"
   if (contabilizado) return "en_proceso"
@@ -41,17 +43,17 @@ export function estadoEfectivo(
 export function buildEstadoWhere(param: string | undefined): Record<string, unknown> {
   switch (param) {
     case "pagado":
-      return { pagado: true }
+      return { pagado: true, noAplica: false }
     case "presentado":
-      return { declarado: true, pagado: false }
+      return { declarado: true, pagado: false, noAplica: false }
     case "en_proceso":
-      return { contabilizado: true, declarado: false, pagado: false }
+      return { contabilizado: true, declarado: false, pagado: false, noAplica: false }
     case "vencido":
-      // All 3 steps must be false — contabilizado=true would make it "en_proceso",
-      // not "vencido", according to estadoEfectivo priority rules.
-      return { contabilizado: false, declarado: false, pagado: false }
+      return { contabilizado: false, declarado: false, pagado: false, noAplica: false }
     case "pendiente":
-      return { contabilizado: false, declarado: false, pagado: false }
+      return { contabilizado: false, declarado: false, pagado: false, noAplica: false }
+    case "no_aplica":
+      return { noAplica: true }
     default:
       return {}
   }

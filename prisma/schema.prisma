@@ -303,6 +303,10 @@ model ObligacionTributaria {
   pagadoFecha  DateTime?
   pagadoPorId  String?
 
+  // No aplica — sin movimientos o la empresa ya no está obligada
+  noAplica      Boolean   @default(false)
+  noAplicaFecha DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

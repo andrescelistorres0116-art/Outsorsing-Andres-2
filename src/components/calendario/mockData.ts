@@ -40,6 +40,7 @@ export interface Obligacion {
   declaradoFecha?: string | null;
   declaradoPorNombre?: string | null;
   pagado: boolean;
+  noAplica?: boolean;
 }
 
 export const ESTADOS_LABELS: Record<EstadoObligacion, string> = {

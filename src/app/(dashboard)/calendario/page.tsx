@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Plus, Download, Search, X, ChevronDown, Pencil, Trash2,
   Building2, AlertTriangle, Clock, CheckCircle2, CalendarDays,
-  List, LayoutGrid, Paperclip, History, Copy,
+  List, LayoutGrid, Paperclip, History, Copy, Ban,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -153,6 +153,7 @@ function mapDB(row: any): Obligacion {
     declaradoFecha: row.declaradoFecha ? isoDate(String(row.declaradoFecha)) : null,
     declaradoPorNombre: row.declaradoPor?.name ?? null,
     pagado: !!row.pagado,
+    noAplica: !!row.noAplica,
   };
 }
 
@@ -489,6 +490,11 @@ export default function CalendarioPage() {
     }).catch(() => {});
   }
 
+  async function handleNoAplica(id: string, value: boolean) {
+    setObligaciones(prev => prev.map(o => o.id === id ? { ...o, noAplica: value } : o));
+    await fetch(`/api/obligaciones/${id}/no-aplica`, { method: value ? "POST" : "DELETE" }).catch(() => {});
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("¿Eliminar esta obligación? Esta acción no se puede deshacer.")) return;
     await fetch(`/api/obligaciones/${id}`, { method: "DELETE" });
@@ -797,8 +803,8 @@ export default function CalendarioPage() {
             <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-100">
               {(["pendientes", "hechas"] as const).map((sub) => {
                 const count = sub === "pendientes"
-                  ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado)).length
-                  : sorted.filter(o => o.contabilizado && o.declarado && o.pagado).length;
+                  ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado) && !o.noAplica).length
+                  : sorted.filter(o => (o.contabilizado && o.declarado && o.pagado) || !!o.noAplica).length;
                 const active = listaSubTab === sub;
                 return (
                   <button
@@ -841,8 +847,8 @@ export default function CalendarioPage() {
                   <tbody className="divide-y divide-gray-50">
                     {(() => {
                       const rows = listaSubTab === "pendientes"
-                        ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado))
-                        : sorted.filter(o => o.contabilizado && o.declarado && o.pagado);
+                        ? sorted.filter(o => !(o.contabilizado && o.declarado && o.pagado) && !o.noAplica)
+                        : sorted.filter(o => (o.contabilizado && o.declarado && o.pagado) || !!o.noAplica);
                       if (rows.length === 0) return (
                         <tr><td colSpan={13} className="px-4 py-12 text-center text-sm text-gray-400">
                           <div className="flex flex-col items-center gap-2">
@@ -860,14 +866,18 @@ export default function CalendarioPage() {
                       const days = getDaysUntil(o.fechaVencimiento);
                       const isCompleted = o.estado === "PAGADO" || o.estado === "PRESENTADO";
                       return (
-                        <tr key={o.id} className={cn("hover:bg-gray-50/80 transition-colors group", isCompleted && "opacity-70")}>
+                        <tr key={o.id} className={cn(
+                          "hover:bg-gray-50/80 transition-colors group",
+                          isCompleted && "opacity-70",
+                          o.noAplica && "bg-gray-50/60 opacity-60"
+                        )}>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: o.empresaColor }} />
-                              <span className="font-medium text-gray-900 text-xs leading-tight max-w-[130px] truncate">{o.empresa}</span>
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: o.noAplica ? "#9CA3AF" : o.empresaColor }} />
+                              <span className={cn("font-medium text-xs leading-tight max-w-[130px] truncate", o.noAplica ? "text-gray-400 line-through" : "text-gray-900")}>{o.empresa}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap"><span className="text-gray-700 text-xs font-medium">{o.tipoObligacion}</span></td>
+                          <td className="px-4 py-3 whitespace-nowrap"><span className={cn("text-xs font-medium", o.noAplica ? "text-gray-400 line-through" : "text-gray-700")}>{o.tipoObligacion}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", o.municipio === "Nacional" ? "bg-slate-100 text-slate-600" : "bg-indigo-50 text-indigo-600")}>{o.municipio}</span>
                           </td>
@@ -876,32 +886,55 @@ export default function CalendarioPage() {
                           <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{o.anio}</td>
                           <td className="px-4 py-3 whitespace-nowrap"><span className="text-xs font-mono text-gray-600">{formatDate(o.fechaVencimiento)}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            {o.contabilizado && o.declarado && o.pagado ? (
+                            {o.noAplica ? (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                                <Ban className="w-3 h-3" /> No Aplica
+                              </span>
+                            ) : o.contabilizado && o.declarado && o.pagado ? (
                               <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">✓ Hecho</span>
                             ) : (
                               <VencimientoBadge days={days} estado={o.estado} showText={true} />
                             )}
                           </td>
                           {/* Contabilizado */}
-                          <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "contabilizado")}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {o.noAplica ? <span className="text-xs text-gray-300">—</span> : renderDocCell(o, "contabilizado")}
+                          </td>
                           {/* Declarado */}
-                          <td className="px-4 py-3 whitespace-nowrap">{renderDocCell(o, "declarado")}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {o.noAplica ? <span className="text-xs text-gray-300">—</span> : renderDocCell(o, "declarado")}
+                          </td>
                           {/* Pagado */}
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex gap-1">
-                              <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
-                                className={cn("px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
-                                  o.pagado ? "bg-purple-500 text-white border-purple-500" : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
-                                )}>Sí</button>
-                              <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
-                                className={cn("px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
-                                  !o.pagado ? "bg-gray-500 text-white border-gray-500" : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
-                                )}>No</button>
-                            </div>
+                            {o.noAplica ? <span className="text-xs text-gray-300">—</span> : (
+                              <div className="flex gap-1">
+                                <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, true); }}
+                                  className={cn("px-2.5 py-1 rounded-l-full text-xs font-semibold border transition-colors",
+                                    o.pagado ? "bg-purple-500 text-white border-purple-500" : "bg-white text-gray-400 border-gray-200 hover:border-purple-400 hover:text-purple-600"
+                                  )}>Sí</button>
+                                <button onClick={(e) => { e.stopPropagation(); handlePagadoChange(o.id, false); }}
+                                  className={cn("px-2.5 py-1 rounded-r-full text-xs font-semibold border transition-colors",
+                                    !o.pagado ? "bg-gray-500 text-white border-gray-500" : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-600"
+                                  )}>No</button>
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap"><span className="text-xs text-gray-500 max-w-[110px] truncate block">{o.responsable}</span></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1">
+                              {/* No Aplica toggle */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleNoAplica(o.id, !o.noAplica); }}
+                                className={cn(
+                                  "w-7 h-7 flex items-center justify-center rounded-lg transition-colors",
+                                  o.noAplica
+                                    ? "text-gray-600 bg-gray-200 hover:bg-gray-300"
+                                    : "text-gray-400 bg-gray-50 hover:bg-gray-100 hover:text-gray-600"
+                                )}
+                                title={o.noAplica ? "Reactivar obligación" : "Marcar como No Aplica"}
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                              </button>
                               <button onClick={() => { setEditingObligacion(o); setShowForm(true); }}
                                 className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" title="Editar">
                                 <Pencil className="w-3.5 h-3.5" />
