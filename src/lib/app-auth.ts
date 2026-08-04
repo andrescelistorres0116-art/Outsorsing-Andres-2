@@ -31,7 +31,8 @@ export const DEFAULT_ADMIN: AppUser = {
   id: "admin-1",
   nombre: "Admin",
   email: "admin@contaflow.co",
-  password: "admin2026",
+  // Server-side: populated from env var. Client bundle sees "".
+  password: process.env.ADMIN_INITIAL_PASSWORD ?? "",
   role: "admin",
   empresaIds: [],
   activo: true,

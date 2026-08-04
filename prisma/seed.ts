@@ -7,8 +7,12 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required — set it before running db:seed')
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5432/outsorsing_db',
+  connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 })
 const adapter = new PrismaPg(pool)
