@@ -1,31 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { encrypt, decrypt } from "@/lib/crypto"
 
-// ─── Encryption helpers ───────────────────────────────────────────────────────
-
-function encryptPassword(password: string): string {
-  const key = process.env.ENCRYPTION_KEY || "default-key"
-  const keyBytes = Buffer.from(key)
-  const passBytes = Buffer.from(password, "utf-8")
-  const result = Buffer.alloc(passBytes.length)
-  for (let i = 0; i < passBytes.length; i++) {
-    result[i] = passBytes[i] ^ keyBytes[i % keyBytes.length]
-  }
-  return result.toString("base64")
-}
-
-function decryptPassword(encrypted: string): string {
-  const key = process.env.ENCRYPTION_KEY || "default-key"
-  const keyBytes = Buffer.from(key)
-  const encBytes = Buffer.from(encrypted, "base64")
-  const result = Buffer.alloc(encBytes.length)
-  for (let i = 0; i < encBytes.length; i++) {
-    result[i] = encBytes[i] ^ keyBytes[i % keyBytes.length]
-  }
-  return result.toString("utf-8")
-}
-
-export { encryptPassword, decryptPassword }
+// encrypt / decrypt re-exported so [id]/route.ts can import from one place
+export { encrypt as encryptPassword, decrypt as decryptPassword }
 
 function mapAcceso(a: any) {
   return {
@@ -112,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.contrasena && data.contrasena !== "••••••") {
-      data.contrasena = encryptPassword(data.contrasena)
+      data.contrasena = encrypt(data.contrasena)
     }
 
     // Quitar campos que no existen en el modelo

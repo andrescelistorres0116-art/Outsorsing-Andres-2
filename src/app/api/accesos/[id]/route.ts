@@ -2,28 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-
-function encryptPassword(password: string): string {
-  const key = process.env.ENCRYPTION_KEY || "default-key"
-  const keyBytes = Buffer.from(key)
-  const passBytes = Buffer.from(password, "utf-8")
-  const result = Buffer.alloc(passBytes.length)
-  for (let i = 0; i < passBytes.length; i++) {
-    result[i] = passBytes[i] ^ keyBytes[i % keyBytes.length]
-  }
-  return result.toString("base64")
-}
-
-function decryptPassword(encrypted: string): string {
-  const key = process.env.ENCRYPTION_KEY || "default-key"
-  const keyBytes = Buffer.from(key)
-  const encBytes = Buffer.from(encrypted, "base64")
-  const result = Buffer.alloc(encBytes.length)
-  for (let i = 0; i < encBytes.length; i++) {
-    result[i] = encBytes[i] ^ keyBytes[i % keyBytes.length]
-  }
-  return result.toString("utf-8")
-}
+import { encrypt as encryptPassword, decrypt as decryptPassword } from "@/lib/crypto"
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
