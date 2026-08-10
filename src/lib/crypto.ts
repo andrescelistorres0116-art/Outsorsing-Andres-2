@@ -20,14 +20,22 @@ function loadKey(): Buffer {
       "and add it as a Railway variable before deploying."
     )
   }
-  const key = Buffer.from(raw, "base64")
-  if (key.length !== KEY_LEN) {
-    throw new Error(
-      `[crypto] ENCRYPTION_KEY must decode to exactly ${KEY_LEN} bytes. ` +
-      `Got ${key.length} bytes. Regenerate with:  openssl rand -base64 32`
-    )
-  }
-  return key
+  // Prefer base64-encoded keys (openssl rand -base64 32 → 44 chars → 32 bytes).
+  // Fall back to raw UTF-8 bytes for keys that are exactly KEY_LEN characters
+  // (e.g. a 32-char plain-text key set before the base64 convention was adopted).
+  const keyB64 = Buffer.from(raw, "base64")
+  if (keyB64.length === KEY_LEN) return keyB64
+
+  const keyUtf8 = Buffer.from(raw, "utf8")
+  if (keyUtf8.length === KEY_LEN) return keyUtf8
+
+  throw new Error(
+    `[crypto] ENCRYPTION_KEY is not usable as an AES-256 key. ` +
+    `It must either be a base64 string that decodes to ${KEY_LEN} bytes, ` +
+    `or a plain string of exactly ${KEY_LEN} UTF-8 characters. ` +
+    `Got base64-decoded length ${keyB64.length} and UTF-8 length ${keyUtf8.length}. ` +
+    `Generate a proper key with:  openssl rand -base64 32`
+  )
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
