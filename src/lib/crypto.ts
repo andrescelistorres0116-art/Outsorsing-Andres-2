@@ -71,7 +71,8 @@ export function decrypt(stored: string): string {
   }
 
   // ── Legacy XOR path (migration bridge — remove after migration) ─
-  const xorKey = process.env.OLD_ENCRYPTION_KEY ?? "default-key"
+  // The original XOR used ENCRYPTION_KEY (same variable), not a separate old key.
+  const xorKey = process.env.ENCRYPTION_KEY || "default-key"
   const keyBytes  = Buffer.from(xorKey)
   const encBytes  = Buffer.from(stored, "base64")
   const result    = Buffer.alloc(encBytes.length)
