@@ -46,27 +46,39 @@ export function encrypt(plaintext: string): string {
 }
 
 /**
- * Decrypts an AES-256-GCM ciphertext produced by encrypt().
- * Throws if the ciphertext is tampered with (GCM authentication failure).
+ * Decrypts a ciphertext produced by encrypt().
+ *
+ * Supports two formats:
+ *   - Modern (v2:): AES-256-GCM — used for all new records.
+ *   - Legacy (no prefix): XOR with OLD_ENCRYPTION_KEY env var
+ *     (fallback "default-key"). Accepted until the migration script
+ *     has re-encrypted all records; remove this branch afterwards.
  */
 export function decrypt(stored: string): string {
-  if (!stored.startsWith(V2_PREFIX)) {
-    throw new Error(
-      `[crypto] Unexpected cipher format — missing "${V2_PREFIX}" prefix. ` +
-      "Run the re-encryption migration script to upgrade legacy records."
-    )
+  if (stored.startsWith(V2_PREFIX)) {
+    // ── AES-256-GCM path ────────────────────────────────────────
+    const key = loadKey()
+    const buf = Buffer.from(stored.slice(V2_PREFIX.length), "base64")
+    if (buf.length < IV_LEN + TAG_LEN) {
+      throw new Error("[crypto] Cipher data is too short to be valid.")
+    }
+    const iv         = buf.subarray(0, IV_LEN)
+    const tag        = buf.subarray(IV_LEN, IV_LEN + TAG_LEN)
+    const ciphertext = buf.subarray(IV_LEN + TAG_LEN)
+    const decipher   = createDecipheriv(ALGORITHM, key, iv)
+    decipher.setAuthTag(tag)
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")
   }
-  const key     = loadKey()
-  const buf     = Buffer.from(stored.slice(V2_PREFIX.length), "base64")
-  if (buf.length < IV_LEN + TAG_LEN) {
-    throw new Error("[crypto] Cipher data is too short to be valid.")
+
+  // ── Legacy XOR path (migration bridge — remove after migration) ─
+  const xorKey = process.env.OLD_ENCRYPTION_KEY ?? "default-key"
+  const keyBytes  = Buffer.from(xorKey)
+  const encBytes  = Buffer.from(stored, "base64")
+  const result    = Buffer.alloc(encBytes.length)
+  for (let i = 0; i < encBytes.length; i++) {
+    result[i] = encBytes[i] ^ keyBytes[i % keyBytes.length]
   }
-  const iv         = buf.subarray(0, IV_LEN)
-  const tag        = buf.subarray(IV_LEN, IV_LEN + TAG_LEN)
-  const ciphertext = buf.subarray(IV_LEN + TAG_LEN)
-  const decipher   = createDecipheriv(ALGORITHM, key, iv)
-  decipher.setAuthTag(tag)
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")
+  return result.toString("utf8")
 }
 
 /**
