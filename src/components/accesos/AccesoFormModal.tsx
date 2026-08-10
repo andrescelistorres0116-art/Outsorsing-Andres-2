@@ -61,6 +61,8 @@ interface AccesoFormModalProps {
   initialData?: Partial<AccesoFormData>;
   mode?: "create" | "edit";
   empresas: string[];
+  /** ID del acceso siendo editado — necesario para cargar la contraseña real desde la API */
+  accesoId?: string | null;
 }
 
 const TIPOS_ACCESO: { value: TipoAcceso; label: string }[] = [
@@ -122,6 +124,7 @@ export default function AccesoFormModal({
   initialData,
   mode = "create",
   empresas,
+  accesoId,
 }: AccesoFormModalProps) {
   const [form, setForm] = useState<AccesoFormData>({
     ...DEFAULT_FORM,
@@ -130,6 +133,7 @@ export default function AccesoFormModal({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof AccesoFormData, string>>>({});
+  const [revealLoading, setRevealLoading] = useState(false);
 
   // Sync form with initialData every time the modal opens
   useEffect(() => {
@@ -151,6 +155,30 @@ export default function AccesoFormModal({
       tipo,
       plataforma: AUTO_PLATAFORMA[tipo] ?? prev.plataforma,
     }));
+  };
+
+  /**
+   * En modo edición, la contraseña llega como "••••••" (enmascarada por la API).
+   * Al hacer click en el ojo la primera vez, carga la contraseña real desde el endpoint
+   * de reveal y la coloca en el formulario para que el usuario pueda verla o editarla.
+   */
+  const handleRevealPassword = async () => {
+    if (mode === "edit" && accesoId && (form.contrasena === "••••••" || form.contrasena === "")) {
+      setRevealLoading(true);
+      try {
+        const res = await fetch(`/api/accesos/${accesoId}?reveal=true`);
+        if (res.ok) {
+          const data = await res.json();
+          const real = data.contrasena ?? "";
+          setForm((prev) => ({ ...prev, contrasena: real, confirmarContrasena: real }));
+        }
+      } catch {
+        // Si falla el reveal, simplemente mostramos lo que hay
+      } finally {
+        setRevealLoading(false);
+      }
+    }
+    setShowPassword((v) => !v);
   };
 
   // DIAN and Hacienda share the same form layout
@@ -289,9 +317,9 @@ export default function AccesoFormModal({
                     placeholder="Contraseña..."
                     className={`pr-10 ${errors.contrasena ? "border-red-400" : ""}`}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button type="button" onClick={handleRevealPassword} disabled={revealLoading}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50">
+                    {revealLoading ? <span className="w-4 h-4 block animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" /> : showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {errors.contrasena && <p className="text-xs text-red-500">{errors.contrasena}</p>}
@@ -386,9 +414,9 @@ export default function AccesoFormModal({
                     placeholder="Contraseña..."
                     className={`pr-10 ${errors.contrasena ? "border-red-400" : ""}`}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button type="button" onClick={handleRevealPassword} disabled={revealLoading}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50">
+                    {revealLoading ? <span className="w-4 h-4 block animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" /> : showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {errors.contrasena && <p className="text-xs text-red-500">{errors.contrasena}</p>}

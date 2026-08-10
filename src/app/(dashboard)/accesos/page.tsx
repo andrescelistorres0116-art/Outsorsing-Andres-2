@@ -796,7 +796,7 @@ export default function AccesosPage() {
       <AccesoFormModal
         open={modalOpen} onClose={() => setModalOpen(false)}
         onSave={handleSave} initialData={editData} mode={editMode}
-        empresas={activaEmpresas}
+        empresas={activaEmpresas} accesoId={editId}
       />
     </div>
   );
