@@ -6,10 +6,12 @@
  * Renders the income statement as a multi-column table:
  *   Concepto | Total Acumulado | Mes1 | Mes2 | …
  *
- * Positive values are shown in regular colour; negative values in red.
+ * Features:
+ *   - Crosshair highlight: hovering any cell highlights its full row AND column.
+ *   - Negative values are rendered in red.
  */
 
-import React from "react"
+import React, { useState, useCallback } from "react"
 import type {
   EstadoResultados,
   LineaEstadoResultados,
@@ -33,207 +35,252 @@ function mesLabel(mes: string): string {
   return `${names[parseInt(m, 10) - 1] ?? m}-${y.slice(2)}`
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Row data model ───────────────────────────────────────────────────────────
 
-function NumCell({ value, className = "" }: { value: number; className?: string }) {
-  const isNeg = value < 0
-  return (
-    <td
-      className={`px-3 py-1.5 text-right tabular-nums text-sm ${isNeg ? "text-red-500" : ""} ${className}`}
-    >
-      {fmtNum(value)}
-    </td>
-  )
-}
+type RowItem =
+  | { type: "section"; label: string }
+  | { type: "line";    linea: LineaEstadoResultados; indent: boolean }
+  | { type: "subtotal"; subtotal: SubtotalEstadoResultados; variant: "default" | "primary" | "strong" }
 
-function SectionHeader({ label, colSpan }: { label: string; colSpan: number }) {
-  return (
-    <tr className="bg-muted/40">
-      <td
-        colSpan={colSpan}
-        className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-foreground/70"
-      >
-        {label}
-      </td>
-    </tr>
-  )
-}
+// ─── Crosshair highlight logic ────────────────────────────────────────────────
 
-function LineRow({
-  linea,
-  meses,
-  indent = false,
-}: {
-  linea: LineaEstadoResultados
-  meses: string[]
-  indent?: boolean
-}) {
-  return (
-    <tr className="hover:bg-muted/20 transition-colors border-b border-border/30">
-      <td className={`px-3 py-1.5 text-sm ${indent ? "pl-6 text-foreground/80" : "font-medium"}`}>
-        {linea.concepto}
-      </td>
-      <NumCell value={linea.acumulado} />
-      {meses.map(m => (
-        <NumCell key={m} value={linea.porMes[m] ?? 0} />
-      ))}
-    </tr>
-  )
-}
+function cellBg(
+  rowIdx: number,
+  colIdx: number,
+  hovRow: number,
+  hovCol: number,
+  baseVariant?: "primary" | "strong" | "section"
+): string {
+  const isRow = hovRow >= 0 && hovRow === rowIdx
+  const isCol = hovCol >= 0 && hovCol === colIdx
 
-function SubtotalRow({
-  subtotal,
-  meses,
-  variant = "default",
-}: {
-  subtotal: SubtotalEstadoResultados
-  meses: string[]
-  variant?: "default" | "primary" | "strong"
-}) {
-  const rowClass =
-    variant === "strong"
-      ? "bg-primary/10 border-t-2 border-primary/40"
-      : variant === "primary"
-      ? "bg-primary/5 border-t border-primary/20"
-      : "border-t border-border/50"
-  const textClass =
-    variant === "strong"
-      ? "font-bold text-sm"
-      : "font-semibold text-sm"
+  if (!isRow && !isCol) return ""
 
-  return (
-    <tr className={`${rowClass}`}>
-      <td className={`px-3 py-2 ${textClass}`}>{subtotal.concepto}</td>
-      <td className={`px-3 py-2 text-right tabular-nums ${textClass} ${subtotal.acumulado < 0 ? "text-red-500" : ""}`}>
-        {fmtNum(subtotal.acumulado)}
-      </td>
-      {meses.map(m => (
-        <td
-          key={m}
-          className={`px-3 py-2 text-right tabular-nums ${textClass} ${(subtotal.porMes[m] ?? 0) < 0 ? "text-red-500" : ""}`}
-        >
-          {fmtNum(subtotal.porMes[m] ?? 0)}
-        </td>
-      ))}
-    </tr>
-  )
+  // Intersection cell gets stronger highlight
+  if (isRow && isCol) {
+    if (baseVariant === "strong")  return "bg-primary/30 dark:bg-primary/25"
+    if (baseVariant === "primary") return "bg-primary/25 dark:bg-primary/20"
+    return "bg-primary/20 dark:bg-primary/15"
+  }
+
+  // Row or column highlight
+  if (baseVariant === "strong")  return "bg-primary/20 dark:bg-primary/15"
+  if (baseVariant === "primary") return "bg-primary/15 dark:bg-primary/10"
+  if (baseVariant === "section") return "bg-muted/60 dark:bg-muted/60"   // section headers stay muted
+  return "bg-primary/10 dark:bg-primary/8"
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-interface Props {
-  er: EstadoResultados
-}
+interface Props { er: EstadoResultados }
 
 export default function TablaEstadoResultados({ er }: Props) {
   const { meses } = er
-  const colSpan = 2 + meses.length  // Concepto + Acumulado + months
+  const colSpan = 2 + meses.length
+
+  const [hovRow, setHovRow] = useState(-1)
+  const [hovCol, setHovCol] = useState(-1)
+  const onLeave = useCallback(() => { setHovRow(-1); setHovCol(-1) }, [])
+
+  // ── Build flat row list ───────────────────────────────────────────────────
+
+  const rows: RowItem[] = []
+
+  if (er.ingresos_operacionales.length > 0) {
+    rows.push({ type: "section", label: "Ingresos Operacionales" })
+    er.ingresos_operacionales.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_ingresos_operacionales, variant: "default" })
+  }
+
+  if (er.costos_ventas.length > 0) {
+    rows.push({ type: "section", label: "Costos de Ventas" })
+    er.costos_ventas.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_costos_ventas, variant: "default" })
+  }
+
+  rows.push({ type: "subtotal", subtotal: er.utilidad_bruta, variant: "primary" })
+
+  if (er.gastos_administrativos.length > 0) {
+    rows.push({ type: "section", label: "Gastos Administrativos" })
+    er.gastos_administrativos.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_gastos_administrativos, variant: "default" })
+  }
+
+  if (er.gastos_ventas.length > 0) {
+    rows.push({ type: "section", label: "Gastos de Ventas" })
+    er.gastos_ventas.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_gastos_ventas, variant: "default" })
+  }
+
+  rows.push({ type: "subtotal", subtotal: er.utilidad_operacional, variant: "primary" })
+
+  if (er.ingresos_no_operacionales.length > 0) {
+    rows.push({ type: "section", label: "Ingresos No Operacionales" })
+    er.ingresos_no_operacionales.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_ingresos_no_op, variant: "default" })
+  }
+
+  if (er.gastos_no_operacionales.length > 0) {
+    rows.push({ type: "section", label: "Gastos No Operacionales" })
+    er.gastos_no_operacionales.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_gastos_no_op, variant: "default" })
+  }
+
+  rows.push({ type: "subtotal", subtotal: er.utilidad_antes_impuestos, variant: "primary" })
+
+  if (er.impuesto_renta.length > 0) {
+    rows.push({ type: "section", label: "Impuesto de Renta" })
+    er.impuesto_renta.forEach(l => rows.push({ type: "line", linea: l, indent: true }))
+    rows.push({ type: "subtotal", subtotal: er.total_impuesto_renta, variant: "default" })
+  }
+
+  rows.push({ type: "subtotal", subtotal: er.utilidad_neta, variant: "strong" })
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full border-collapse text-sm min-w-[600px]">
+      <table
+        className="w-full border-collapse text-sm min-w-[600px]"
+        onMouseLeave={onLeave}
+      >
+        {/* Header row — rowIdx = -1 (excluded from crosshair rows) */}
         <thead>
           <tr className="bg-muted/60 border-b border-border">
-            <th className="px-3 py-2.5 text-left font-semibold text-sm w-[40%]">Concepto</th>
-            <th className="px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap">
+            {/* col 0 */}
+            <th
+              className={`px-3 py-2.5 text-left font-semibold text-sm w-[40%] transition-colors ${cellBg(-1, 0, hovRow, hovCol)}`}
+              onMouseEnter={() => { setHovRow(-1); setHovCol(0) }}
+            >
+              Concepto
+            </th>
+            {/* col 1 */}
+            <th
+              className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors ${cellBg(-1, 1, hovRow, hovCol)}`}
+              onMouseEnter={() => { setHovRow(-1); setHovCol(1) }}
+            >
               Total Acumulado
             </th>
-            {meses.map(m => (
-              <th key={m} className="px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap">
+            {meses.map((m, i) => (
+              <th
+                key={m}
+                className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors ${cellBg(-1, i + 2, hovRow, hovCol)}`}
+                onMouseEnter={() => { setHovRow(-1); setHovCol(i + 2) }}
+              >
                 {mesLabel(m)}
               </th>
             ))}
           </tr>
         </thead>
+
         <tbody>
-          {/* ── Ingresos Operacionales ─────────────────────────── */}
-          {er.ingresos_operacionales.length > 0 && (
-            <>
-              <SectionHeader label="Ingresos Operacionales" colSpan={colSpan} />
-              {er.ingresos_operacionales.map(l => (
-                <LineRow key={l.cuentas[0]} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_ingresos_operacionales} meses={meses} />
-            </>
-          )}
+          {rows.map((row, rowIdx) => {
+            if (row.type === "section") {
+              return (
+                <tr key={rowIdx} className="bg-muted/40">
+                  <td
+                    colSpan={colSpan}
+                    className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-foreground/70"
+                    onMouseEnter={() => { setHovRow(rowIdx); setHovCol(-1) }}
+                  >
+                    {row.label}
+                  </td>
+                </tr>
+              )
+            }
 
-          {/* ── Costos de Ventas ───────────────────────────────── */}
-          {er.costos_ventas.length > 0 && (
-            <>
-              <SectionHeader label="Costos de Ventas" colSpan={colSpan} />
-              {er.costos_ventas.map(l => (
-                <LineRow key={l.cuentas[0]} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_costos_ventas} meses={meses} />
-            </>
-          )}
+            if (row.type === "line") {
+              const { linea, indent } = row
+              return (
+                <tr
+                  key={rowIdx}
+                  className="border-b border-border/30"
+                >
+                  {/* col 0 — Concepto */}
+                  <td
+                    className={`px-3 py-1.5 text-sm transition-colors cursor-default
+                      ${indent ? "pl-6 text-foreground/80" : "font-medium"}
+                      ${cellBg(rowIdx, 0, hovRow, hovCol)}`}
+                    onMouseEnter={() => { setHovRow(rowIdx); setHovCol(0) }}
+                  >
+                    {linea.concepto}
+                  </td>
+                  {/* col 1 — Acumulado */}
+                  <td
+                    className={`px-3 py-1.5 text-right tabular-nums text-sm transition-colors cursor-default
+                      ${linea.acumulado < 0 ? "text-red-500" : ""}
+                      ${cellBg(rowIdx, 1, hovRow, hovCol)}`}
+                    onMouseEnter={() => { setHovRow(rowIdx); setHovCol(1) }}
+                  >
+                    {fmtNum(linea.acumulado)}
+                  </td>
+                  {/* month columns */}
+                  {meses.map((m, i) => {
+                    const val = linea.porMes[m] ?? 0
+                    return (
+                      <td
+                        key={m}
+                        className={`px-3 py-1.5 text-right tabular-nums text-sm transition-colors cursor-default
+                          ${val < 0 ? "text-red-500" : ""}
+                          ${cellBg(rowIdx, i + 2, hovRow, hovCol)}`}
+                        onMouseEnter={() => { setHovRow(rowIdx); setHovCol(i + 2) }}
+                      >
+                        {fmtNum(val)}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            }
 
-          {/* ── Utilidad Bruta ─────────────────────────────────── */}
-          <SubtotalRow subtotal={er.utilidad_bruta} meses={meses} variant="primary" />
+            // type === "subtotal"
+            const { subtotal, variant } = row
+            const rowClass =
+              variant === "strong"
+                ? "bg-primary/10 border-t-2 border-primary/40"
+                : variant === "primary"
+                ? "bg-primary/5 border-t border-primary/20"
+                : "border-t border-border/50"
+            const textClass = variant === "strong" ? "font-bold text-sm" : "font-semibold text-sm"
 
-          {/* ── Gastos Administrativos ─────────────────────────── */}
-          {er.gastos_administrativos.length > 0 && (
-            <>
-              <SectionHeader label="Gastos Administrativos" colSpan={colSpan} />
-              {er.gastos_administrativos.map(l => (
-                <LineRow key={l.cuentas[0] ?? l.concepto} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_gastos_administrativos} meses={meses} />
-            </>
-          )}
-
-          {/* ── Gastos de Ventas ───────────────────────────────── */}
-          {er.gastos_ventas.length > 0 && (
-            <>
-              <SectionHeader label="Gastos de Ventas" colSpan={colSpan} />
-              {er.gastos_ventas.map(l => (
-                <LineRow key={l.cuentas[0] ?? l.concepto} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_gastos_ventas} meses={meses} />
-            </>
-          )}
-
-          {/* ── Utilidad Operacional ───────────────────────────── */}
-          <SubtotalRow subtotal={er.utilidad_operacional} meses={meses} variant="primary" />
-
-          {/* ── Ingresos No Operacionales ──────────────────────── */}
-          {er.ingresos_no_operacionales.length > 0 && (
-            <>
-              <SectionHeader label="Ingresos No Operacionales" colSpan={colSpan} />
-              {er.ingresos_no_operacionales.map(l => (
-                <LineRow key={l.cuentas[0]} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_ingresos_no_op} meses={meses} />
-            </>
-          )}
-
-          {/* ── Gastos No Operacionales ────────────────────────── */}
-          {er.gastos_no_operacionales.length > 0 && (
-            <>
-              <SectionHeader label="Gastos No Operacionales" colSpan={colSpan} />
-              {er.gastos_no_operacionales.map(l => (
-                <LineRow key={l.cuentas[0]} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_gastos_no_op} meses={meses} />
-            </>
-          )}
-
-          {/* ── Utilidad Antes de Impuestos ────────────────────── */}
-          <SubtotalRow subtotal={er.utilidad_antes_impuestos} meses={meses} variant="primary" />
-
-          {/* ── Impuesto de Renta ──────────────────────────────── */}
-          {er.impuesto_renta.length > 0 && (
-            <>
-              <SectionHeader label="Impuesto de Renta" colSpan={colSpan} />
-              {er.impuesto_renta.map(l => (
-                <LineRow key={l.cuentas[0]} linea={l} meses={meses} indent />
-              ))}
-              <SubtotalRow subtotal={er.total_impuesto_renta} meses={meses} />
-            </>
-          )}
-
-          {/* ── Utilidad Neta ──────────────────────────────────── */}
-          <SubtotalRow subtotal={er.utilidad_neta} meses={meses} variant="strong" />
+            return (
+              <tr key={rowIdx} className={rowClass}>
+                {/* col 0 */}
+                <td
+                  className={`px-3 py-2 transition-colors cursor-default ${textClass} ${cellBg(rowIdx, 0, hovRow, hovCol, variant === "default" ? undefined : variant)}`}
+                  onMouseEnter={() => { setHovRow(rowIdx); setHovCol(0) }}
+                >
+                  {subtotal.concepto}
+                </td>
+                {/* col 1 */}
+                <td
+                  className={`px-3 py-2 text-right tabular-nums transition-colors cursor-default
+                    ${textClass}
+                    ${subtotal.acumulado < 0 ? "text-red-500" : ""}
+                    ${cellBg(rowIdx, 1, hovRow, hovCol, variant === "default" ? undefined : variant)}`}
+                  onMouseEnter={() => { setHovRow(rowIdx); setHovCol(1) }}
+                >
+                  {fmtNum(subtotal.acumulado)}
+                </td>
+                {/* month columns */}
+                {meses.map((m, i) => {
+                  const val = subtotal.porMes[m] ?? 0
+                  return (
+                    <td
+                      key={m}
+                      className={`px-3 py-2 text-right tabular-nums transition-colors cursor-default
+                        ${textClass}
+                        ${val < 0 ? "text-red-500" : ""}
+                        ${cellBg(rowIdx, i + 2, hovRow, hovCol, variant === "default" ? undefined : variant)}`}
+                      onMouseEnter={() => { setHovRow(rowIdx); setHovCol(i + 2) }}
+                    >
+                      {fmtNum(val)}
+                    </td>
+                  )
+                })}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
