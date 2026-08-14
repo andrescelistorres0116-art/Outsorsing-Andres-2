@@ -801,7 +801,11 @@ export default function EstadoResultadosPage() {
   useEffect(() => {
     fetch("/api/empresas?limit=100")
       .then(r => r.json())
-      .then(data => setEmpresas((data.empresas ?? data ?? []) as EmpresaItem[]))
+      .then(data => {
+        const todas = (data.empresas ?? data ?? []) as EmpresaItem[]
+        // Solo mostrar empresas con software contable configurado
+        setEmpresas(todas.filter(e => !!e.softwareContable))
+      })
       .catch(console.error)
       .finally(() => setCargando(false))
   }, [])
