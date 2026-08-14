@@ -92,6 +92,7 @@ async function seedEstadoResultadosExcepciones(prisma) {
   const EMPRESA_EXCEPCIONES = [
     {
       // Inversiones Diazar S.A.S. — accounts 428xxxxx are operational income
+      // and account 51651001 (GASTOS PARTICIPACIÓN AVIATUR) is a selling expense
       razonSocialContiene: 'Diazar',
       excepciones: [
         {
@@ -99,6 +100,12 @@ async function seedEstadoResultadosExcepciones(prisma) {
           categoriaOriginal: 'ingresos_no_operacionales',
           categoriaDestino:  'ingresos_operacionales',
           descripcion:       'Cuenta 428xxxxx clasificada como ingreso operacional para esta empresa',
+        },
+        {
+          prefijoCuenta:    '51651001',
+          categoriaOriginal: 'gastos_administrativos',
+          categoriaDestino:  'gastos_ventas',
+          descripcion:       'GASTOS PARTICIPACIÓN AVIATUR reclasificado como Gastos de Ventas',
         },
       ],
     },

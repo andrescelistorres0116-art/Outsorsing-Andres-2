@@ -19,9 +19,11 @@ import type {
   EstadoResultados,
   LineaEstadoResultados,
   SubtotalEstadoResultados,
+  CategoriaEstadoResultados,
+  ExcepcionClasificacion,
 } from "./types"
 
-// ─── Section keys ─────────────────────────────────────────────────────────────
+// ─── Section ↔ Category mapping ──────────────────────────────────────────────
 
 type SectionKey =
   | "ingresos_operacionales"
@@ -187,6 +189,109 @@ export function mergeEstadoResultados(ers: EstadoResultados[]): EstadoResultados
     ...subtract(utilidad_antes_impuestos, total_impuesto_renta),
     concepto: "Utilidad Neta",
   }
+
+  return {
+    meses,
+    ...sections,
+    total_ingresos_operacionales,
+    total_costos_ventas,
+    utilidad_bruta,
+    total_gastos_administrativos,
+    total_gastos_ventas,
+    utilidad_operacional,
+    total_ingresos_no_op,
+    total_gastos_no_op,
+    utilidad_antes_impuestos,
+    total_impuesto_renta,
+    utilidad_neta,
+  }
+}
+
+// ─── Re-apply exceptions to a stored result ───────────────────────────────────
+
+/**
+ * Re-classify lines in an already-computed EstadoResultados according to the
+ * current exception list, then recompute all subtotals.
+ *
+ * This allows stored archive results to reflect new or updated exceptions
+ * without re-uploading the original Excel files.
+ *
+ * Uses the `cuentas` array on each line (account codes) to match against
+ * exception prefixes. When a line matches an exception whose target category
+ * differs from the line's current section, the line is moved there.
+ */
+export function reclasificarEstadoResultados(
+  er: EstadoResultados,
+  excepciones: Pick<ExcepcionClasificacion, "prefijoCuenta" | "categoriaDestino">[]
+): EstadoResultados {
+  if (excepciones.length === 0) return er
+
+  const meses = er.meses
+
+  // Clone all section arrays (shallow — we replace the arrays, not mutate elements)
+  const sections: Record<SectionKey, LineaEstadoResultados[]> = {
+    ingresos_operacionales:    [...er.ingresos_operacionales],
+    costos_ventas:             [...er.costos_ventas],
+    gastos_administrativos:    [...er.gastos_administrativos],
+    gastos_ventas:             [...er.gastos_ventas],
+    ingresos_no_operacionales: [...er.ingresos_no_operacionales],
+    gastos_no_operacionales:   [...er.gastos_no_operacionales],
+    impuesto_renta:            [...er.impuesto_renta],
+  }
+
+  let changed = false
+
+  for (const fromKey of SECTION_KEYS) {
+    const toRemove: LineaEstadoResultados[] = []
+
+    for (const linea of sections[fromKey]) {
+      // Find the exception with the longest matching prefix for any of this line's account codes
+      let bestMatch: Pick<ExcepcionClasificacion, "prefijoCuenta" | "categoriaDestino"> | null = null
+
+      for (const codigo of linea.cuentas) {
+        for (const exc of excepciones) {
+          if (
+            codigo.startsWith(exc.prefijoCuenta) &&
+            (bestMatch === null || exc.prefijoCuenta.length > bestMatch.prefijoCuenta.length)
+          ) {
+            bestMatch = exc
+          }
+        }
+      }
+
+      if (
+        bestMatch &&
+        bestMatch.categoriaDestino !== "ignorar" &&
+        bestMatch.categoriaDestino !== fromKey
+      ) {
+        const toKey = bestMatch.categoriaDestino as SectionKey
+        if (SECTION_KEYS.includes(toKey)) {
+          toRemove.push(linea)
+          sections[toKey] = [...sections[toKey], { ...linea, categoria: bestMatch.categoriaDestino }]
+          changed = true
+        }
+      }
+    }
+
+    if (toRemove.length > 0) {
+      sections[fromKey] = sections[fromKey].filter(l => !toRemove.includes(l))
+    }
+  }
+
+  if (!changed) return er
+
+  // Recompute subtotals
+  const total_ingresos_operacionales = { ...sumLines(sections.ingresos_operacionales, meses), concepto: "Total Ingresos Operacionales" }
+  const total_costos_ventas          = { ...sumLines(sections.costos_ventas, meses),             concepto: "Total Costos de Ventas" }
+  const utilidad_bruta               = { ...subtract(total_ingresos_operacionales, total_costos_ventas), concepto: "Utilidad Bruta" }
+  const total_gastos_administrativos = { ...sumLines(sections.gastos_administrativos, meses),    concepto: "Total Gastos Administrativos" }
+  const total_gastos_ventas          = { ...sumLines(sections.gastos_ventas, meses),             concepto: "Total Gastos de Ventas" }
+  const utilidad_operacional         = { ...subtract(utilidad_bruta, total_gastos_administrativos, total_gastos_ventas), concepto: "Utilidad Operacional" }
+  const total_ingresos_no_op         = { ...sumLines(sections.ingresos_no_operacionales, meses), concepto: "Total Ingresos No Operacionales" }
+  const total_gastos_no_op           = { ...sumLines(sections.gastos_no_operacionales, meses),   concepto: "Total Gastos No Operacionales" }
+  const utilidad_antes_impuestos     = { ...subtract(add(utilidad_operacional, total_ingresos_no_op), total_gastos_no_op), concepto: "Utilidad Antes de Impuestos" }
+  const total_impuesto_renta         = { ...sumLines(sections.impuesto_renta, meses),            concepto: "Impuesto de Renta" }
+  const utilidad_neta                = { ...subtract(utilidad_antes_impuestos, total_impuesto_renta), concepto: "Utilidad Neta" }
 
   return {
     meses,
