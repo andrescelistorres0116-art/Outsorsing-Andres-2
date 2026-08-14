@@ -423,6 +423,8 @@ function TabConfiguracion({
 
 // ─── Tab: Estado de Resultados ────────────────────────────────────────────────
 
+const TODOS_ID = "__todos__"
+
 function TabEstadoResultados({
   empresa,
   archivos,
@@ -434,39 +436,40 @@ function TabEstadoResultados({
   resultadoInicial: EstadoResultados | null
   mesInicial: string | null
 }) {
-  const [archivoId, setArchivoId]       = useState<string>("")
-  const [resultado, setResultado]       = useState<EstadoResultados | null>(resultadoInicial)
-  const [cargando, setCargando]         = useState(false)
-  const [error, setError]               = useState<string | null>(null)
-  const [exportando, setExportando]     = useState(false)
+  // "__todos__" = consolidated view; any other value = specific archive ID
+  const [seleccion, setSeleccion]   = useState<string>(TODOS_ID)
+  const [resultado, setResultado]   = useState<EstadoResultados | null>(null)
+  const [cargando, setCargando]     = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [exportando, setExportando] = useState(false)
 
-  // When archivos list changes, default to the most recent one
+  // When archivos list changes (e.g. after upload), refresh the consolidated view
   useEffect(() => {
-    if (archivos.length === 0) { setArchivoId(""); setResultado(null); return }
+    if (archivos.length === 0) { setResultado(null); return }
 
-    // If we have a mesInicial, try to find the archive that covers it
-    if (mesInicial) {
-      const match = archivos.find(a => a.mesesCubiertos.includes(mesInicial))
-      if (match && match.id !== archivoId) { setArchivoId(match.id); return }
-    }
-
-    // Otherwise default to most recent (first in list since ordered desc)
-    if (!archivoId || !archivos.find(a => a.id === archivoId)) {
-      setArchivoId(archivos[0].id)
-    }
-  }, [archivos, mesInicial])
-
-  // Load resultado when archivoId changes
-  useEffect(() => {
-    if (!archivoId) return
-    // If resultadoInicial matches, use it directly
-    if (resultadoInicial && archivos[0]?.id === archivoId) {
-      setResultado(resultadoInicial)
+    // If a new file was just uploaded and we have a pending result, use it
+    // but only if we're in the consolidated view (switch to it if not)
+    if (resultadoInicial && mesInicial) {
+      // After upload → reload consolidated to include the new file
+      setSeleccion(TODOS_ID)
       return
     }
+
+    // Otherwise just keep whatever is selected
+  }, [archivos])
+
+  // Load resultado whenever selection or archivos change
+  useEffect(() => {
+    if (archivos.length === 0) return
+
     setCargando(true)
     setError(null)
-    fetch(`/api/estado-resultados/archivos/${empresa.id}/${archivoId}`)
+
+    const url = seleccion === TODOS_ID
+      ? `/api/estado-resultados/archivos/${empresa.id}/consolidado`
+      : `/api/estado-resultados/archivos/${empresa.id}/${seleccion}`
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error)
@@ -474,7 +477,7 @@ function TabEstadoResultados({
       })
       .catch(err => setError(err.message))
       .finally(() => setCargando(false))
-  }, [archivoId])
+  }, [seleccion, archivos, empresa.id])
 
   async function handleExportar() {
     if (!resultado) return
@@ -518,15 +521,20 @@ function TabEstadoResultados({
 
   return (
     <div className="space-y-4 pt-4">
-      {/* Archive selector + export */}
+      {/* Period selector + export */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="flex-1 min-w-0">
           <label className="block text-xs text-muted-foreground mb-1">Período</label>
           <select
-            value={archivoId}
-            onChange={e => setArchivoId(e.target.value)}
+            value={seleccion}
+            onChange={e => setSeleccion(e.target.value)}
             className="w-full sm:w-auto rounded-md border border-input bg-background px-3 py-1.5 text-sm"
           >
+            {/* Consolidated option first */}
+            <option value={TODOS_ID}>
+              Todos los períodos ({archivos.length} {archivos.length === 1 ? "archivo" : "archivos"})
+            </option>
+            {/* Individual archives */}
             {archivos.map(a => (
               <option key={a.id} value={a.id}>
                 {a.mesesCubiertos.map(mesLabel).join(" – ")}
