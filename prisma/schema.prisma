@@ -209,6 +209,7 @@ model Empresa {
   libranzas                   Libranza[]
   responsableNomina           User?               @relation("EmpresaResponsableNomina", fields: [responsableNominaId], references: [id])
   excepcionesEstadoResultados EstadoResultadosExcepcion[]
+  archivosEstadoResultados    EstadoResultadosArchivo[]
 
   @@index([nit])
   @@index([estado])
@@ -234,6 +235,26 @@ model EstadoResultadosExcepcion {
 
   @@unique([empresaId, prefijoCuenta])
   @@index([empresaId])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — resultados persistidos por empresa
+// ─────────────────────────────────────────────
+
+model EstadoResultadosArchivo {
+  id             String   @id @default(cuid())
+  empresaId      String
+  nombreArchivo  String
+  /// YYYY-MM strings covered by this upload, e.g. ["2026-01","2026-07"]
+  mesesCubiertos String[]
+  /// Computed EstadoResultados JSON (ready to render without reprocessing)
+  resultado      Json
+  createdAt      DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────
