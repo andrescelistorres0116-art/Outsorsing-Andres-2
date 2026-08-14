@@ -130,7 +130,12 @@ function CalendarioMeses({
                   </button>
                   {onEliminarArchivo && archivoId && (
                     <button
-                      onClick={e => { e.stopPropagation(); onEliminarArchivo(archivoId) }}
+                      onClick={e => {
+                        e.stopPropagation()
+                        if (window.confirm(`¿Eliminar el archivo de ${mesLabel(mes)}? Esta acción no se puede deshacer.`)) {
+                          onEliminarArchivo(archivoId)
+                        }
+                      }}
                       title={`Eliminar ${mesLabel(mes)}`}
                       className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[9px] shadow hover:bg-red-600 transition-colors z-10"
                     >
@@ -418,21 +423,16 @@ function TabConfiguracion({
 
 // ─── Tab: Estado de Resultados ────────────────────────────────────────────────
 
-const TODOS_ID = "__todos__"
 
 function TabEstadoResultados({
   empresa,
   archivos,
-  resultadoInicial,
-  mesInicial,
 }: {
   empresa: EmpresaItem
   archivos: ArchivoMeta[]
   resultadoInicial: EstadoResultados | null
   mesInicial: string | null
 }) {
-  // "__todos__" = consolidated view for selected year; any other value = specific archive ID
-  const [seleccion, setSeleccion]   = useState<string>(TODOS_ID)
   const [resultado, setResultado]   = useState<EstadoResultados | null>(null)
   const [cargando, setCargando]     = useState(false)
   const [error, setError]           = useState<string | null>(null)
@@ -459,37 +459,15 @@ function TabEstadoResultados({
     a.mesesCubiertos.some(m => m.startsWith(añoSeleccionado))
   )
 
-  // Reset period selection when year changes
-  useEffect(() => {
-    setSeleccion(TODOS_ID)
-  }, [añoSeleccionado])
-
-  // When archivos list changes (e.g. after upload)
-  useEffect(() => {
-    if (archivos.length === 0) { setResultado(null); return }
-    if (resultadoInicial && mesInicial) {
-      setSeleccion(TODOS_ID)
-      return
-    }
-  }, [archivos])
-
-  // Load resultado whenever selection, year, or archivos change
+  // Load consolidado for the selected year whenever year or archivos change
   useEffect(() => {
     if (archivosDelAño.length === 0) { setResultado(null); return }
 
     setCargando(true)
     setError(null)
 
-    let url: string
-    if (seleccion === TODOS_ID) {
-      // Consolidate only the selected year's archives
-      const ids = archivosDelAño.map(a => a.id).join(",")
-      url = `/api/estado-resultados/archivos/${empresa.id}/consolidado?ids=${ids}`
-    } else {
-      url = `/api/estado-resultados/archivos/${empresa.id}/${seleccion}`
-    }
-
-    fetch(url)
+    const ids = archivosDelAño.map(a => a.id).join(",")
+    fetch(`/api/estado-resultados/archivos/${empresa.id}/consolidado?ids=${ids}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error)
@@ -497,7 +475,7 @@ function TabEstadoResultados({
       })
       .catch(err => setError(err.message))
       .finally(() => setCargando(false))
-  }, [seleccion, añoSeleccionado, archivos, empresa.id])
+  }, [añoSeleccionado, archivos, empresa.id])
 
   async function handleExportar() {
     if (!resultado) return
@@ -562,38 +540,17 @@ function TabEstadoResultados({
         </div>
       )}
 
-      {/* ── Period selector + export ── */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <div className="flex-1 min-w-0">
-          <label className="block text-xs text-muted-foreground mb-1">Período</label>
-          <select
-            value={seleccion}
-            onChange={e => setSeleccion(e.target.value)}
-            className="w-full sm:w-auto rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-          >
-            <option value={TODOS_ID}>
-              Todo {añoSeleccionado}
-              {archivosDelAño.length > 0 && ` (${archivosDelAño.length} ${archivosDelAño.length === 1 ? "archivo" : "archivos"})`}
-            </option>
-            {archivosDelAño.map(a => (
-              <option key={a.id} value={a.id}>
-                {a.mesesCubiertos.map(mesLabel).join(" – ")}
-                {" · "}
-                {a.nombreArchivo}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {resultado && (
+      {/* ── Export ── */}
+      {resultado && (
+        <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={handleExportar} disabled={exportando}>
             {exportando
               ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               : <Download className="h-3.5 w-3.5 mr-1.5" />}
             Exportar Excel
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -615,14 +572,10 @@ function TabEstadoResultados({
           er={resultado}
           empresaId={empresa.id}
           archivoPorMes={(() => {
-            // Build mes → archivoId map.
-            // When TODOS_ID: use all archives; when specific: only that one.
-            // Newest archive wins for any month (archivos sorted createdAt desc).
+            // Build mes → archivoId for the selected year's archives.
+            // Newest archive wins when a month appears in more than one.
             const map: Record<string, string> = {}
-            const fuente = seleccion !== TODOS_ID
-              ? archivos.filter(a => a.id === seleccion)
-              : archivos
-            for (const a of [...fuente].reverse()) {   // oldest → newest, newest wins
+            for (const a of [...archivosDelAño].reverse()) {
               for (const mes of a.mesesCubiertos) {
                 map[mes] = a.id
               }
