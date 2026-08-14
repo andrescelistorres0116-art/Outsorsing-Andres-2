@@ -144,19 +144,19 @@ export default function TablaEstadoResultados({ er }: Props) {
         className="w-full border-collapse text-sm min-w-[600px]"
         onMouseLeave={onLeave}
       >
-        {/* Header row — rowIdx = -1 (excluded from crosshair rows) */}
-        <thead>
+        {/* Header row — sticky so month titles stay visible while scrolling */}
+        <thead className="sticky top-0 z-10">
           <tr className="bg-muted/60 border-b border-border">
             {/* col 0 */}
             <th
-              className={`px-3 py-2.5 text-left font-semibold text-sm w-[40%] transition-colors ${cellBg(-1, 0, hovRow, hovCol)}`}
+              className={`px-3 py-2.5 text-left font-semibold text-sm w-[40%] transition-colors bg-muted/60 ${cellBg(-1, 0, hovRow, hovCol)}`}
               onMouseEnter={() => { setHovRow(-1); setHovCol(0) }}
             >
               Concepto
             </th>
             {/* col 1 */}
             <th
-              className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors ${cellBg(-1, 1, hovRow, hovCol)}`}
+              className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors bg-muted/60 ${cellBg(-1, 1, hovRow, hovCol)}`}
               onMouseEnter={() => { setHovRow(-1); setHovCol(1) }}
             >
               Total Acumulado
@@ -164,7 +164,7 @@ export default function TablaEstadoResultados({ er }: Props) {
             {meses.map((m, i) => (
               <th
                 key={m}
-                className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors ${cellBg(-1, i + 2, hovRow, hovCol)}`}
+                className={`px-3 py-2.5 text-right font-semibold text-sm whitespace-nowrap transition-colors bg-muted/60 ${cellBg(-1, i + 2, hovRow, hovCol)}`}
                 onMouseEnter={() => { setHovRow(-1); setHovCol(i + 2) }}
               >
                 {mesLabel(m)}
