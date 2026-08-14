@@ -139,7 +139,7 @@ export default function TablaEstadoResultados({ er }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="overflow-auto rounded-lg border border-border max-h-[70vh]">
       <table
         className="w-full border-collapse text-sm min-w-[600px]"
         onMouseLeave={onLeave}
