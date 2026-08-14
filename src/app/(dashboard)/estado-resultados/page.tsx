@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import {
   BarChart2, Upload, Download, RefreshCw, AlertCircle,
   Building2, ArrowLeft, Search, Settings, CheckCircle2,
-  Trash2, FileSpreadsheet, Calendar, BookOpen,
+  Trash2, Calendar, BookOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -65,13 +65,23 @@ function CalendarioMeses({
   archivos,
   onSeleccionarMes,
   mesSeleccionado,
+  onEliminarArchivo,
 }: {
   archivos: ArchivoMeta[]
   onSeleccionarMes: (mes: string) => void
   mesSeleccionado: string | null
+  onEliminarArchivo?: (archivoId: string) => void
 }) {
-  // Build set of all covered months + unique years
   const cubiertos = new Set(archivos.flatMap(a => a.mesesCubiertos))
+
+  // Build mes → archivoId for the delete button
+  const archivoPorMes: Record<string, string> = {}
+  for (const a of archivos) {
+    for (const m of a.mesesCubiertos) {
+      if (!archivoPorMes[m]) archivoPorMes[m] = a.id
+    }
+  }
+
   const años = Array.from(
     new Set([
       new Date().getFullYear(),
@@ -88,27 +98,46 @@ function CalendarioMeses({
           </p>
           <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
             {MONTH_NAMES.map((name, i) => {
-              const mes = `${año}-${String(i + 1).padStart(2, "0")}`
-              const cargado = cubiertos.has(mes)
+              const mes    = `${año}-${String(i + 1).padStart(2, "0")}`
+              const cargado    = cubiertos.has(mes)
               const seleccionado = mesSeleccionado === mes
+              const archivoId  = archivoPorMes[mes]
+
+              if (!cargado) {
+                return (
+                  <div
+                    key={mes}
+                    className="rounded-md py-1.5 text-xs font-medium text-center border bg-muted/40 text-muted-foreground/40 border-transparent select-none"
+                  >
+                    {name}
+                  </div>
+                )
+              }
 
               return (
-                <button
-                  key={mes}
-                  disabled={!cargado}
-                  onClick={() => cargado && onSeleccionarMes(mes)}
-                  title={cargado ? `Ver informe ${mesLabel(mes)}` : `${mesLabel(mes)} — sin datos`}
-                  className={[
-                    "rounded-md py-1.5 text-xs font-medium transition-all border",
-                    cargado
-                      ? seleccionado
+                <div key={mes} className="relative group">
+                  <button
+                    onClick={() => onSeleccionarMes(mes)}
+                    title={`Ver informe ${mesLabel(mes)}`}
+                    className={[
+                      "w-full rounded-md py-1.5 text-xs font-medium transition-all border",
+                      seleccionado
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                        : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50 cursor-pointer"
-                      : "bg-muted/40 text-muted-foreground/40 border-transparent cursor-default",
-                  ].join(" ")}
-                >
-                  {name}
-                </button>
+                        : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50 cursor-pointer",
+                    ].join(" ")}
+                  >
+                    {name}
+                  </button>
+                  {onEliminarArchivo && archivoId && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onEliminarArchivo(archivoId) }}
+                      title={`Eliminar ${mesLabel(mes)}`}
+                      className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[9px] shadow hover:bg-red-600 transition-colors z-10"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>
@@ -378,45 +407,11 @@ function TabConfiguracion({
                 setMesCal(mes)
                 onVerInforme(mes)
               }}
+              onEliminarArchivo={handleEliminar}
             />
           )}
         </CardContent>
       </Card>
-
-      {/* ── Archivos cargados ── */}
-      {archivos.length > 0 && (
-        <div>
-          <p className="text-sm font-medium mb-2">Archivos cargados</p>
-          <div className="space-y-2">
-            {archivos.map(a => (
-              <div
-                key={a.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{a.nombreArchivo}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {a.mesesCubiertos.map(mesLabel).join(" · ")}
-                    <span className="mx-1.5">·</span>
-                    {formatDate(a.createdAt)}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleEliminar(a.id)}
-                  disabled={eliminando === a.id}
-                  className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded"
-                  title="Eliminar"
-                >
-                  {eliminando === a.id
-                    ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    : <Trash2 className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -436,38 +431,63 @@ function TabEstadoResultados({
   resultadoInicial: EstadoResultados | null
   mesInicial: string | null
 }) {
-  // "__todos__" = consolidated view; any other value = specific archive ID
+  // "__todos__" = consolidated view for selected year; any other value = specific archive ID
   const [seleccion, setSeleccion]   = useState<string>(TODOS_ID)
   const [resultado, setResultado]   = useState<EstadoResultados | null>(null)
   const [cargando, setCargando]     = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [exportando, setExportando] = useState(false)
 
-  // When archivos list changes (e.g. after upload), refresh the consolidated view
+  // ── Year selector ─────────────────────────────────────────────────────────
+  const años = [...new Set(
+    archivos.flatMap(a => a.mesesCubiertos.map(m => m.slice(0, 4)))
+  )].sort().reverse()   // newest first
+
+  const [añoSeleccionado, setAño] = useState<string>(
+    () => años[0] ?? String(new Date().getFullYear())
+  )
+
+  // When a new archive arrives for a newer year, jump to it
+  useEffect(() => {
+    if (años.length > 0 && años[0] !== añoSeleccionado) {
+      setAño(años[0])
+    }
+  }, [años[0]])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Archives for the selected year only
+  const archivosDelAño = archivos.filter(a =>
+    a.mesesCubiertos.some(m => m.startsWith(añoSeleccionado))
+  )
+
+  // Reset period selection when year changes
+  useEffect(() => {
+    setSeleccion(TODOS_ID)
+  }, [añoSeleccionado])
+
+  // When archivos list changes (e.g. after upload)
   useEffect(() => {
     if (archivos.length === 0) { setResultado(null); return }
-
-    // If a new file was just uploaded and we have a pending result, use it
-    // but only if we're in the consolidated view (switch to it if not)
     if (resultadoInicial && mesInicial) {
-      // After upload → reload consolidated to include the new file
       setSeleccion(TODOS_ID)
       return
     }
-
-    // Otherwise just keep whatever is selected
   }, [archivos])
 
-  // Load resultado whenever selection or archivos change
+  // Load resultado whenever selection, year, or archivos change
   useEffect(() => {
-    if (archivos.length === 0) return
+    if (archivosDelAño.length === 0) { setResultado(null); return }
 
     setCargando(true)
     setError(null)
 
-    const url = seleccion === TODOS_ID
-      ? `/api/estado-resultados/archivos/${empresa.id}/consolidado`
-      : `/api/estado-resultados/archivos/${empresa.id}/${seleccion}`
+    let url: string
+    if (seleccion === TODOS_ID) {
+      // Consolidate only the selected year's archives
+      const ids = archivosDelAño.map(a => a.id).join(",")
+      url = `/api/estado-resultados/archivos/${empresa.id}/consolidado?ids=${ids}`
+    } else {
+      url = `/api/estado-resultados/archivos/${empresa.id}/${seleccion}`
+    }
 
     fetch(url)
       .then(r => r.json())
@@ -477,7 +497,7 @@ function TabEstadoResultados({
       })
       .catch(err => setError(err.message))
       .finally(() => setCargando(false))
-  }, [seleccion, archivos, empresa.id])
+  }, [seleccion, añoSeleccionado, archivos, empresa.id])
 
   async function handleExportar() {
     if (!resultado) return
@@ -521,7 +541,28 @@ function TabEstadoResultados({
 
   return (
     <div className="space-y-4 pt-4">
-      {/* Period selector + export */}
+      {/* ── Year selector ── */}
+      {años.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground font-medium">Año:</span>
+          {años.map(año => (
+            <button
+              key={año}
+              onClick={() => setAño(año)}
+              className={[
+                "rounded-full px-3 py-1 text-xs font-semibold transition-all border",
+                añoSeleccionado === año
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-muted/50 text-foreground border-border hover:bg-muted cursor-pointer",
+              ].join(" ")}
+            >
+              {año}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Period selector + export ── */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="flex-1 min-w-0">
           <label className="block text-xs text-muted-foreground mb-1">Período</label>
@@ -530,12 +571,11 @@ function TabEstadoResultados({
             onChange={e => setSeleccion(e.target.value)}
             className="w-full sm:w-auto rounded-md border border-input bg-background px-3 py-1.5 text-sm"
           >
-            {/* Consolidated option first */}
             <option value={TODOS_ID}>
-              Todos los períodos ({archivos.length} {archivos.length === 1 ? "archivo" : "archivos"})
+              Todo {añoSeleccionado}
+              {archivosDelAño.length > 0 && ` (${archivosDelAño.length} ${archivosDelAño.length === 1 ? "archivo" : "archivos"})`}
             </option>
-            {/* Individual archives */}
-            {archivos.map(a => (
+            {archivosDelAño.map(a => (
               <option key={a.id} value={a.id}>
                 {a.mesesCubiertos.map(mesLabel).join(" – ")}
                 {" · "}
