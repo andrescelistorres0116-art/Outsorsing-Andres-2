@@ -151,7 +151,17 @@ export function calcularEstadoResultados(
   libro: LibroAuxiliarParsed,
   excepciones: Pick<ExcepcionClasificacion, "prefijoCuenta" | "categoriaDestino">[] = []
 ): EstadoResultados {
-  const meses = libro.meses
+  // Only keep months that have at least one relevant (non-ignorar) account with actual movements.
+  // This filters out months that appear only because of balance-sheet or equity adjustments.
+  const relevantCuentas = libro.cuentas.filter(
+    c => clasificarCuenta(c.codigo, excepciones) !== "ignorar"
+  )
+  const meses = libro.meses.filter(mes =>
+    relevantCuentas.some(c => {
+      const mov = c.movimientosPorMes[mes]
+      return mov && (mov.debitos > 0 || mov.creditos > 0)
+    })
+  )
 
   // Buckets for regular lines
   const buckets: Record<CategoriaEstadoResultados, LineaEstadoResultados[]> = {
