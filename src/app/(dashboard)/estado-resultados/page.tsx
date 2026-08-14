@@ -572,15 +572,21 @@ function TabEstadoResultados({
       )}
       {!cargando && resultado && (
         <>
-          {seleccion === TODOS_ID && (
+          {seleccion === TODOS_ID && archivos.length > 1 && (
             <p className="text-xs text-muted-foreground -mb-2">
-              Vista consolidada. Selecciona un período específico para ver el detalle de movimientos al hacer clic en una celda.
+              Vista consolidada ({archivos.length} archivos). Selecciona un período específico para ver el detalle de movimientos al hacer clic en una celda.
             </p>
           )}
           <TablaEstadoResultados
             er={resultado}
             empresaId={empresa.id}
-            archivoId={seleccion !== TODOS_ID ? seleccion : undefined}
+            archivoId={
+              seleccion !== TODOS_ID
+                ? seleccion
+                : archivos.length === 1
+                ? archivos[0].id
+                : undefined
+            }
           />
         </>
       )}
