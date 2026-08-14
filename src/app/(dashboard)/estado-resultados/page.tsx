@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import {
   BarChart2, Upload, Download, RefreshCw, AlertCircle,
   Building2, ArrowLeft, Search, Settings, CheckCircle2,
-  Trash2, FileSpreadsheet, Calendar,
+  Trash2, FileSpreadsheet, Calendar, BookOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,6 +28,11 @@ interface ArchivoMeta {
   nombreArchivo: string
   mesesCubiertos: string[]
   createdAt: string
+}
+
+interface CatalogoInfo {
+  hasCatalogo: boolean
+  totalCuentas: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -130,41 +135,51 @@ function TabConfiguracion({
   onArchivoEliminado: (id: string) => void
   onVerInforme: (mes: string) => void
 }) {
-  const [subiendo, setSubiendo]       = useState(false)
-  const [error, setError]             = useState<string | null>(null)
-  const [exito, setExito]             = useState<string | null>(null)
-  const [eliminando, setEliminando]   = useState<string | null>(null)
-  const [mesCalendario, setMesCal]    = useState<string | null>(null)
-  const inputRef                      = useRef<HTMLInputElement>(null)
+  const [subiendo, setSubiendo]               = useState(false)
+  const [error, setError]                     = useState<string | null>(null)
+  const [exito, setExito]                     = useState<string | null>(null)
+  const [eliminando, setEliminando]           = useState<string | null>(null)
+  const [mesCalendario, setMesCal]            = useState<string | null>(null)
+  const inputRef                              = useRef<HTMLInputElement>(null)
+
+  // Catalog state
+  const [catalogo, setCatalogo]               = useState<CatalogoInfo | null>(null)
+  const [cargandoCatalogo, setCargandoCat]    = useState(true)
+  const [subiendoCatalogo, setSubiendoCat]    = useState(false)
+  const [eliminandoCatalogo, setEliminandoCat] = useState(false)
+  const catalogoInputRef                      = useRef<HTMLInputElement>(null)
+
+  // Load catalog status
+  useEffect(() => {
+    fetch(`/api/estado-resultados/catalogo/${empresa.id}`)
+      .then(r => r.json())
+      .then(data => setCatalogo(data))
+      .catch(console.error)
+      .finally(() => setCargandoCat(false))
+  }, [empresa.id])
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    // Reset input so same file can be re-uploaded
     e.target.value = ""
-
     setSubiendo(true)
     setError(null)
     setExito(null)
-
     try {
       const base64 = await fileToBase64(file)
       const res = await fetch(`/api/estado-resultados/archivos/${empresa.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          archivoBase64:   base64,
-          nombreArchivo:   file.name,
+          archivoBase64:    base64,
+          nombreArchivo:    file.name,
           softwareContable: empresa.softwareContable ?? "world_office",
         }),
       })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error ?? "Error al procesar")
-
       onArchivoSubido(data.archivo, data.estadoResultados)
-      setExito(
-        `Archivo procesado: ${data.archivo.mesesCubiertos.map(mesLabel).join(", ")}`
-      )
+      setExito(`Archivo procesado: ${data.archivo.mesesCubiertos.map(mesLabel).join(", ")}`)
     } catch (err: any) {
       setError(err.message ?? "Error desconocido")
     } finally {
@@ -187,29 +202,56 @@ function TabConfiguracion({
     }
   }
 
+  async function handleSubirCatalogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ""
+    setSubiendoCat(true)
+    setError(null)
+    setExito(null)
+    try {
+      const base64 = await fileToBase64(file)
+      const res = await fetch(`/api/estado-resultados/catalogo/${empresa.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archivoBase64: base64 }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error ?? "Error al procesar")
+      setCatalogo({ hasCatalogo: true, totalCuentas: data.totalCuentas })
+      setExito(`Catálogo importado: ${data.totalCuentas.toLocaleString("es-CO")} cuentas registradas`)
+    } catch (err: any) {
+      setError(err.message ?? "Error desconocido")
+    } finally {
+      setSubiendoCat(false)
+    }
+  }
+
+  async function handleEliminarCatalogo() {
+    setEliminandoCat(true)
+    try {
+      await fetch(`/api/estado-resultados/catalogo/${empresa.id}`, { method: "DELETE" })
+      setCatalogo({ hasCatalogo: false, totalCuentas: 0 })
+      setExito("Catálogo eliminado")
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setEliminandoCat(false)
+    }
+  }
+
   return (
     <div className="space-y-6 pt-4">
-      {/* Upload button */}
+      {/* ── Libro Auxiliar upload ── */}
       <div className="flex items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleUpload}
-          className="hidden"
-        />
-        <Button
-          onClick={() => inputRef.current?.click()}
-          disabled={subiendo}
-        >
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} className="hidden" />
+        <Button onClick={() => inputRef.current?.click()} disabled={subiendo}>
           {subiendo
             ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
             : <Upload className="h-4 w-4 mr-2" />}
-          {subiendo ? "Procesando…" : "Cargar archivo Excel"}
+          {subiendo ? "Procesando…" : "Cargar Libro Auxiliar"}
         </Button>
-        <p className="text-xs text-muted-foreground">
-          Libro Auxiliar de World Office (.xlsx)
-        </p>
+        <p className="text-xs text-muted-foreground">World Office (.xlsx)</p>
       </div>
 
       {/* Feedback */}
@@ -226,7 +268,87 @@ function TabConfiguracion({
         </div>
       )}
 
-      {/* Calendar */}
+      {/* ── Catálogo de cuentas ── */}
+      <Card>
+        <CardContent className="pt-4 pb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium">Catálogo de cuentas</p>
+            {catalogo?.hasCatalogo && (
+              <span className="ml-auto text-xs font-medium text-green-600 dark:text-green-400">
+                {catalogo.totalCuentas.toLocaleString("es-CO")} cuentas
+              </span>
+            )}
+          </div>
+
+          <input
+            ref={catalogoInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleSubirCatalogo}
+            className="hidden"
+          />
+
+          {cargandoCatalogo ? (
+            <div className="flex items-center gap-2 py-1 text-muted-foreground text-sm">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              Cargando…
+            </div>
+          ) : catalogo?.hasCatalogo ? (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-xs text-muted-foreground flex-1">
+                El catálogo está activo. Los archivos que subas usarán esta información
+                para clasificar las cuentas automáticamente.
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => catalogoInputRef.current?.click()}
+                  disabled={subiendoCatalogo}
+                >
+                  {subiendoCatalogo
+                    ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                  Actualizar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEliminarCatalogo}
+                  disabled={eliminandoCatalogo}
+                  className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20"
+                >
+                  {eliminandoCatalogo
+                    ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    : <Trash2 className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-sm text-muted-foreground flex-1">
+                Sin catálogo. Importa el listado de cuentas contables para que la
+                clasificación del Estado de Resultados sea más precisa.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => catalogoInputRef.current?.click()}
+                disabled={subiendoCatalogo}
+              >
+                {subiendoCatalogo
+                  ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                Importar catálogo
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Meses cargados (calendar) ── */}
       <Card>
         <CardContent className="pt-4 pb-5">
           <div className="flex items-center gap-2 mb-4">
@@ -261,7 +383,7 @@ function TabConfiguracion({
         </CardContent>
       </Card>
 
-      {/* File list */}
+      {/* ── Archivos cargados ── */}
       {archivos.length > 0 && (
         <div>
           <p className="text-sm font-medium mb-2">Archivos cargados</p>

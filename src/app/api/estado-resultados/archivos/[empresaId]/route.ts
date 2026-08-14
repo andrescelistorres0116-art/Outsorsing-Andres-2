@@ -16,6 +16,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { parseWorldOffice } from "@/lib/estado-resultados/parser-world-office"
 import { calcularEstadoResultados } from "@/lib/estado-resultados/calculator"
+import { catalogoToAutoExcepciones } from "@/lib/estado-resultados/catalogo"
 
 interface Params { empresaId: string }
 
@@ -91,9 +92,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<Param
     categoriaDestino: e.categoriaDestino as any,
   }))
 
+  // Load catalog and generate auto-exceptions for accounts not covered by PUC defaults
+  const catalogoDb = await prisma.catalogoCuenta.findMany({
+    where: { empresaId },
+    select: { codigo: true, tipo: true },
+  })
+  const autoExcepciones = catalogoToAutoExcepciones(catalogoDb)
+  // Manual exceptions take priority (go first — clasificarCuenta picks the first match)
+  const todasExcepciones = [...excepciones, ...autoExcepciones]
+
   try {
     const libro           = parseWorldOffice(archivoBase64)
-    const estadoResultados = calcularEstadoResultados(libro, excepciones)
+    const estadoResultados = calcularEstadoResultados(libro, todasExcepciones)
 
     // Persist
     const archivo = await prisma.estadoResultadosArchivo.create({

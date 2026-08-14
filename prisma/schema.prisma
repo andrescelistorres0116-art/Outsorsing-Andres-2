@@ -210,6 +210,7 @@ model Empresa {
   responsableNomina           User?               @relation("EmpresaResponsableNomina", fields: [responsableNominaId], references: [id])
   excepcionesEstadoResultados EstadoResultadosExcepcion[]
   archivosEstadoResultados    EstadoResultadosArchivo[]
+  catalogoCuentas             CatalogoCuenta[]
 
   @@index([nit])
   @@index([estado])
@@ -255,6 +256,28 @@ model EstadoResultadosArchivo {
 
   @@index([empresaId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — catálogo de cuentas por empresa
+// ─────────────────────────────────────────────
+
+model CatalogoCuenta {
+  id        String  @id @default(cuid())
+  empresaId String
+  /// Account code (e.g. "410505", "51050501")
+  codigo    String
+  nombre    String
+  /// Original "Tipo" value from the catalog Excel (e.g. "Ingresos", "Gastos", "Costo De Ventas")
+  tipo      String
+  /// Original "Grupo" value (e.g. "Normal", "Tesoreria")
+  grupo     String  @default("Normal")
+  inactivo  Boolean @default(false)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
 }
 
 // ─────────────────────────────────────────────
