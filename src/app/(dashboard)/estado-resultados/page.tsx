@@ -571,24 +571,25 @@ function TabEstadoResultados({
         </div>
       )}
       {!cargando && resultado && (
-        <>
-          {seleccion === TODOS_ID && archivos.length > 1 && (
-            <p className="text-xs text-muted-foreground -mb-2">
-              Vista consolidada ({archivos.length} archivos). Selecciona un período específico para ver el detalle de movimientos al hacer clic en una celda.
-            </p>
-          )}
-          <TablaEstadoResultados
-            er={resultado}
-            empresaId={empresa.id}
-            archivoId={
-              seleccion !== TODOS_ID
-                ? seleccion
-                : archivos.length === 1
-                ? archivos[0].id
-                : undefined
+        <TablaEstadoResultados
+          er={resultado}
+          empresaId={empresa.id}
+          archivoPorMes={(() => {
+            // Build mes → archivoId map.
+            // When TODOS_ID: use all archives; when specific: only that one.
+            // Newest archive wins for any month (archivos sorted createdAt desc).
+            const map: Record<string, string> = {}
+            const fuente = seleccion !== TODOS_ID
+              ? archivos.filter(a => a.id === seleccion)
+              : archivos
+            for (const a of [...fuente].reverse()) {   // oldest → newest, newest wins
+              for (const mes of a.mesesCubiertos) {
+                map[mes] = a.id
+              }
             }
-          />
-        </>
+            return Object.keys(map).length > 0 ? map : undefined
+          })()}
+        />
       )}
     </div>
   )

@@ -229,12 +229,16 @@ function DrillDownPopup({
 
 interface Props {
   er: EstadoResultados
-  /** When provided, month cells become clickable for drill-down */
+  /** When provided alongside archivoPorMes, month cells become clickable for drill-down */
   empresaId?: string
-  archivoId?: string
+  /**
+   * Maps YYYY-MM → archivoId so each month column knows which archive to query.
+   * Works for both single-archive and consolidated (multi-archive) views.
+   */
+  archivoPorMes?: Record<string, string>
 }
 
-export default function TablaEstadoResultados({ er, empresaId, archivoId }: Props) {
+export default function TablaEstadoResultados({ er, empresaId, archivoPorMes }: Props) {
   const { meses } = er
   const colSpan = 2 + meses.length
 
@@ -243,20 +247,22 @@ export default function TablaEstadoResultados({ er, empresaId, archivoId }: Prop
   const onLeave = useCallback(() => { setHovRow(-1); setHovCol(-1) }, [])
 
   const [drillDown, setDrillDown] = useState<DrillDownTarget | null>(null)
-  const canDrillDown = !!(empresaId && archivoId)
+  const canDrillDown = !!(empresaId && archivoPorMes)
 
   const openDrillDown = useCallback(
     (linea: LineaEstadoResultados, mes: string) => {
-      if (!canDrillDown) return
+      if (!canDrillDown || !archivoPorMes) return
+      const archivoId = archivoPorMes[mes]
+      if (!archivoId) return   // month not covered by any archive (shouldn't happen)
       setDrillDown({
         empresaId: empresaId!,
-        archivoId: archivoId!,
+        archivoId,
         cuentas:   linea.cuentas,
         mes,
         concepto:  linea.concepto,
       })
     },
-    [canDrillDown, empresaId, archivoId]
+    [canDrillDown, empresaId, archivoPorMes]
   )
 
   const closeDrillDown = useCallback(() => setDrillDown(null), [])
@@ -397,7 +403,7 @@ export default function TablaEstadoResultados({ er, empresaId, archivoId }: Prop
                     {/* month columns — clickable for drill-down */}
                     {meses.map((m, i) => {
                       const val = linea.porMes[m] ?? 0
-                      const drillable = canDrillDown && (linea.porMes[m] !== undefined)
+                      const drillable = canDrillDown && !!(archivoPorMes?.[m])
                       return (
                         <td
                           key={m}
