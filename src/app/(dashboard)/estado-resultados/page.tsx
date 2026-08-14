@@ -698,7 +698,7 @@ function PantallaEmpresa({
 }) {
   const [archivos, setArchivos]         = useState<ArchivoMeta[]>([])
   const [cargandoArchivos, setCargando] = useState(true)
-  const [tabActivo, setTabActivo]       = useState("configuracion")
+  const [tabActivo, setTabActivo]       = useState("informe")
   // Result passed from config tab → results tab (to avoid a second fetch)
   const [resultadoPendiente, setResultadoPendiente] = useState<EstadoResultados | null>(null)
   const [mesPendiente, setMesPendiente]             = useState<string | null>(null)
