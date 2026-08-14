@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   TrendingUp,
+  BarChart2,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -20,12 +21,13 @@ import { useAppSession } from "@/hooks/useAppSession";
 import { initials } from "@/lib/app-auth";
 
 const ADMIN_NAV = [
-  { label: "Dashboard",           href: "/dashboard",   icon: LayoutDashboard },
-  { label: "Clientes",            href: "/empresas",    icon: Building2 },
-  { label: "Accesos",             href: "/accesos",     icon: KeyRound },
-  { label: "Calendario Tributario", href: "/calendario", icon: CalendarCheck },
-  { label: "Nómina",              href: "/nomina",      icon: Users },
-  { label: "Configuración",       href: "/configuracion", icon: Settings },
+  { label: "Dashboard",             href: "/dashboard",          icon: LayoutDashboard },
+  { label: "Clientes",              href: "/empresas",           icon: Building2 },
+  { label: "Accesos",               href: "/accesos",            icon: KeyRound },
+  { label: "Calendario Tributario", href: "/calendario",         icon: CalendarCheck },
+  { label: "Nómina",                href: "/nomina",             icon: Users },
+  { label: "Estado de Resultados",  href: "/estado-resultados",  icon: BarChart2 },
+  { label: "Configuración",         href: "/configuracion",      icon: Settings },
 ];
 
 const ADMIN_EXTRA = [
@@ -33,10 +35,11 @@ const ADMIN_EXTRA = [
 ];
 
 const CONTADOR_NAV = [
-  { label: "Clientes",              href: "/empresas",    icon: Building2 },
-  { label: "Accesos",               href: "/accesos",     icon: KeyRound },
-  { label: "Calendario Tributario", href: "/calendario",  icon: CalendarCheck },
-  { label: "Nómina",                href: "/nomina",      icon: Users },
+  { label: "Clientes",              href: "/empresas",          icon: Building2 },
+  { label: "Accesos",               href: "/accesos",           icon: KeyRound },
+  { label: "Calendario Tributario", href: "/calendario",        icon: CalendarCheck },
+  { label: "Nómina",                href: "/nomina",            icon: Users },
+  { label: "Estado de Resultados",  href: "/estado-resultados", icon: BarChart2 },
 ];
 
 const CLIENT_NAV = [

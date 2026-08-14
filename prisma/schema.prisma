@@ -200,18 +200,40 @@ model Empresa {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  usuarios          UsuarioEmpresa[]
-  accesos           Acceso[]
-  obligaciones      ObligacionTributaria[]
-  empleados         Empleado[]
-  novedadesNomina   NovedadNomina[]
-  reportesNomina    ReporteNomina[]
-  libranzas         Libranza[]
-  responsableNomina User?               @relation("EmpresaResponsableNomina", fields: [responsableNominaId], references: [id])
+  usuarios                    UsuarioEmpresa[]
+  accesos                     Acceso[]
+  obligaciones                ObligacionTributaria[]
+  empleados                   Empleado[]
+  novedadesNomina             NovedadNomina[]
+  reportesNomina              ReporteNomina[]
+  libranzas                   Libranza[]
+  responsableNomina           User?               @relation("EmpresaResponsableNomina", fields: [responsableNominaId], references: [id])
+  excepcionesEstadoResultados EstadoResultadosExcepcion[]
 
   @@index([nit])
   @@index([estado])
   @@index([responsableNominaId])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — excepciones por cuenta/empresa
+// ─────────────────────────────────────────────
+
+model EstadoResultadosExcepcion {
+  id               String  @id @default(cuid())
+  empresaId        String
+  /// Leading digits to match (e.g. "428")
+  prefijoCuenta    String
+  /// Default PUC category before the override (informational, nullable)
+  categoriaOriginal String?
+  /// Category to assign instead
+  categoriaDestino String
+  descripcion      String?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, prefijoCuenta])
+  @@index([empresaId])
 }
 
 // ─────────────────────────────────────────────

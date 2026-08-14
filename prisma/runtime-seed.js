@@ -83,6 +83,49 @@ async function generarReportesActuales(prisma) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Seed default Estado de Resultados classification exceptions.
+ * Uses upsert so it's idempotent; only adds exceptions for companies that
+ * match by razonSocial / NIT patterns defined below.
+ */
+async function seedEstadoResultadosExcepciones(prisma) {
+  const EMPRESA_EXCEPCIONES = [
+    {
+      // Inversiones Diazar S.A.S. — accounts 428xxxxx are operational income
+      razonSocialContiene: 'Diazar',
+      excepciones: [
+        {
+          prefijoCuenta:    '428',
+          categoriaOriginal: 'ingresos_no_operacionales',
+          categoriaDestino:  'ingresos_operacionales',
+          descripcion:       'Cuenta 428xxxxx clasificada como ingreso operacional para esta empresa',
+        },
+      ],
+    },
+  ]
+
+  for (const entry of EMPRESA_EXCEPCIONES) {
+    const empresa = await prisma.empresa.findFirst({
+      where: {
+        razonSocial: { contains: entry.razonSocialContiene, mode: 'insensitive' },
+      },
+      select: { id: true, razonSocial: true },
+    })
+    if (!empresa) {
+      console.log(`[init] EstadoResultados seed: empresa "${entry.razonSocialContiene}" not found — skipping`)
+      continue
+    }
+    for (const exc of entry.excepciones) {
+      await prisma.estadoResultadosExcepcion.upsert({
+        where: { empresaId_prefijoCuenta: { empresaId: empresa.id, prefijoCuenta: exc.prefijoCuenta } },
+        update: { categoriaDestino: exc.categoriaDestino, descripcion: exc.descripcion },
+        create: { empresaId: empresa.id, ...exc },
+      })
+    }
+    console.log(`[init] EstadoResultados seed: ${entry.excepciones.length} excepcion(es) para "${empresa.razonSocial}" ✓`)
+  }
+}
+
 async function run() {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) {
@@ -125,6 +168,9 @@ async function run() {
 
     // ── 2. Reportes del mes actual ────────────────────────────────────────────
     await generarReportesActuales(prisma)
+
+    // ── 3. Estado de Resultados — excepciones por empresa ─────────────────────
+    await seedEstadoResultadosExcepciones(prisma)
 
   } catch (err) {
     console.error('[init] Seed error:', err.message)
