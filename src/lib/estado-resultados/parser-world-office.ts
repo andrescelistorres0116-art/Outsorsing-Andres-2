@@ -25,7 +25,7 @@
  */
 
 import * as XLSX from "xlsx"
-import type { LibroAuxiliarParsed, CuentaMovimientos } from "./types"
+import type { LibroAuxiliarParsed, CuentaMovimientos, TransaccionLibro } from "./types"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,39 +48,52 @@ const SALDO_INICIAL_RE = /saldo\s+(inicial|anterior)/i
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 /**
+ * Parse a raw date value into a Date object.
+ * Returns null when the value cannot be interpreted.
+ */
+function toDate(raw: unknown): Date | null {
+  if (raw == null || raw === "") return null
+
+  if (typeof raw === "number" && raw > 1000) {
+    const ms = Math.round((raw - 1) * 86400000) + EXCEL_EPOCH_MS
+    return new Date(ms)
+  }
+  if (raw instanceof Date) return raw
+
+  if (typeof raw === "string") {
+    const s = raw.trim()
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3])
+    m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
+    if (m) {
+      let yr = +m[3]
+      if (yr < 100) yr += yr < 50 ? 2000 : 1900
+      return new Date(yr, +m[2] - 1, +m[1])
+    }
+  }
+  return null
+}
+
+/**
  * Convert an Excel serial number or string date to "YYYY-MM".
  * Returns null when the value cannot be interpreted as a date.
  */
 function toYYYYMM(raw: unknown): string | null {
-  if (raw == null || raw === "") return null
-
-  let date: Date | null = null
-
-  if (typeof raw === "number" && raw > 1000) {
-    // Excel serial → ms from EXCEL_EPOCH_MS (accounts for Excel's 1900 leap-year bug)
-    const ms = Math.round((raw - 1) * 86400000) + EXCEL_EPOCH_MS
-    date = new Date(ms)
-  } else if (raw instanceof Date) {
-    date = raw
-  } else if (typeof raw === "string") {
-    const s = raw.trim()
-    // ISO-style: YYYY-MM-DD
-    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
-    if (m) {
-      date = new Date(+m[1], +m[2] - 1, +m[3])
-    } else {
-      // DD/MM/YYYY or D/M/YY (Colombian locale)
-      m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
-      if (m) {
-        let yr = +m[3]
-        if (yr < 100) yr += yr < 50 ? 2000 : 1900
-        date = new Date(yr, +m[2] - 1, +m[1])
-      }
-    }
-  }
-
+  const date = toDate(raw)
   if (!date || isNaN(date.getTime())) return null
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+}
+
+/**
+ * Convert an Excel serial number or string date to "YYYY-MM-DD".
+ * Returns "YYYY-MM-01" fallback when day is unavailable.
+ */
+function toYYYYMMDD(raw: unknown, mes: string): string {
+  const date = toDate(raw)
+  if (!date || isNaN(date.getTime())) return `${mes}-01`
+  const mm = String(date.getMonth() + 1).padStart(2, "0")
+  const dd = String(date.getDate()).padStart(2, "0")
+  return `${date.getFullYear()}-${mm}-${dd}`
 }
 
 /** Parse a cell as float, returning 0 for empties or NaN */
@@ -95,22 +108,24 @@ function toFloat(raw: unknown): number {
 
 interface ColMap {
   fecha: number    // date column
+  nota: number     // description / nota column
   debito: number   // debit column
   credito: number  // credit column
 }
 
 const HEADER_KEYWORDS = {
   fecha:   ["fecha", "date"],
+  nota:    ["nota", "descripcion", "descripción", "description", "concepto", "detalle"],
   debito:  ["débito", "debito", "debe", "debit"],
   credito: ["crédito", "credito", "haber", "credit"],
 }
 
 /**
  * Scan the first `scanRows` rows for a header row and return detected column
- * positions. Falls back to: fecha=2, debito=6, credito=7 (World Office default).
+ * positions. Falls back to: fecha=2, nota=3, debito=6, credito=7 (World Office default).
  */
 function detectColumns(rows: unknown[][], scanRows = 15): ColMap {
-  const defaults: ColMap = { fecha: 2, debito: 6, credito: 7 }
+  const defaults: ColMap = { fecha: 2, nota: 3, debito: 6, credito: 7 }
 
   for (let i = 0; i < Math.min(scanRows, rows.length); i++) {
     const lower = rows[i].map(c => (c ?? "").toString().toLowerCase().trim())
@@ -126,6 +141,8 @@ function detectColumns(rows: unknown[][], scanRows = 15): ColMap {
     }
 
     if (found.fecha !== undefined && found.debito !== undefined && found.credito !== undefined) {
+      // nota is optional — keep default if not found
+      if (found.nota === undefined) found.nota = defaults.nota
       return found as ColMap
     }
   }
@@ -142,12 +159,12 @@ interface AccountHeaderRow {
   /** Opening balance data from this same row (balance accounts) */
   saldoInicial?: { debito: number; credito: number }
   /** First transaction data from this same row (income/expense accounts) */
-  primeraTransaccion?: { mes: string; debito: number; credito: number }
+  primeraTransaccion?: { mes: string; fecha: string; nota: string; debito: number; credito: number }
 }
 
 type RowKind =
   | AccountHeaderRow
-  | { kind: "transaction"; mes: string; debito: number; credito: number }
+  | { kind: "transaction"; mes: string; fecha: string; nota: string; debito: number; credito: number }
   | { kind: "total" }
   | { kind: "skip" }
 
@@ -180,11 +197,13 @@ function classifyRow(row: unknown[], cols: ColMap): RowKind {
     // Income/expense (or any other) accounts: this row IS the first transaction
     const mes = toYYYYMM(row[cols.fecha])
     if (mes && (debito !== 0 || credito !== 0)) {
+      const nota  = (row[cols.nota] ?? "").toString().trim()
+      const fecha = toYYYYMMDD(row[cols.fecha], mes)
       return {
         kind: "account_header",
         codigo,
         nombre,
-        primeraTransaccion: { mes, debito, credito },
+        primeraTransaccion: { mes, fecha, nota, debito, credito },
       }
     }
 
@@ -200,7 +219,9 @@ function classifyRow(row: unknown[], cols: ColMap): RowKind {
     const credito = toFloat(row[cols.credito])
 
     if (mes && (debito !== 0 || credito !== 0)) {
-      return { kind: "transaction", mes, debito, credito }
+      const nota  = (row[cols.nota] ?? "").toString().trim()
+      const fecha = toYYYYMMDD(row[cols.fecha], mes)
+      return { kind: "transaction", mes, fecha, nota, debito, credito }
     }
   }
 
@@ -226,6 +247,29 @@ function addMovement(
   }
 }
 
+// ─── Push a TransaccionLibro record ──────────────────────────────────────────
+
+function pushTx(
+  txs: TransaccionLibro[],
+  cuenta: CuentaMovimientos,
+  mes: string,
+  fecha: string,
+  nota: string,
+  debito: number,
+  credito: number
+) {
+  if (debito === 0 && credito === 0) return
+  txs.push({
+    codigo:   cuenta.codigo,
+    concepto: cuenta.nombre,
+    mes,
+    fecha,
+    nota,
+    debito,
+    credito,
+  })
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -245,9 +289,10 @@ export function parseWorldOffice(source: Buffer | string): LibroAuxiliarParsed {
     raw: true,
   })
 
-  const cols      = detectColumns(rows)
-  const cuentaMap = new Map<string, CuentaMovimientos>()
-  const mesesSet  = new Set<string>()
+  const cols         = detectColumns(rows)
+  const cuentaMap    = new Map<string, CuentaMovimientos>()
+  const mesesSet     = new Set<string>()
+  const transacciones: TransaccionLibro[] = []
 
   let currentCuenta: CuentaMovimientos | null = null
 
@@ -277,22 +322,20 @@ export function parseWorldOffice(source: Buffer | string): LibroAuxiliarParsed {
           currentCuenta.saldoInicial += saldoInicial.debito - saldoInicial.credito
         }
 
-        // Apply first transaction
+        // Apply first transaction + capture for drill-down
         if (primeraTransaccion) {
-          addMovement(
-            currentCuenta,
-            primeraTransaccion.mes,
-            primeraTransaccion.debito,
-            primeraTransaccion.credito,
-            mesesSet
-          )
+          const { mes, fecha, nota, debito, credito } = primeraTransaccion
+          addMovement(currentCuenta, mes, debito, credito, mesesSet)
+          pushTx(transacciones, currentCuenta, mes, fecha, nota, debito, credito)
         }
         break
       }
 
       case "transaction": {
         if (!currentCuenta) break
-        addMovement(currentCuenta, classified.mes, classified.debito, classified.credito, mesesSet)
+        const { mes, fecha, nota, debito, credito } = classified
+        addMovement(currentCuenta, mes, debito, credito, mesesSet)
+        pushTx(transacciones, currentCuenta, mes, fecha, nota, debito, credito)
         break
       }
 
@@ -309,5 +352,6 @@ export function parseWorldOffice(source: Buffer | string): LibroAuxiliarParsed {
     softwareContable: "world_office",
     meses,
     cuentas: Array.from(cuentaMap.values()),
+    transacciones,
   }
 }

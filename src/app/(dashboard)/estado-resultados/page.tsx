@@ -571,7 +571,18 @@ function TabEstadoResultados({
         </div>
       )}
       {!cargando && resultado && (
-        <TablaEstadoResultados er={resultado} />
+        <>
+          {seleccion === TODOS_ID && (
+            <p className="text-xs text-muted-foreground -mb-2">
+              Vista consolidada. Selecciona un período específico para ver el detalle de movimientos al hacer clic en una celda.
+            </p>
+          )}
+          <TablaEstadoResultados
+            er={resultado}
+            empresaId={empresa.id}
+            archivoId={seleccion !== TODOS_ID ? seleccion : undefined}
+          />
+        </>
       )}
     </div>
   )

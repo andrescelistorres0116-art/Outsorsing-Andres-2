@@ -102,24 +102,44 @@ export async function POST(req: NextRequest, { params }: { params: Promise<Param
   const todasExcepciones = [...excepciones, ...autoExcepciones]
 
   try {
-    const libro           = parseWorldOffice(archivoBase64)
+    const libro            = parseWorldOffice(archivoBase64)
     const estadoResultados = calcularEstadoResultados(libro, todasExcepciones)
 
-    // Persist
-    const archivo = await prisma.estadoResultadosArchivo.create({
-      data: {
-        empresaId,
-        nombreArchivo,
-        mesesCubiertos: estadoResultados.meses,
-        resultado:      estadoResultados as any,
-      },
-      select: {
-        id: true,
-        nombreArchivo: true,
-        mesesCubiertos: true,
-        createdAt: true,
-      },
-    })
+    // Persist archive + individual transactions in one transaction
+    const [archivo] = await prisma.$transaction([
+      prisma.estadoResultadosArchivo.create({
+        data: {
+          empresaId,
+          nombreArchivo,
+          mesesCubiertos: estadoResultados.meses,
+          resultado:      estadoResultados as any,
+        },
+        select: {
+          id: true,
+          nombreArchivo: true,
+          mesesCubiertos: true,
+          createdAt: true,
+        },
+      }),
+    ])
+
+    // Persist individual transactions in batches of 500 (after archive is created so we have the id)
+    const BATCH = 500
+    for (let i = 0; i < libro.transacciones.length; i += BATCH) {
+      await prisma.transaccionAuxiliar.createMany({
+        data: libro.transacciones.slice(i, i + BATCH).map(tx => ({
+          archivoId: archivo.id,
+          empresaId,
+          codigo:    tx.codigo,
+          concepto:  tx.concepto,
+          mes:       tx.mes,
+          fecha:     tx.fecha,
+          nota:      tx.nota,
+          debito:    tx.debito,
+          credito:   tx.credito,
+        })),
+      })
+    }
 
     return NextResponse.json({ ok: true, archivo, estadoResultados })
   } catch (err: any) {

@@ -27,12 +27,30 @@ export interface CuentaMovimientos {
   movimientosPorMes: Record<string, { debitos: number; creditos: number }>
 }
 
+/** A single movement row captured from the libro auxiliar (for drill-down) */
+export interface TransaccionLibro {
+  /** Account code (e.g. "51050601") */
+  codigo: string
+  /** Account name */
+  concepto: string
+  /** YYYY-MM */
+  mes: string
+  /** YYYY-MM-DD — best effort; falls back to YYYY-MM-01 */
+  fecha: string
+  /** Description / nota column from the libro auxiliar */
+  nota: string
+  debito: number
+  credito: number
+}
+
 /** Complete parsed book */
 export interface LibroAuxiliarParsed {
   softwareContable: "world_office" | string
   /** YYYY-MM strings sorted chronologically */
   meses: string[]
   cuentas: CuentaMovimientos[]
+  /** Individual movements captured for drill-down (one entry per non-zero row) */
+  transacciones: TransaccionLibro[]
 }
 
 // ─── Classification ───────────────────────────────────────────────────────────

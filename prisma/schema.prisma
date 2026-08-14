@@ -252,10 +252,39 @@ model EstadoResultadosArchivo {
   resultado      Json
   createdAt      DateTime @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa       Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  transacciones TransaccionAuxiliar[]
 
   @@index([empresaId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — transacciones del libro auxiliar (detalle por celda)
+// ─────────────────────────────────────────────
+
+model TransaccionAuxiliar {
+  id        String  @id @default(cuid())
+  archivoId String
+  empresaId String
+  /// Account code (e.g. "51050601")
+  codigo    String
+  /// Account name
+  concepto  String
+  /// YYYY-MM
+  mes       String
+  /// YYYY-MM-DD (best-effort; may fall back to YYYY-MM-01 when day unavailable)
+  fecha     String
+  /// Nota / description from the libro auxiliar
+  nota      String  @default("")
+  debito    Float   @default(0)
+  credito   Float   @default(0)
+
+  archivo EstadoResultadosArchivo @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId])
+  @@index([empresaId])
+  @@index([archivoId, codigo, mes])
 }
 
 // ─────────────────────────────────────────────
