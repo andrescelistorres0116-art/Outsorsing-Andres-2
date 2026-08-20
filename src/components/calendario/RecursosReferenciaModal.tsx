@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FileText, Upload, Download, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
+import { FileText, Upload, Download, Trash2, Loader2, FileSpreadsheet, Eye, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,7 @@ export default function RecursosReferenciaModal({ open, onClose }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [viewingRecurso, setViewingRecurso] = useState<Recurso | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -164,6 +165,7 @@ export default function RecursosReferenciaModal({ open, onClose }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg w-full">
         <DialogHeader>
@@ -232,6 +234,18 @@ export default function RecursosReferenciaModal({ open, onClose }: Props) {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {/* Eye button — only for PDFs */}
+                  {r.tipo === "application/pdf" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                      onClick={() => setViewingRecurso(r)}
+                      title="Ver documento"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -269,5 +283,45 @@ export default function RecursosReferenciaModal({ open, onClose }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+
+    {viewingRecurso && (
+      <div className="fixed inset-0 z-[100] flex flex-col bg-black/80">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-900 text-white shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="text-sm font-medium truncate">{viewingRecurso.nombre}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-white/10 gap-1.5"
+              onClick={() => handleDownload(viewingRecurso)}
+              title="Descargar"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Descargar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => setViewingRecurso(null)}
+              title="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        {/* PDF iframe */}
+        <iframe
+          src={`/api/recursos-calendario/${viewingRecurso.id}?view=1`}
+          className="flex-1 w-full border-0 bg-white"
+          title={viewingRecurso.nombre}
+        />
+      </div>
+    )}
+  </>
   );
 }
