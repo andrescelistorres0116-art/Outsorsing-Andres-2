@@ -1,0 +1,65 @@
+import { getToken } from "next-auth/jwt"
+import { NextRequest, NextResponse } from "next/server"
+import { publicOrigin } from "@/lib/public-origin"
+
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth",
+  // MCP server — uses its own Bearer-token / OAuth auth, not session cookies.
+  // Middleware runs before rewrites, so /.well-known must be listed by its
+  // original URL (it gets rewritten to /api/mcp/oauth-metadata later).
+  "/.well-known",
+  "/api/mcp",
+  // José AI endpoints — each route validates Authorization: Bearer JOSE_API_KEY
+  // internally via joseAuth(). The middleware must not redirect to /login first,
+  // since server-to-server calls carry no session cookie.
+  "/api/jose",
+]
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Allow public paths
+  if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
+    return NextResponse.next()
+  }
+
+  // Allow static files
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+    return NextResponse.next()
+  }
+
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+
+  if (!token) {
+    const base = publicOrigin(request)
+    const loginUrl = new URL("/login", base)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // Role-based route protection
+  const role = token.role as string
+  const base = publicOrigin(request)
+
+  // Protect admin-only routes
+  if (pathname.startsWith("/configuracion") && role !== "admin") {
+    return NextResponse.redirect(new URL("/", base))
+  }
+
+  // Clients can only access /nomina
+  if (role === "cliente" && !pathname.startsWith("/nomina") && !pathname.startsWith("/api")) {
+    return NextResponse.redirect(new URL("/nomina", base))
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+}

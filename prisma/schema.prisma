@@ -1,0 +1,674 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  ANALYST
+  NOMINA
+  CLIENT
+}
+
+enum EstadoEmpresa {
+  ACTIVA
+  INACTIVA
+}
+
+enum TipoAcceso {
+  DIAN
+  HACIENDA
+  PARAFISCAL
+  BANCO
+  CAMARA
+  UGPP
+  SUPERSOCIEDADES
+  SOFTWARE_CONTABLE
+  FACTURACION
+  FIRMA_DIGITAL
+  OTRO
+}
+
+enum Periodicidad {
+  QUINCENAL
+  MENSUAL
+  BIMESTRAL
+  TRIMESTRAL
+  CUATRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  UNICA
+}
+
+enum EstadoObligacion {
+  PENDIENTE
+  EN_PROCESO
+  PRESENTADO
+  PAGADO
+  VENCIDO
+}
+
+// Periodicidad con la que la empresa corre nómina
+enum PeriodicidadNomina {
+  MENSUAL
+  QUINCENAL
+}
+
+// Periodo cubierto por un reporte de nómina
+enum PeriodoNomina {
+  MENSUAL
+  PRIMERA_QUINCENA
+  SEGUNDA_QUINCENA
+}
+
+// Modo del flujo de aprobación por empresa
+enum ModoFlujoNomina {
+  SIMPLE    // BORRADOR → APROBADA (directo)
+  COMPLETO  // BORRADOR → ENVIADA → REVISADA → APROBADA → REABIERTA → CORREGIDA
+}
+
+enum TipoNovedad {
+  HORAS_EXTRAS
+  HORAS_EXTRAS_NOCTURNAS
+  DOMINICALES
+  RECARGOS
+  BONIFICACIONES
+  COMISIONES
+  INCAPACIDAD
+  LICENCIA
+  VACACIONES
+  LIBRANZA
+  PRESTAMO
+  EMBARGO
+  INGRESO
+  RETIRO
+  LLEGADA_TARDE
+  AUSENCIA
+  DESCUENTO_AUTORIZADO
+  OTRA
+}
+
+enum EstadoReporteNomina {
+  BORRADOR
+  ENVIADA
+  REVISADA
+  APROBADA
+  REABIERTA
+  CORREGIDA
+}
+
+// ─────────────────────────────────────────────
+// Identidad y Acceso
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(CLIENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresas              UsuarioEmpresa[]
+  obligacionesAsignadas ObligacionTributaria[] @relation("ObligacionResponsable")
+  logAccesos            LogAcceso[]
+  empresasResponsable   Empresa[]              @relation("EmpresaResponsableNomina")
+  reportesEnviados      ReporteNomina[]        @relation("ReporteEnviadoPor")
+  reportesRevisados     ReporteNomina[]        @relation("ReporteRevisadoPor")
+  reportesAprobados     ReporteNomina[]        @relation("ReporteAprobadoPor")
+  reportesCerrados      ReporteNomina[]        @relation("ReporteCerradoPor")
+  novedadesCreadas      NovedadNomina[]        @relation("NovedadCreadaPor")
+  novedadesAprobadas    NovedadNomina[]        @relation("NovedadAprobadaPor")
+  auditoriasReporte     AuditoriaReporte[]
+  auditoriasNovedad     AuditoriaNovedad[]
+  auditoriasEmpleado    AuditoriaEmpleado[]
+  obligacionesContabilizadas ObligacionTributaria[] @relation("ObligacionContabilizadoPor")
+  obligacionesDeclaradas     ObligacionTributaria[] @relation("ObligacionDeclaradoPor")
+  obligacionesPagadas        ObligacionTributaria[] @relation("ObligacionPagadoPor")
+  auditoriasObligacion       AuditoriaObligacion[]
+
+  @@index([email])
+}
+
+// Relación muchos-a-muchos User ↔ Empresa
+model UsuarioEmpresa {
+  id        String   @id @default(cuid())
+  userId    String
+  empresaId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, empresaId])
+  @@index([userId])
+  @@index([empresaId])
+}
+
+// ─────────────────────────────────────────────
+// Empresa
+// ─────────────────────────────────────────────
+
+model Empresa {
+  id              String        @id @default(cuid())
+  razonSocial     String
+  nombreComercial String?
+  nit             String        @unique
+  dv              String
+  direccion       String?
+  ciudad          String?
+  departamento    String?
+  telefono        String?
+  correo          String?
+  estado          EstadoEmpresa @default(ACTIVA)
+
+  // Representante legal
+  repLegalNombre   String?
+  repLegalCedula   String?
+  repLegalCorreo   String?
+  repLegalTelefono String?
+
+  // Información tributaria
+  regimen                    String?
+  responsabilidadIva         String?
+  obligadoFacturar           Boolean   @default(false)
+  resolucionFacturacion      String?
+  fechaVencimientoResolucion DateTime?
+  actividadEconomica         String?
+  tipoContribuyente          String?
+  agenteRetenedor            Boolean   @default(false)
+
+  // Software y facturación
+  softwareContable           String?
+  tipoFacturacionElectronica String?
+
+  // Configuración de nómina
+  tipoNomina          String?
+  periodicidadNomina  PeriodicidadNomina?
+  modoFlujoNomina     ModoFlujoNomina     @default(COMPLETO)
+  responsableNominaId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios                    UsuarioEmpresa[]
+  accesos                     Acceso[]
+  obligaciones                ObligacionTributaria[]
+  empleados                   Empleado[]
+  novedadesNomina             NovedadNomina[]
+  reportesNomina              ReporteNomina[]
+  libranzas                   Libranza[]
+  responsableNomina           User?               @relation("EmpresaResponsableNomina", fields: [responsableNominaId], references: [id])
+  excepcionesEstadoResultados EstadoResultadosExcepcion[]
+  archivosEstadoResultados    EstadoResultadosArchivo[]
+  catalogoCuentas             CatalogoCuenta[]
+
+  @@index([nit])
+  @@index([estado])
+  @@index([responsableNominaId])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — excepciones por cuenta/empresa
+// ─────────────────────────────────────────────
+
+model EstadoResultadosExcepcion {
+  id               String  @id @default(cuid())
+  empresaId        String
+  /// Leading digits to match (e.g. "428")
+  prefijoCuenta    String
+  /// Default PUC category before the override (informational, nullable)
+  categoriaOriginal String?
+  /// Category to assign instead
+  categoriaDestino String
+  descripcion      String?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, prefijoCuenta])
+  @@index([empresaId])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — resultados persistidos por empresa
+// ─────────────────────────────────────────────
+
+model EstadoResultadosArchivo {
+  id             String   @id @default(cuid())
+  empresaId      String
+  nombreArchivo  String
+  /// YYYY-MM strings covered by this upload, e.g. ["2026-01","2026-07"]
+  mesesCubiertos String[]
+  /// Computed EstadoResultados JSON (ready to render without reprocessing)
+  resultado      Json
+  createdAt      DateTime @default(now())
+
+  empresa       Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  transacciones TransaccionAuxiliar[]
+
+  @@index([empresaId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — transacciones del libro auxiliar (detalle por celda)
+// ─────────────────────────────────────────────
+
+model TransaccionAuxiliar {
+  id        String  @id @default(cuid())
+  archivoId String
+  empresaId String
+  /// Account code (e.g. "51050601")
+  codigo    String
+  /// Account name
+  concepto  String
+  /// YYYY-MM
+  mes       String
+  /// YYYY-MM-DD (best-effort; may fall back to YYYY-MM-01 when day unavailable)
+  fecha     String
+  /// Nota / description from the libro auxiliar
+  nota      String  @default("")
+  debito    Float   @default(0)
+  credito   Float   @default(0)
+
+  archivo EstadoResultadosArchivo @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId])
+  @@index([empresaId])
+  @@index([archivoId, codigo, mes])
+}
+
+// ─────────────────────────────────────────────
+// Estado de Resultados — catálogo de cuentas por empresa
+// ─────────────────────────────────────────────
+
+model CatalogoCuenta {
+  id        String  @id @default(cuid())
+  empresaId String
+  /// Account code (e.g. "410505", "51050501")
+  codigo    String
+  nombre    String
+  /// Original "Tipo" value from the catalog Excel (e.g. "Ingresos", "Gastos", "Costo De Ventas")
+  tipo      String
+  /// Original "Grupo" value (e.g. "Normal", "Tesoreria")
+  grupo     String  @default("Normal")
+  inactivo  Boolean @default(false)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
+}
+
+// ─────────────────────────────────────────────
+// Accesos
+// ─────────────────────────────────────────────
+
+model Acceso {
+  id                 String     @id @default(cuid())
+  empresaId          String
+  tipo               TipoAcceso
+  plataforma         String?
+  usuario            String?
+  contrasena         String?
+  correoAsociado     String?
+  preguntasSeguridad String?
+  tokenCodigo        String?
+  banco              String?
+  observaciones      String?
+  municipio          String?
+  tags               String[]
+  createdBy          String?
+  archivado          Boolean    @default(false)
+  ultimoAcceso       DateTime   @default(now())
+  nitTercero         String?
+  tipoDocumento      String?
+  nitEmpresa         String?
+  nombreSoftware     String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  empresa    Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  logAccesos LogAcceso[]
+
+  @@index([empresaId])
+  @@index([tipo])
+}
+
+model LogAcceso {
+  id        String   @id @default(cuid())
+  accesoId  String
+  userId    String
+  accion    String
+  timestamp DateTime @default(now())
+
+  acceso Acceso @relation(fields: [accesoId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([accesoId])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// ─────────────────────────────────────────────
+// Obligaciones Tributarias
+// ─────────────────────────────────────────────
+
+model ObligacionTributaria {
+  id               String           @id @default(cuid())
+  empresaId        String
+  tipoObligacion   String
+  periodicidad     Periodicidad
+  periodo          String?
+  año              Int
+  fechaVencimiento DateTime
+  estado           EstadoObligacion @default(PENDIENTE)
+  responsableId    String?
+  responsableNombre String?
+  observaciones    String?
+  municipio        String?
+
+  // Contabilizado
+  contabilizado              Boolean   @default(false)
+  contabilizadoArchivoNombre String?
+  contabilizadoArchivoData   String?
+  contabilizadoArchivoTipo   String?
+  contabilizadoFecha         DateTime?
+  contabilizadoPorId         String?
+
+  // Declarado
+  declarado                  Boolean   @default(false)
+  declaradoArchivoNombre     String?
+  declaradoArchivoData       String?
+  declaradoArchivoTipo       String?
+  declaradoFecha             DateTime?
+  declaradoPorId             String?
+
+  // Pagado
+  pagado       Boolean   @default(false)
+  pagadoFecha  DateTime?
+  pagadoPorId  String?
+
+  // No aplica — sin movimientos o la empresa ya no está obligada
+  noAplica      Boolean   @default(false)
+  noAplicaFecha DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa          Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  responsable      User?                @relation("ObligacionResponsable", fields: [responsableId], references: [id])
+  contabilizadoPor User?                @relation("ObligacionContabilizadoPor", fields: [contabilizadoPorId], references: [id])
+  declaradoPor     User?                @relation("ObligacionDeclaradoPor", fields: [declaradoPorId], references: [id])
+  pagadoPor        User?                @relation("ObligacionPagadoPor", fields: [pagadoPorId], references: [id])
+  auditorias       AuditoriaObligacion[]
+
+  @@index([empresaId])
+  @@index([estado])
+  @@index([fechaVencimiento])
+  @@index([responsableId])
+}
+
+// ─────────────────────────────────────────────
+// Nómina: Empleados
+// ─────────────────────────────────────────────
+
+model Empleado {
+  id              String    @id @default(cuid())
+  empresaId       String
+  tipoDocumento   String?
+  numeroDocumento String
+  nombre          String
+  cargo           String?
+  salarioBase     Decimal?  @db.Decimal(18, 2)
+  tipoContrato    String?
+  ciudad          String?
+  eps             String?
+  fondoPensiones  String?
+  fechaIngreso    DateTime?
+  fechaRetiro     DateTime?
+  observaciones   String?
+  activo          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  empresa         Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  novedadesNomina NovedadNomina[]
+  libranzas       Libranza[]
+  auditorias      AuditoriaEmpleado[]
+
+  @@unique([empresaId, numeroDocumento])
+  @@index([empresaId])
+  @@index([activo])
+}
+
+// ─────────────────────────────────────────────
+// Nómina: Novedades
+// ─────────────────────────────────────────────
+
+model NovedadNomina {
+  id          String        @id @default(cuid())
+  empleadoId  String
+  empresaId   String
+  reporteId   String?
+  periodo     PeriodoNomina
+  mes         Int
+  año         Int
+  tipoNovedad TipoNovedad
+
+  // Valores monetarios (Decimal para precisión financiera)
+  valor      Decimal? @db.Decimal(18, 2)
+  tarifaHora Decimal? @db.Decimal(18, 2)
+  porcentaje Decimal? @db.Decimal(5, 2)
+
+  // Tiempo
+  horas        Decimal? @db.Decimal(8, 2)
+  diasAusencia Int?
+
+  // Cuotas (LIBRANZA / EMBARGO)
+  libranzaId   String?
+  numeroCuotas Int?
+  valorCuota   Decimal? @db.Decimal(18, 2)
+  cuotaNumero  Int?
+
+  // Rango de la novedad
+  fechaInicioNovedad DateTime?
+  fechaFinNovedad    DateTime?
+
+  descripcion String?
+  adjunto     String?
+
+  // Actores (FK, sin guardar correos en texto plano)
+  creadoPorId   String?
+  aprobadoPorId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empleado    Empleado          @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empresa     Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  reporte     ReporteNomina?    @relation(fields: [reporteId], references: [id])
+  libranza    Libranza?         @relation(fields: [libranzaId], references: [id])
+  creadoPor   User?             @relation("NovedadCreadaPor", fields: [creadoPorId], references: [id])
+  aprobadoPor User?             @relation("NovedadAprobadaPor", fields: [aprobadoPorId], references: [id])
+  auditorias  AuditoriaNovedad[]
+
+  @@index([empleadoId])
+  @@index([empresaId])
+  @@index([reporteId])
+  @@index([mes, año])
+  @@index([periodo])
+  @@index([tipoNovedad])
+}
+
+// ─────────────────────────────────────────────
+// Nómina: Libranzas
+// ─────────────────────────────────────────────
+
+model Libranza {
+  id             String   @id @default(cuid())
+  empleadoId     String
+  empresaId      String
+  entidad        String
+  numeroPrestamo String?
+  valorCuota     Decimal  @db.Decimal(18, 2)
+  numeroCuotas   Int
+  cuotaActual    Int      @default(1)
+  fechaInicio    DateTime
+  activa         Boolean  @default(true)
+  tipo           String   @default("LIBRANZA")
+  observaciones  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  empleado  Empleado        @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empresa   Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  novedades NovedadNomina[]
+
+  @@index([empleadoId])
+  @@index([empresaId])
+  @@index([activa])
+}
+
+// ─────────────────────────────────────────────
+// Nómina: Reportes
+// ─────────────────────────────────────────────
+
+model ReporteNomina {
+  id           String              @id @default(cuid())
+  empresaId    String
+  periodo      PeriodoNomina
+  mes          Int
+  año          Int
+  estado       EstadoReporteNomina @default(BORRADOR)
+  sinNovedades Boolean             @default(false)
+  comentarios  String?
+
+  // Rango laboral exacto del periodo
+  fechaInicioPeriodo DateTime?
+  fechaFinPeriodo    DateTime?
+
+  // Actores por FK
+  enviadoPorId  String?
+  revisadoPorId String?
+  aprobadoPorId String?
+  cerradoPorId  String?
+
+  // Timestamps de cada transición de estado
+  fechaEnvio      DateTime?
+  fechaRevision   DateTime?
+  fechaAprobacion DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa     Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  enviadoPor  User?              @relation("ReporteEnviadoPor",  fields: [enviadoPorId],  references: [id])
+  revisadoPor User?              @relation("ReporteRevisadoPor", fields: [revisadoPorId], references: [id])
+  aprobadoPor User?              @relation("ReporteAprobadoPor", fields: [aprobadoPorId], references: [id])
+  cerradoPor  User?              @relation("ReporteCerradoPor",  fields: [cerradoPorId],  references: [id])
+  novedades   NovedadNomina[]
+  auditorias  AuditoriaReporte[]
+
+  @@unique([empresaId, periodo, mes, año])
+  @@index([empresaId])
+  @@index([estado])
+  @@index([mes, año])
+}
+
+// ─────────────────────────────────────────────
+// Auditoría
+// ─────────────────────────────────────────────
+
+model AuditoriaReporte {
+  id              String               @id @default(cuid())
+  reporteNominaId String
+  accion          String
+  estadoAntes     EstadoReporteNomina?
+  estadoDespues   EstadoReporteNomina
+  realizadoPorId  String
+  observaciones   String?
+  fechaAccion     DateTime             @default(now())
+
+  reporte      ReporteNomina @relation(fields: [reporteNominaId], references: [id], onDelete: Cascade)
+  realizadoPor User          @relation(fields: [realizadoPorId], references: [id])
+
+  @@index([reporteNominaId])
+  @@index([realizadoPorId])
+  @@index([fechaAccion])
+}
+
+model AuditoriaNovedad {
+  id              String   @id @default(cuid())
+  novedadNominaId String
+  accion          String
+  camposAntes     Json?
+  camposDespues   Json?
+  realizadoPorId  String
+  fechaAccion     DateTime @default(now())
+
+  novedad      NovedadNomina @relation(fields: [novedadNominaId], references: [id], onDelete: Cascade)
+  realizadoPor User          @relation(fields: [realizadoPorId], references: [id])
+
+  @@index([novedadNominaId])
+  @@index([realizadoPorId])
+  @@index([fechaAccion])
+}
+
+model AuditoriaEmpleado {
+  id             String   @id @default(cuid())
+  empleadoId     String
+  accion         String
+  camposAntes    Json?
+  camposDespues  Json?
+  realizadoPorId String
+  fechaAccion    DateTime @default(now())
+
+  empleado     Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  realizadoPor User     @relation(fields: [realizadoPorId], references: [id])
+
+  @@index([empleadoId])
+  @@index([realizadoPorId])
+  @@index([fechaAccion])
+}
+
+model AuditoriaObligacion {
+  id             String   @id @default(cuid())
+  obligacionId   String
+  accion         String
+  archivoNombre  String?
+  detalles       String?
+  realizadoPorId String
+  fechaAccion    DateTime @default(now())
+
+  obligacion   ObligacionTributaria @relation(fields: [obligacionId], references: [id], onDelete: Cascade)
+  realizadoPor User                 @relation(fields: [realizadoPorId], references: [id])
+
+  @@index([obligacionId])
+  @@index([realizadoPorId])
+  @@index([fechaAccion])
+}
+
+// ─────────────────────────────────────────────
+// Recursos de referencia del Calendario Tributario
+// ─────────────────────────────────────────────
+
+model RecursoCalendario {
+  id       String   @id @default(cuid())
+  nombre   String
+  tipo     String   @default("application/pdf")
+  datos    Bytes
+  tamanio  Int      @default(0)
+  subidoEn DateTime @default(now())
+
+  @@index([subidoEn])
+}
