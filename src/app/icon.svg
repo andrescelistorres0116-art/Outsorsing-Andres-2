@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a2a55"/>
+      <stop offset="100%" stop-color="#080f22"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="40%" stop-color="#f5d080" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#c9921a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="50" fill="url(#bg)"/>
+
+  <!-- Outer gold border ring -->
+  <circle cx="50" cy="50" r="47" fill="none" stroke="#c9921a" stroke-width="4.5"/>
+
+  <!-- Decorative sections (the 4 triangular panels) -->
+  <path d="M50,3 L97,50 L50,97 L3,50 Z" fill="none" stroke="#c9921a" stroke-width="0.8" opacity="0.35"/>
+
+  <!-- Second ring -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#c9921a" stroke-width="1.2"/>
+
+  <!-- Dotted ring (matches the logo's dot pattern) -->
+  <circle cx="50" cy="50" r="31" fill="none" stroke="#c9921a" stroke-width="2.2"
+    stroke-dasharray="3.6 4" stroke-linecap="round"/>
+
+  <!-- Third ring -->
+  <circle cx="50" cy="50" r="23" fill="none" stroke="#c9921a" stroke-width="1"/>
+
+  <!-- Crosshair lines -->
+  <line x1="50" y1="5" x2="50" y2="95" stroke="#c9921a" stroke-width="0.7" opacity="0.45"/>
+  <line x1="5" y1="50" x2="95" y2="50" stroke="#c9921a" stroke-width="0.7" opacity="0.45"/>
+
+  <!-- Inner dark ring (the "O" center hole) -->
+  <circle cx="50" cy="50" r="17" fill="#080f22"/>
+  <circle cx="50" cy="50" r="17" fill="none" stroke="#c9921a" stroke-width="0.8"/>
+
+  <!-- Central glow -->
+  <circle cx="50" cy="50" r="10" fill="url(#glow)"/>
+  <circle cx="50" cy="50" r="3" fill="#ffffff" opacity="0.95"/>
+</svg>
